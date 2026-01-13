@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -10,6 +10,7 @@ import StatsCard from '../../components/StatsCard';
 import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 
 export default function AdminPage() {
   const { isDark } = useTheme();
@@ -408,6 +409,7 @@ export default function AdminPage() {
             { id: 'actividades', label: 'Actividades', icon: FileText },
             { id: 'funcionarios', label: 'Funcionarios', icon: Users },
             { id: 'empresas', label: 'Empresas', icon: BarChart3 },
+            { id: 'dashboards', label: 'Dashboards', icon: PieChart },
             { id: 'reportes', label: 'Reportes', icon: Calendar }
           ].map(tab => {
             const Icon = tab.icon;
@@ -1084,6 +1086,202 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </>
+        )}
+        {/* TAB: DASHBOARDS */}
+        {activeTab === 'dashboards' && (
+          <>
+            {/* Colores para gráficos */}
+            {(() => {
+              const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
+
+              // Calcular datos para gráficos
+              const hoursByCompany = {};
+              const hoursByWorker = {};
+              const hoursByType = { auditoria: 0, contabilidad: 0 };
+
+              records.forEach(r => {
+                const hours = parseFloat(r.hours_worked || 0);
+
+                // Por empresa
+                if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
+                hoursByCompany[r.company_name] += hours;
+
+                // Por funcionario
+                if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
+                hoursByWorker[r.worker_name] += hours;
+              });
+
+              // Determinar tipo de empresa
+              companies.forEach(c => {
+                const companyHours = hoursByCompany[c.name] || 0;
+                if (c.type === 'auditoria') {
+                  hoursByType.auditoria += companyHours;
+                } else {
+                  hoursByType.contabilidad += companyHours;
+                }
+              });
+
+              const topCompanies = Object.entries(hoursByCompany)
+                .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
+                .sort((a, b) => b.horas - a.horas)
+                .slice(0, 8);
+
+              const workerData = Object.entries(hoursByWorker)
+                .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
+                .sort((a, b) => b.horas - a.horas)
+                .slice(0, 8);
+
+              const pieData = [
+                { name: 'Auditoría', value: parseFloat(hoursByType.auditoria.toFixed(2)) },
+                { name: 'Contabilidad', value: parseFloat(hoursByType.contabilidad.toFixed(2)) }
+              ];
+
+              const recentActivities = [...records]
+                .sort((a, b) => new Date(b.created_at || b.start_datetime) - new Date(a.created_at || a.start_datetime))
+                .slice(0, 8);
+
+              return (
+                <div className="space-y-6">
+                  {/* Top Empresas y Productividad por Funcionario */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Top Empresas */}
+                    <div
+                      className="rounded-xl shadow-lg p-6"
+                      style={{ background: theme.surface }}
+                    >
+                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
+                        🏢 Top Empresas por Horas
+                      </h3>
+                      {topCompanies.length === 0 ? (
+                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={topCompanies} layout="vertical" margin={{ left: 20, right: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                            <XAxis type="number" stroke={theme.textSecondary} />
+                            <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                            <Tooltip
+                              contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                              formatter={(value) => [`${value}h`, 'Horas']}
+                            />
+                            <Bar dataKey="horas" fill="#3498db" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+
+                    {/* Productividad por Funcionario */}
+                    <div
+                      className="rounded-xl shadow-lg p-6"
+                      style={{ background: theme.surface }}
+                    >
+                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
+                        👤 Productividad por Funcionario
+                      </h3>
+                      {workerData.length === 0 ? (
+                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={workerData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                            <XAxis type="number" stroke={theme.textSecondary} />
+                            <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                            <Tooltip
+                              contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                              formatter={(value) => [`${value}h`, 'Horas']}
+                            />
+                            <Bar dataKey="horas" fill="#27ae60" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Distribución y Actividades Recientes */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Distribución por Tipo */}
+                    <div
+                      className="rounded-xl shadow-lg p-6"
+                      style={{ background: theme.surface }}
+                    >
+                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
+                        📊 Distribución por Tipo
+                      </h3>
+                      {pieData.every(d => d.value === 0) ? (
+                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <RechartsPie>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="value"
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            >
+                              {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value) => [`${value}h`, 'Horas']} />
+                            <Legend />
+                          </RechartsPie>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+
+                    {/* Actividades Recientes */}
+                    <div
+                      className="rounded-xl shadow-lg p-6"
+                      style={{ background: theme.surface }}
+                    >
+                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
+                        🕐 Actividades Recientes
+                      </h3>
+                      {recentActivities.length === 0 ? (
+                        <p style={{ color: theme.textSecondary }}>No hay actividades recientes</p>
+                      ) : (
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                          {recentActivities.map((activity, index) => (
+                            <div
+                              key={activity.id}
+                              className="flex items-start gap-3 p-3 rounded-lg"
+                              style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                            >
+                              <div
+                                className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                                style={{ background: COLORS[index % COLORS.length] }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-2">
+                                  <p className="font-semibold text-sm truncate">{activity.worker_name}</p>
+                                  <span
+                                    className="text-xs px-2 py-1 rounded-full text-white flex-shrink-0"
+                                    style={{ background: theme.primary }}
+                                  >
+                                    {activity.hours_worked}h
+                                  </span>
+                                </div>
+                                <p className="text-xs truncate" style={{ color: theme.textSecondary }}>
+                                  {activity.company_name}
+                                </p>
+                                <p className="text-xs" style={{ color: theme.textSecondary }}>
+                                  {new Date(activity.start_datetime).toLocaleDateString('es-ES')}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
 
