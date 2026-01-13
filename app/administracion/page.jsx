@@ -101,10 +101,18 @@ export default function AdminPage() {
   // Calcular datos del dashboard cuando records cambia
   useEffect(() => {
     if (records.length > 0) {
+      console.log('Calculando dashboard con registros:', records);
       const productivityCompany = getProductivityByCompany(records);
       const productivityWorker = getProductivityByWorker(records);
       const hoursByDay = getHoursByDay(records);
       const topActivities = getTopActivities(records);
+
+      console.log('Datos calculados:', {
+        productivityCompany,
+        productivityWorker,
+        hoursByDay,
+        topActivities
+      });
 
       setDashboardData({
         productivityCompany,
@@ -143,6 +151,8 @@ export default function AdminPage() {
     const recordsData = await getRecords();
     const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
     const companiesData = await getCompanies();
+    
+    console.log('Registros cargados:', recordsData);
     
     setRecords(recordsData);
     if (!workersData.error) setWorkers(workersData.data || []);
@@ -1199,6 +1209,8 @@ export default function AdminPage() {
             {records.length === 0 && (
               <div className="col-span-1 md:col-span-2 text-center py-12">
                 <p className="text-lg" style={{ color: theme.text }}>No hay datos para mostrar</p>
+                <p className="text-sm mt-2" style={{ color: theme.text }}>registros cargados: {records.length}</p>
+                <p className="text-sm mt-2" style={{ color: theme.text }}>dashboard data: {JSON.stringify(dashboardData)}</p>
               </div>
             )}
           </div>
