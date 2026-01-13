@@ -18,16 +18,16 @@ export default function HomePage() {
     >
       <div className="w-full mx-auto">
         {/* Header con logo, título y tema */}
-        <div className="flex justify-between items-center mb-8 px-8 py-4 rounded-xl shadow-lg" style={{ background: theme.surface }}>
+        <div className="flex justify-between items-center mb-8 px-4 md:px-8 py-4 rounded-xl shadow-lg" style={{ background: theme.surface }}>
           {/* Logo */}
           <img 
             src="/Sin título-1-08.png"
             alt="Logo PRG Auditores" 
-            className="w-20 h-20 object-contain"
+            className="w-12 md:w-20 h-12 md:h-20 object-contain flex-shrink-0"
           />
 
-          {/* Título Centrado */}
-          <h1 className="text-3xl font-bold flex-1 text-center" style={{ color: theme.primary }}>
+          {/* Título Centrado - Responsive */}
+          <h1 className="text-lg md:text-3xl font-bold flex-1 text-center px-2" style={{ color: theme.primary }}>
             Registro de Actividades
           </h1>
 

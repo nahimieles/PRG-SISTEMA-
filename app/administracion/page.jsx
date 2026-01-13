@@ -284,23 +284,23 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div
-          className="rounded-xl shadow-lg p-4 mb-6 flex justify-between items-center"
+          className="rounded-xl shadow-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4"
           style={{ background: theme.surface, borderBottom: `3px solid ${theme.primary}` }}
         >
-          <Link href="/" className="flex items-center gap-2 hover:underline" style={{ color: theme.primary }}>
+          <Link href="/" className="flex items-center gap-2 hover:underline text-sm md:text-base cursor-pointer" style={{ color: theme.primary }}>
             ← Volver
           </Link>
-          <h1 className="text-2xl font-bold" style={{ color: theme.primary }}>
+          <h1 className="text-xl md:text-2xl font-bold" style={{ color: theme.primary }}>
             Administración
           </h1>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-2 md:gap-4 items-center">
             <ThemeToggle />
             <button
               onClick={() => setIsAuthenticated(false)}
-              className="text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90"
+              className="text-white px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 cursor-pointer text-sm md:text-base"
               style={{ background: '#e74c3c' }}
             >
-              <LogOut className="w-4 h-4" /> Salir
+              <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
@@ -318,13 +318,13 @@ export default function AdminPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap"
+                className="px-4 md:px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer text-sm md:text-base"
                 style={{
                   color: activeTab === tab.id ? theme.primary : theme.textSecondary,
                   borderBottom: activeTab === tab.id ? `3px solid ${theme.primary}` : 'none'
                 }}
               >
-                <Icon className="w-4 h-4" /> {tab.label}
+                <Icon className="w-4 h-4" /> <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}
@@ -386,7 +386,7 @@ export default function AdminPage() {
                 </select>
                 <button
                   onClick={handleExport}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
                   style={{ background: '#27ae60' }}
                 >
                   <Download className="w-4 h-4" /> Exportar
@@ -394,7 +394,7 @@ export default function AdminPage() {
                 <button
                   onClick={loadAllData}
                   disabled={loading}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50"
+                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                   style={{ background: theme.primary }}
                 >
                   Actualizar
@@ -459,7 +459,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleDeleteRecord(record.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                               style={{ background: '#e74c3c' }}
                             >
                               <Trash2 className="w-3 h-3 inline" /> Eliminar
@@ -492,7 +492,7 @@ export default function AdminPage() {
                       setNewWorker({ username: '', password: '', full_name: '', email: '' });
                     }
                   }}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
                   style={{ background: theme.primary }}
                 >
                   <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
@@ -551,7 +551,7 @@ export default function AdminPage() {
                   />
                   <button
                     type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold"
+                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer"
                     style={{ background: '#27ae60' }}
                   >
                     {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
@@ -606,14 +606,14 @@ export default function AdminPage() {
                           <td className="px-4 py-3 flex gap-2">
                             <button
                               onClick={() => handleEditWorker(worker)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                               style={{ background: '#3498db' }}
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDeleteWorker(worker.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                               style={{ background: '#e74c3c' }}
                             >
                               <Trash2 className="w-3 h-3 inline" /> Eliminar
@@ -646,7 +646,7 @@ export default function AdminPage() {
                       setNewCompany({ name: '', type: 'auditoria' });
                     }
                   }}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
                   style={{ background: theme.primary }}
                 >
                   <Plus className="w-4 h-4" /> {showCompanyForm ? 'Cancelar' : 'Nueva'}
@@ -682,7 +682,7 @@ export default function AdminPage() {
                   </select>
                   <button
                     type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold"
+                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer"
                     style={{ background: '#27ae60' }}
                   >
                     {editingCompanyId ? 'Actualizar Empresa' : 'Crear Empresa'}
@@ -721,26 +721,31 @@ export default function AdminPage() {
                         >
                           <td className="px-4 py-3 font-semibold">{company.name}</td>
                           <td className="px-4 py-3">
-                            <span
-                              className="px-3 py-1 rounded-full text-white text-xs font-semibold"
-                              style={{
-                                background: company.type === 'auditoria' ? '#3498db' : '#27ae60'
-                              }}
-                            >
-                              {company.type === 'auditoria' ? 'Auditoría' : 'Contabilidad'}
-                            </span>
+                            <div className="flex gap-2 flex-wrap">
+                              {(company.types || [company.type]).map(type => (
+                                <span
+                                  key={type}
+                                  className="px-3 py-1 rounded-full text-white text-xs font-semibold"
+                                  style={{
+                                    background: type === 'auditoria' ? '#3498db' : '#27ae60'
+                                  }}
+                                >
+                                  {type === 'auditoria' ? 'Auditoría' : 'Contabilidad'}
+                                </span>
+                              ))}
+                            </div>
                           </td>
                           <td className="px-4 py-3 flex gap-2">
                             <button
                               onClick={() => handleEditCompany(company)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                               style={{ background: '#3498db' }}
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDeleteCompany(company.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                               style={{ background: '#e74c3c' }}
                             >
                               <Trash2 className="w-3 h-3 inline" /> Eliminar
@@ -760,19 +765,19 @@ export default function AdminPage() {
         {activeTab === 'reportes' && (
           <>
             <div
-              className="rounded-xl shadow-lg p-6 mb-6"
+              className="rounded-xl shadow-lg p-4 md:p-6 mb-6 overflow-x-auto"
               style={{ background: theme.surface }}
             >
-              <h2 className="text-xl font-bold mb-4">Generar Reporte</h2>
+              <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
               
-              <div className="grid md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div>
-                  <label className="block font-semibold mb-2">Desde</label>
+                  <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
                   <input
                     type="datetime-local"
                     value={reportFilters.startDate}
                     onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none"
+                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -782,12 +787,12 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-2">Hasta</label>
+                  <label className="block font-semibold mb-2 text-sm md:text-base">Hasta</label>
                   <input
                     type="datetime-local"
                     value={reportFilters.endDate}
                     onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none"
+                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -797,11 +802,11 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-2">Funcionario</label>
+                  <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
                   <select
                     value={reportFilters.worker}
                     onChange={(e) => setReportFilters({...reportFilters, worker: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none"
+                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -816,10 +821,10 @@ export default function AdminPage() {
                 <div className="flex items-end">
                   <button
                     onClick={generateReport}
-                    className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold"
+                    className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold cursor-pointer text-sm md:text-base"
                     style={{ background: theme.primary }}
                   >
-                    <Calendar className="w-4 h-4" /> Generar
+                    <Calendar className="w-4 h-4" /> <span className="hidden sm:inline">Generar</span>
                   </button>
                 </div>
               </div>
@@ -834,7 +839,7 @@ export default function AdminPage() {
                   <h2 className="text-xl font-bold">Resultados</h2>
                   <button
                     onClick={exportReport}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2"
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
                     style={{ background: '#27ae60' }}
                   >
                     <Download className="w-4 h-4" /> Exportar CSV

@@ -121,37 +121,37 @@ export default function FuncionariosPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div
-          className="rounded-xl shadow-lg p-4 mb-6 flex justify-between items-center"
+          className="rounded-xl shadow-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4"
           style={{ background: theme.surface, borderBottom: `3px solid ${theme.primary}` }}
         >
-          <Link href="/" className="flex items-center gap-2 hover:underline" style={{ color: theme.primary }}>
+          <Link href="/" className="flex items-center gap-2 hover:underline text-sm md:text-base cursor-pointer" style={{ color: theme.primary }}>
             ← Volver
           </Link>
-          <h1 className="text-2xl font-bold" style={{ color: theme.primary }}>
+          <h1 className="text-xl md:text-2xl font-bold" style={{ color: theme.primary }}>
             
           </h1>
-          <div className="flex gap-4 items-center justify-center">
+          <div className="flex gap-2 md:gap-4 items-center justify-center flex-wrap">
             <div className="text-right">
-              <p className="text-sm" style={{ color: theme.textSecondary }}>Hola,</p>
-              <p className="font-semibold">{currentWorker?.full_name}</p>
+              <p className="text-xs md:text-sm" style={{ color: theme.textSecondary }}>Hola,</p>
+              <p className="font-semibold text-sm md:text-base">{currentWorker?.full_name}</p>
             </div>
             <ThemeToggle />
             <button
               onClick={() => setIsAuthenticated(false)}
-              className="text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90"
+              className="text-white px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 cursor-pointer text-sm md:text-base"
               style={{ background: '#e74c3c' }}
             >
-              <LogOut className="w-4 h-4" /> Salir
+              <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
 
         {/* Formulario */}
         <div
-          className="rounded-2xl shadow-2xl p-8 mb-6"
+          className="rounded-2xl shadow-2xl p-4 md:p-8 mb-6"
           style={{ background: theme.surface }}
         >
-          <h2 className="text-3xl font-bold mb-6" style={{ color: theme.primary }}>
+          <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: theme.primary }}>
             Registrar Nueva Actividad
           </h2>
           
@@ -169,14 +169,14 @@ export default function FuncionariosPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block font-semibold mb-2">
+                <label className="block font-semibold mb-2 text-sm md:text-base">
                   Empresa *
                 </label>
                 <select
                   required
                   value={formData.companyName}
                   onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
@@ -192,14 +192,14 @@ export default function FuncionariosPage() {
                 </select>
               </div>
               <div>
-                <label className="block font-semibold mb-2">
+                <label className="block font-semibold mb-2 text-sm md:text-base">
                   Tipo de Servicio *
                 </label>
                 <select
                   required
                   value={formData.serviceType}
                   onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
@@ -215,7 +215,7 @@ export default function FuncionariosPage() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block font-semibold mb-2">
+                <label className="block font-semibold mb-2 text-sm md:text-base">
                   Fecha y Hora de Inicio *
                 </label>
                 <input
@@ -223,7 +223,7 @@ export default function FuncionariosPage() {
                   required
                   value={formData.startDateTime}
                   onChange={(e) => setFormData({...formData, startDateTime: e.target.value})}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
@@ -233,7 +233,7 @@ export default function FuncionariosPage() {
               </div>
 
               <div>
-                <label className="block font-semibold mb-2">
+                <label className="block font-semibold mb-2 text-sm md:text-base">
                   Fecha y Hora de Fin *
                 </label>
                 <input
@@ -241,7 +241,7 @@ export default function FuncionariosPage() {
                   required
                   value={formData.endDateTime}
                   onChange={(e) => setFormData({...formData, endDateTime: e.target.value})}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
@@ -252,7 +252,7 @@ export default function FuncionariosPage() {
             </div>
 
             <div>
-              <label className="block font-semibold mb-2">
+              <label className="block font-semibold mb-2 text-sm md:text-base">
                 Descripción del Trabajo *
               </label>
               <textarea
@@ -260,7 +260,7 @@ export default function FuncionariosPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 rows="4"
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                 style={{
                   borderColor: theme.border,
                   background: isDark ? '#0f1419' : '#fff',
@@ -271,14 +271,14 @@ export default function FuncionariosPage() {
             </div>
 
             <div>
-              <label className="block font-semibold mb-2">
+              <label className="block font-semibold mb-2 text-sm md:text-base">
                 Adjunta archivo (Opcional)
               </label>
               <input
                 id="fileInput"
                 type="file"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                 style={{
                   borderColor: theme.border,
                   background: isDark ? '#0f1419' : '#fff',
@@ -286,13 +286,13 @@ export default function FuncionariosPage() {
                 }}
                 accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.jpg,.png"
               />
-              {file && <p className="text-sm text-green-600 mt-2 dark:text-green-400">{file.name}</p>}
+              {file && <p className="text-xs md:text-sm text-green-600 mt-2 dark:text-green-400">{file.name}</p>}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
+              className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 cursor-pointer text-sm md:text-base"
               style={{ background: theme.primary }}
             >
               <Plus className="w-5 h-5 inline mr-2" /> {loading ? 'Guardando...' : 'Guardar Actividad'}
@@ -302,10 +302,10 @@ export default function FuncionariosPage() {
 
         {/* Mis Actividades */}
         <div
-          className="rounded-2xl shadow-2xl p-8"
+          className="rounded-2xl shadow-2xl p-4 md:p-8"
           style={{ background: theme.surface }}
         >
-          <h3 className="text-2xl font-bold mb-4" style={{ color: theme.primary }}>
+          <h3 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: theme.primary }}>
             Mis Actividades Registradas
           </h3>
           {myRecords.length === 0 ? (
