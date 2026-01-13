@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import StatsCard from '../../components/StatsCard';
-import { getRecords, getCompanies } from '../../lib/auth';
+import { getRecords, getCompanies, exportToExcel } from '../../lib/auth';
 import { lightTheme, darkTheme } from '../../lib/colors';
 
 export default function ClientesPage() {
@@ -17,6 +17,11 @@ export default function ClientesPage() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [companyRecords, setCompanyRecords] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Filtros avanzados
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [workerFilter, setWorkerFilter] = useState('');
 
   useEffect(() => {
     loadData();
@@ -34,10 +39,38 @@ export default function ClientesPage() {
   const handleSelectCompany = (companyName) => {
     if (!companyName) {
       setCompanyRecords(null);
+      setDateFrom('');
+      setDateTo('');
+      setWorkerFilter('');
       return;
     }
 
-    const filtered = records.filter(r => r.company_name === companyName);
+    applyFilters(companyName, dateFrom, dateTo, workerFilter);
+  };
+
+  const applyFilters = (companyName = selectedCompany, from = dateFrom, to = dateTo, worker = workerFilter) => {
+    if (!companyName) return;
+
+    let filtered = records.filter(r => r.company_name === companyName);
+
+    // Filtro por funcionario
+    if (worker) {
+      filtered = filtered.filter(r => r.worker_name === worker);
+    }
+
+    // Filtro por fecha desde
+    if (from) {
+      const fromDate = new Date(from);
+      filtered = filtered.filter(r => new Date(r.start_datetime) >= fromDate);
+    }
+
+    // Filtro por fecha hasta
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(r => new Date(r.start_datetime) <= toDate);
+    }
+
     setCompanyRecords({
       name: companyName,
       records: filtered,
@@ -47,6 +80,27 @@ export default function ClientesPage() {
         workers: [...new Set(filtered.map(r => r.worker_name))].length
       }
     });
+  };
+
+  const clearClientFilters = () => {
+    setDateFrom('');
+    setDateTo('');
+    setWorkerFilter('');
+    if (selectedCompany) {
+      applyFilters(selectedCompany, '', '', '');
+    }
+  };
+
+  const handleExportClient = () => {
+    if (companyRecords && companyRecords.records.length > 0) {
+      exportToExcel(companyRecords.records, `actividades-${companyRecords.name}`);
+    }
+  };
+
+  // Obtener funcionarios únicos de la empresa seleccionada
+  const getUniqueWorkersForCompany = () => {
+    if (!selectedCompany) return [];
+    return [...new Set(records.filter(r => r.company_name === selectedCompany).map(r => r.worker_name))];
   };
 
   return (
@@ -115,23 +169,106 @@ export default function ClientesPage() {
               {companyRecords.name}
             </h3>
             <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <StatsCard 
-                number={companyRecords.summary.total} 
+              <StatsCard
+                number={companyRecords.summary.total}
                 label="Actividades"
                 bgColor={theme.primary}
               />
-              <StatsCard 
-                number={companyRecords.summary.hours} 
+              <StatsCard
+                number={companyRecords.summary.hours}
                 label="Horas Totales"
                 bgColor={theme.primary}
               />
-              <StatsCard 
-                number={companyRecords.summary.workers} 
+              <StatsCard
+                number={companyRecords.summary.workers}
                 label="Funcionarios"
                 bgColor={theme.primary}
               />
             </div>
-            
+
+            {/* Filtros avanzados */}
+            <div
+              className="rounded-lg p-4 mb-6"
+              style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+            >
+              <h4 className="font-semibold mb-3" style={{ color: theme.primary }}>Filtrar Actividades</h4>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => {
+                      setDateFrom(e.target.value);
+                      applyFilters(selectedCompany, e.target.value, dateTo, workerFilter);
+                    }}
+                    className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#1a1f24' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => {
+                      setDateTo(e.target.value);
+                      applyFilters(selectedCompany, dateFrom, e.target.value, workerFilter);
+                    }}
+                    className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#1a1f24' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Funcionario</label>
+                  <select
+                    value={workerFilter}
+                    onChange={(e) => {
+                      setWorkerFilter(e.target.value);
+                      applyFilters(selectedCompany, dateFrom, dateTo, e.target.value);
+                    }}
+                    className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none cursor-pointer"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#1a1f24' : '#fff',
+                      color: theme.text,
+                    }}
+                  >
+                    <option value="">Todos</option>
+                    {getUniqueWorkersForCompany().map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={clearClientFilters}
+                    className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer border-2"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                  >
+                    Limpiar
+                  </button>
+                  <button
+                    onClick={handleExportClient}
+                    disabled={companyRecords.records.length === 0}
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    style={{ background: '#27ae60' }}
+                  >
+                    <Download className="w-4 h-4" /> Excel
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm" style={{ color: theme.textSecondary }}>
+                Mostrando {companyRecords.records.length} actividades
+              </p>
+            </div>
+
             {companyRecords.records.length === 0 ? (
               <div
                 className="rounded-lg p-12 text-center"

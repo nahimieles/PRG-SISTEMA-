@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 
@@ -23,6 +23,13 @@ export default function AdminPage() {
   const [records, setRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWorker, setSelectedWorker] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  // Estado para filtros de empresas
+  const [companySearchTerm, setCompanySearchTerm] = useState('');
+  const [companyTypeFilter, setCompanyTypeFilter] = useState('');
 
   // Estado para funcionarios
   const [workers, setWorkers] = useState([]);
@@ -84,7 +91,7 @@ export default function AdminPage() {
     if (isAuthenticated) {
       loadAllData();
       loadAlertsAndStats();
-      
+
       // Actualizar estadísticas cada 30 segundos
       const interval = setInterval(loadAlertsAndStats, 30000);
       return () => clearInterval(interval);
@@ -119,10 +126,10 @@ export default function AdminPage() {
     const recordsData = await getRecords();
     const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
     const companiesData = await getCompanies();
-    
+
     console.log('Registros cargados:', recordsData);
     console.log('Primer registro:', recordsData[0]);
-    
+
     setRecords(recordsData);
     if (!workersData.error) setWorkers(workersData.data || []);
     setCompanies(companiesData);
@@ -303,20 +310,55 @@ export default function AdminPage() {
   };
 
   const handleExport = () => {
-    exportToCSV(filteredRecords, 'actividades-completo');
+    exportToExcel(filteredRecords, 'actividades-completo');
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedWorker('');
+    setSelectedCompany('');
+    setDateFrom('');
+    setDateTo('');
   };
 
   const filteredRecords = records.filter(r => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       r.worker_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.company_name.toLowerCase().includes(searchTerm.toLowerCase());
+      r.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.description && r.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesWorker = !selectedWorker || r.worker_name === selectedWorker;
-    return matchesSearch && matchesWorker;
+    const matchesCompany = !selectedCompany || r.company_name === selectedCompany;
+
+    // Filtro por fecha
+    let matchesDateFrom = true;
+    let matchesDateTo = true;
+    if (dateFrom) {
+      const recordDate = new Date(r.start_datetime);
+      const fromDate = new Date(dateFrom);
+      matchesDateFrom = recordDate >= fromDate;
+    }
+    if (dateTo) {
+      const recordDate = new Date(r.start_datetime);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      matchesDateTo = recordDate <= toDate;
+    }
+
+    return matchesSearch && matchesWorker && matchesCompany && matchesDateFrom && matchesDateTo;
   });
 
   const uniqueWorkers = [...new Set(records.map(r => r.worker_name))];
+  const uniqueCompanies = [...new Set(records.map(r => r.company_name))];
   const totalHours = records.reduce((sum, r) => sum + parseFloat(r.hours_worked || 0), 0);
   const workersList = [...new Set(records.map(r => r.worker_name))];
+
+  // Filtro para empresas
+  const filteredCompanies = companies.filter(c => {
+    const matchesSearch = !companySearchTerm ||
+      c.name.toLowerCase().includes(companySearchTerm.toLowerCase());
+    const matchesType = !companyTypeFilter || c.type === companyTypeFilter;
+    return matchesSearch && matchesType;
+  });
 
   if (!isAuthenticated) {
     return (
@@ -535,13 +577,15 @@ export default function AdminPage() {
               className="rounded-xl shadow-lg p-6 mb-6"
               style={{ background: theme.surface }}
             >
-              <div className="flex gap-4 flex-wrap items-center">
-                <div className="flex-1 min-w-[200px]">
+              <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda Avanzada</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar funcionario o empresa..."
+                    placeholder="Nombre, empresa o descripción..."
                     className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
                     style={{
                       borderColor: theme.border,
@@ -550,34 +594,97 @@ export default function AdminPage() {
                     }}
                   />
                 </div>
-                <select
-                  value={selectedWorker}
-                  onChange={(e) => setSelectedWorker(e.target.value)}
-                  className="px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                  style={{
-                    borderColor: theme.border,
-                    background: isDark ? '#0f1419' : '#fff',
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Todos los funcionarios</option>
-                  {uniqueWorkers.map(w => <option key={w} value={w}>{w}</option>)}
-                </select>
-                <button
-                  onClick={handleExport}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                  style={{ background: '#27ae60' }}
-                >
-                  <Download className="w-4 h-4" /> Exportar
-                </button>
-                <button
-                  onClick={loadAllData}
-                  disabled={loading}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                  style={{ background: theme.primary }}
-                >
-                  Actualizar
-                </button>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Funcionario</label>
+                  <select
+                    value={selectedWorker}
+                    onChange={(e) => setSelectedWorker(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  >
+                    <option value="">Todos los funcionarios</option>
+                    {uniqueWorkers.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Empresa</label>
+                  <select
+                    value={selectedCompany}
+                    onChange={(e) => setSelectedCompany(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  >
+                    <option value="">Todas las empresas</option>
+                    {uniqueCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer border-2"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                  >
+                    Limpiar Filtros
+                  </button>
+                  <button
+                    onClick={loadAllData}
+                    disabled={loading}
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                    style={{ background: theme.primary }}
+                  >
+                    Actualizar
+                  </button>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm" style={{ color: theme.textSecondary }}>
+                    {filteredRecords.length} resultados
+                  </span>
+                  <button
+                    onClick={handleExport}
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                    style={{ background: '#27ae60' }}
+                  >
+                    <Download className="w-4 h-4" /> Exportar Excel
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -684,7 +791,7 @@ export default function AdminPage() {
                     type="text"
                     placeholder="Nombre de usuario"
                     value={newWorker.username}
-                    onChange={(e) => setNewWorker({...newWorker, username: e.target.value})}
+                    onChange={(e) => setNewWorker({ ...newWorker, username: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -696,7 +803,7 @@ export default function AdminPage() {
                     type="password"
                     placeholder="Contraseña"
                     value={newWorker.password}
-                    onChange={(e) => setNewWorker({...newWorker, password: e.target.value})}
+                    onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -708,7 +815,7 @@ export default function AdminPage() {
                     type="text"
                     placeholder="Nombre completo"
                     value={newWorker.full_name}
-                    onChange={(e) => setNewWorker({...newWorker, full_name: e.target.value})}
+                    onChange={(e) => setNewWorker({ ...newWorker, full_name: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -720,7 +827,7 @@ export default function AdminPage() {
                     type="email"
                     placeholder="Email (opcional)"
                     value={newWorker.email}
-                    onChange={(e) => setNewWorker({...newWorker, email: e.target.value})}
+                    onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -775,7 +882,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3 flex items-center gap-2">
                             <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
                             <button
-                              onClick={() => setShowPasswordsSet({...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id]})}
+                              onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
                               className="hover:opacity-70"
                               style={{ color: theme.primary }}
                             >
@@ -838,7 +945,7 @@ export default function AdminPage() {
                     type="text"
                     placeholder="Nombre de la empresa"
                     value={newCompany.name}
-                    onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                    onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -848,7 +955,7 @@ export default function AdminPage() {
                   />
                   <select
                     value={newCompany.type}
-                    onChange={(e) => setNewCompany({...newCompany, type: e.target.value})}
+                    onChange={(e) => setNewCompany({ ...newCompany, type: e.target.value })}
                     className="px-4 py-2 border-2 rounded-lg focus:outline-none"
                     style={{
                       borderColor: theme.border,
@@ -870,11 +977,51 @@ export default function AdminPage() {
               )}
             </div>
 
+            {/* Búsqueda de Empresas */}
+            <div
+              className="rounded-xl shadow-lg p-4 mb-6"
+              style={{ background: theme.surface }}
+            >
+              <div className="flex gap-4 flex-wrap items-center">
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    value={companySearchTerm}
+                    onChange={(e) => setCompanySearchTerm(e.target.value)}
+                    placeholder="Buscar empresa por nombre..."
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <select
+                  value={companyTypeFilter}
+                  onChange={(e) => setCompanyTypeFilter(e.target.value)}
+                  className="px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                  style={{
+                    borderColor: theme.border,
+                    background: isDark ? '#0f1419' : '#fff',
+                    color: theme.text,
+                  }}
+                >
+                  <option value="">Todos los tipos</option>
+                  <option value="auditoria">Auditoría</option>
+                  <option value="contabilidad">Contabilidad</option>
+                </select>
+                <span className="text-sm" style={{ color: theme.textSecondary }}>
+                  {filteredCompanies.length} empresas
+                </span>
+              </div>
+            </div>
+
             <div
               className="rounded-xl shadow-lg overflow-hidden"
               style={{ background: theme.surface }}
             >
-              {companies.length === 0 ? (
+              {filteredCompanies.length === 0 ? (
                 <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
                   No hay empresas registradas
                 </div>
@@ -889,7 +1036,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {companies.map(company => (
+                      {filteredCompanies.map(company => (
                         <tr
                           key={company.id}
                           className="border-b hover:opacity-75 transition-opacity"
@@ -948,14 +1095,14 @@ export default function AdminPage() {
               style={{ background: theme.surface }}
             >
               <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
                   <input
                     type="datetime-local"
                     value={reportFilters.startDate}
-                    onChange={(e) => setReportFilters({...reportFilters, startDate: e.target.value})}
+                    onChange={(e) => setReportFilters({ ...reportFilters, startDate: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
@@ -970,7 +1117,7 @@ export default function AdminPage() {
                   <input
                     type="datetime-local"
                     value={reportFilters.endDate}
-                    onChange={(e) => setReportFilters({...reportFilters, endDate: e.target.value})}
+                    onChange={(e) => setReportFilters({ ...reportFilters, endDate: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
@@ -984,7 +1131,7 @@ export default function AdminPage() {
                   <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
                   <select
                     value={reportFilters.worker}
-                    onChange={(e) => setReportFilters({...reportFilters, worker: e.target.value})}
+                    onChange={(e) => setReportFilters({ ...reportFilters, worker: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
                     style={{
                       borderColor: theme.border,
@@ -1056,7 +1203,7 @@ export default function AdminPage() {
                             <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
                             <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
                             <td className="px-4 py-3">
-                              <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{background: theme.primary}}>
+                              <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ background: theme.primary }}>
                                 {record.hours_worked}h
                               </span>
                             </td>
