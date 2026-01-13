@@ -59,6 +59,18 @@ export default function AdminPage() {
   const [realtimeStats, setRealtimeStats] = useState(null);
   const [showAlertsWidget, setShowAlertsWidget] = useState(true);
   const [showQualityWidget, setShowQualityWidget] = useState(true);
+  const [closingAlerts, setClosingAlerts] = useState(false);
+  const [closingQuality, setClosingQuality] = useState(false);
+
+  const handleCloseAlertsWidget = () => {
+    setClosingAlerts(true);
+    setTimeout(() => setShowAlertsWidget(false), 400);
+  };
+
+  const handleCloseQualityWidget = () => {
+    setClosingQuality(true);
+    setTimeout(() => setShowQualityWidget(false), 400);
+  };
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -381,16 +393,7 @@ export default function AdminPage() {
         )}
 
         {/* ESTADÍSTICAS EN TIEMPO REAL */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div
-            className="rounded-xl shadow-lg p-4"
-            style={{ background: theme.surface }}
-          >
-            <p style={{ color: theme.textSecondary }} className="text-sm">Activos Ahora</p>
-            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-              {realtimeStats?.activeNow || 0}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div
             className="rounded-xl shadow-lg p-4"
             style={{ background: theme.surface }}
@@ -423,7 +426,7 @@ export default function AdminPage() {
         {/* ALERTAS DE FALTA DE REPORTES */}
         {showAlertsWidget && workersWithoutReports.length > 0 && (
           <div
-            className="rounded-xl shadow-lg p-6 mb-6"
+            className={`rounded-xl shadow-lg p-6 mb-6 ${closingAlerts ? 'widget-close' : ''}`}
             style={{ background: theme.surface, borderLeft: '4px solid #f39c12' }}
           >
             <div className="flex items-center justify-between gap-2 mb-4">
@@ -432,7 +435,7 @@ export default function AdminPage() {
                 <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
               </div>
               <button
-                onClick={() => setShowAlertsWidget(false)}
+                onClick={handleCloseAlertsWidget}
                 className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
                 style={{ background: '#f39c12', color: '#fff' }}
               >
@@ -467,7 +470,7 @@ export default function AdminPage() {
         {/* PROBLEMAS DE CALIDAD */}
         {showQualityWidget && qualityIssues.length > 0 && (
           <div
-            className="rounded-xl shadow-lg p-6 mb-6"
+            className={`rounded-xl shadow-lg p-6 mb-6 ${closingQuality ? 'widget-close' : ''}`}
             style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
           >
             <div className="flex items-center justify-between gap-2 mb-4">
@@ -476,7 +479,7 @@ export default function AdminPage() {
                 <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
               </div>
               <button
-                onClick={() => setShowQualityWidget(false)}
+                onClick={handleCloseQualityWidget}
                 className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
                 style={{ background: '#e74c3c', color: '#fff' }}
               >
