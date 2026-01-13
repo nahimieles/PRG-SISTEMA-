@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
-import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies } from '../../lib/auth.js';
+import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession } from '../../lib/auth.js';
 
 export default function FuncionariosPage() {
   const { isDark } = useTheme();
@@ -27,17 +27,35 @@ export default function FuncionariosPage() {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
 
+  // Verificar sesión al montar el componente
+  useEffect(() => {
+    const savedSession = getWorkerSession();
+    if (savedSession) {
+      setCurrentWorker(savedSession);
+      setIsAuthenticated(true);
+      loadMyRecords(savedSession.id);
+      getCompanies().then(setCompanies);
+    }
+  }, []);
+
   const handleLogin = async (username, password) => {
     const result = await loginWorker(username, password);
     if (result.success) {
       setCurrentWorker(result.worker);
       setIsAuthenticated(true);
+      saveWorkerSession(result.worker); // Guardar sesión
       loadMyRecords(result.worker.id);
       const companiesData = await getCompanies();
       setCompanies(companiesData);
       return { success: true };
     }
     return result;
+  };
+
+  const handleLogout = () => {
+    clearWorkerSession();
+    setIsAuthenticated(false);
+    setCurrentWorker(null);
   };
 
   const loadMyRecords = async (workerId) => {
@@ -137,7 +155,7 @@ export default function FuncionariosPage() {
             </div>
             <ThemeToggle />
             <button
-              onClick={() => setIsAuthenticated(false)}
+              onClick={handleLogout}
               className="text-white px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 cursor-pointer text-sm md:text-base"
               style={{ background: '#e74c3c' }}
             >

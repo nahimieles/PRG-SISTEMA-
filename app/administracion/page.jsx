@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, getCompanies, addCompany, deleteCompany } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 
@@ -53,9 +53,27 @@ export default function AdminPage() {
   });
   const [reportData, setReportData] = useState(null);
 
+  // Estado para alertas y estadísticas
+  const [workersWithoutReports, setWorkersWithoutReports] = useState([]);
+  const [qualityIssues, setQualityIssues] = useState([]);
+  const [realtimeStats, setRealtimeStats] = useState(null);
+
+  // Verificar sesión al montar
+  useEffect(() => {
+    const savedSession = getAdminSession();
+    if (savedSession) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated) {
       loadAllData();
+      loadAlertsAndStats();
+      
+      // Actualizar estadísticas cada 30 segundos
+      const interval = setInterval(loadAlertsAndStats, 30000);
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
@@ -63,9 +81,23 @@ export default function AdminPage() {
     const result = await loginAdmin(username, password);
     if (result.success) {
       setIsAuthenticated(true);
+      saveAdminSession(result.admin); // Guardar sesión
       return { success: true };
     }
     return result;
+  };
+
+  const handleLogout = () => {
+    clearAdminSession();
+    setIsAuthenticated(false);
+  };
+
+  const loadAlertsAndStats = async () => {
+    const workersAlert = await getWorkersWithoutReports(3);
+    setWorkersWithoutReports(workersAlert);
+
+    const stats = await getRealTimeStats();
+    setRealtimeStats(stats);
   };
 
   const loadAllData = async () => {
@@ -73,9 +105,15 @@ export default function AdminPage() {
     const recordsData = await getRecords();
     const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
     const companiesData = await getCompanies();
+    
     setRecords(recordsData);
     if (!workersData.error) setWorkers(workersData.data || []);
     setCompanies(companiesData);
+
+    // Detectar problemas de calidad
+    const issues = await getQualityIssues(recordsData);
+    setQualityIssues(issues);
+
     setLoading(false);
   };
 
@@ -296,7 +334,7 @@ export default function AdminPage() {
           <div className="flex gap-2 md:gap-4 items-center">
             <ThemeToggle />
             <button
-              onClick={() => setIsAuthenticated(false)}
+              onClick={handleLogout}
               className="text-white px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 cursor-pointer text-sm md:text-base"
               style={{ background: '#e74c3c' }}
             >
@@ -337,6 +375,121 @@ export default function AdminPage() {
             color: message.includes('correctamente') ? '#155724' : '#721c24'
           }}>
             {message}
+          </div>
+        )}
+
+        {/* ESTADÍSTICAS EN TIEMPO REAL */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div
+            className="rounded-xl shadow-lg p-4"
+            style={{ background: theme.surface }}
+          >
+            <p style={{ color: theme.textSecondary }} className="text-sm">Activos Hoy</p>
+            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
+              {realtimeStats?.activeWorkersToday || 0}
+            </p>
+          </div>
+          <div
+            className="rounded-xl shadow-lg p-4"
+            style={{ background: theme.surface }}
+          >
+            <p style={{ color: theme.textSecondary }} className="text-sm">Horas Hoy</p>
+            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
+              {realtimeStats?.totalHoursToday.toFixed(2) || '0.00'}h
+            </p>
+          </div>
+          <div
+            className="rounded-xl shadow-lg p-4"
+            style={{ background: theme.surface }}
+          >
+            <p style={{ color: theme.textSecondary }} className="text-sm">Registros Totales</p>
+            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
+              {realtimeStats?.totalRecords || 0}
+            </p>
+          </div>
+          <div
+            className="rounded-xl shadow-lg p-4"
+            style={{ background: theme.surface }}
+          >
+            <p style={{ color: theme.textSecondary }} className="text-sm">Problemas de Calidad</p>
+            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: '#e74c3c' }}>
+              {qualityIssues.length}
+            </p>
+          </div>
+        </div>
+
+        {/* ALERTAS DE FALTA DE REPORTES */}
+        {workersWithoutReports.length > 0 && (
+          <div
+            className="rounded-xl shadow-lg p-6 mb-6"
+            style={{ background: theme.surface, borderLeft: '4px solid #f39c12' }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5" style={{ color: '#f39c12' }} />
+              <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
+            </div>
+            <div className="grid gap-2">
+              {workersWithoutReports.map(worker => (
+                <div
+                  key={worker.id}
+                  className="p-3 rounded-lg flex justify-between items-center"
+                  style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                >
+                  <div>
+                    <p className="font-semibold">{worker.name}</p>
+                    <p style={{ color: theme.textSecondary }} className="text-sm">
+                      {worker.daysWithoutReport} días sin reportes {worker.lastReportDate && `(última: ${new Date(worker.lastReportDate).toLocaleDateString('es-ES')})`}
+                    </p>
+                  </div>
+                  <button
+                    className="text-white px-3 py-1 rounded text-xs cursor-pointer hover:opacity-90"
+                    style={{ background: '#f39c12' }}
+                  >
+                    Recordar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PROBLEMAS DE CALIDAD */}
+        {qualityIssues.length > 0 && (
+          <div
+            className="rounded-xl shadow-lg p-6 mb-6"
+            style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
+              <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
+            </div>
+            <div className="grid gap-2 max-h-64 overflow-y-auto">
+              {qualityIssues.slice(0, 5).map(issue => (
+                <div
+                  key={`${issue.id}-${issue.type}`}
+                  className="p-3 rounded-lg flex justify-between items-center"
+                  style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                >
+                  <div>
+                    <p className="font-semibold text-sm">{issue.message}</p>
+                    <p style={{ color: theme.textSecondary }} className="text-xs">
+                      {issue.record.worker_name} - {issue.record.company_name}
+                    </p>
+                  </div>
+                  <span
+                    className="px-2 py-1 rounded text-white text-xs font-semibold"
+                    style={{ background: issue.severity === 'error' ? '#e74c3c' : '#f39c12' }}
+                  >
+                    {issue.severity}
+                  </span>
+                </div>
+              ))}
+              {qualityIssues.length > 5 && (
+                <p style={{ color: theme.textSecondary }} className="text-sm text-center pt-2">
+                  +{qualityIssues.length - 5} problemas más
+                </p>
+              )}
+            </div>
           </div>
         )}
 
