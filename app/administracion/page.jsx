@@ -57,6 +57,8 @@ export default function AdminPage() {
   const [workersWithoutReports, setWorkersWithoutReports] = useState([]);
   const [qualityIssues, setQualityIssues] = useState([]);
   const [realtimeStats, setRealtimeStats] = useState(null);
+  const [showAlertsWidget, setShowAlertsWidget] = useState(true);
+  const [showQualityWidget, setShowQualityWidget] = useState(true);
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -384,9 +386,9 @@ export default function AdminPage() {
             className="rounded-xl shadow-lg p-4"
             style={{ background: theme.surface }}
           >
-            <p style={{ color: theme.textSecondary }} className="text-sm">Activos Hoy</p>
+            <p style={{ color: theme.textSecondary }} className="text-sm">Activos Ahora</p>
             <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-              {realtimeStats?.activeWorkersToday || 0}
+              {realtimeStats?.activeNow || 0}
             </p>
           </div>
           <div
@@ -419,14 +421,23 @@ export default function AdminPage() {
         </div>
 
         {/* ALERTAS DE FALTA DE REPORTES */}
-        {workersWithoutReports.length > 0 && (
+        {showAlertsWidget && workersWithoutReports.length > 0 && (
           <div
             className="rounded-xl shadow-lg p-6 mb-6"
             style={{ background: theme.surface, borderLeft: '4px solid #f39c12' }}
           >
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle className="w-5 h-5" style={{ color: '#f39c12' }} />
-              <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" style={{ color: '#f39c12' }} />
+                <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
+              </div>
+              <button
+                onClick={() => setShowAlertsWidget(false)}
+                className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
+                style={{ background: '#f39c12', color: '#fff' }}
+              >
+                ✕
+              </button>
             </div>
             <div className="grid gap-2">
               {workersWithoutReports.map(worker => (
@@ -454,14 +465,23 @@ export default function AdminPage() {
         )}
 
         {/* PROBLEMAS DE CALIDAD */}
-        {qualityIssues.length > 0 && (
+        {showQualityWidget && qualityIssues.length > 0 && (
           <div
             className="rounded-xl shadow-lg p-6 mb-6"
             style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
           >
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
-              <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
+                <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
+              </div>
+              <button
+                onClick={() => setShowQualityWidget(false)}
+                className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
+                style={{ background: '#e74c3c', color: '#fff' }}
+              >
+                ✕
+              </button>
             </div>
             <div className="grid gap-2 max-h-64 overflow-y-auto">
               {qualityIssues.slice(0, 5).map(issue => (
