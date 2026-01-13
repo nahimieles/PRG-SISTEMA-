@@ -98,6 +98,23 @@ export default function AdminPage() {
     }
   }, [isAuthenticated]);
 
+  // Calcular datos del dashboard cuando records cambia
+  useEffect(() => {
+    if (records.length > 0) {
+      const productivityCompany = getProductivityByCompany(records);
+      const productivityWorker = getProductivityByWorker(records);
+      const hoursByDay = getHoursByDay(records);
+      const topActivities = getTopActivities(records);
+
+      setDashboardData({
+        productivityCompany,
+        productivityWorker,
+        hoursByDay,
+        topActivities
+      });
+    }
+  }, [records]);
+
   const handleLogin = async (username, password) => {
     const result = await loginAdmin(username, password);
     if (result.success) {
@@ -119,21 +136,6 @@ export default function AdminPage() {
 
     const stats = await getRealTimeStats();
     setRealtimeStats(stats);
-
-    // Calcular datos del dashboard
-    if (records.length > 0) {
-      const productivityCompany = getProductivityByCompany(records);
-      const productivityWorker = getProductivityByWorker(records);
-      const hoursByDay = getHoursByDay(records);
-      const topActivities = getTopActivities(records);
-
-      setDashboardData({
-        productivityCompany,
-        productivityWorker,
-        hoursByDay,
-        topActivities
-      });
-    }
   };
 
   const loadAllData = async () => {
