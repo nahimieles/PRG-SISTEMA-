@@ -16,6 +16,7 @@ export default function FuncionariosPage() {
   const [currentWorker, setCurrentWorker] = useState(null);
   const [formData, setFormData] = useState({
     companyName: '',
+    serviceType: '',
     startDateTime: '',
     endDateTime: '',
     description: ''
@@ -70,6 +71,7 @@ export default function FuncionariosPage() {
       workerId: currentWorker.id,
       workerName: currentWorker.full_name,
       companyName: formData.companyName,
+      serviceType: formData.serviceType,
       startDateTime: formData.startDateTime,
       endDateTime: formData.endDateTime,
       description: formData.description,
@@ -84,6 +86,7 @@ export default function FuncionariosPage() {
       setShowSuccess('success');
       setFormData({
         companyName: '',
+        serviceType: '',
         startDateTime: '',
         endDateTime: '',
         description: ''
@@ -186,6 +189,26 @@ export default function FuncionariosPage() {
                       {company.name}
                     </option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-2">
+                  Tipo de Servicio *
+                </label>
+                <select
+                  required
+                  value={formData.serviceType}
+                  onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors"
+                  style={{
+                    borderColor: theme.border,
+                    background: isDark ? '#0f1419' : '#fff',
+                    color: theme.text,
+                  }}
+                >
+                  <option value="">Selecciona tipo de servicio</option>
+                  <option value="auditoria">Auditoría</option>
+                  <option value="contabilidad">Contabilidad</option>
                 </select>
               </div>
             </div>
