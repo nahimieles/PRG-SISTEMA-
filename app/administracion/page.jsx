@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, TrendingUp } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getProductivityByCompany, getProductivityByWorker, getHoursByDay, getTopActivities } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 
@@ -62,12 +61,6 @@ export default function AdminPage() {
   const [showQualityWidget, setShowQualityWidget] = useState(true);
   const [closingAlerts, setClosingAlerts] = useState(false);
   const [closingQuality, setClosingQuality] = useState(false);
-  const [dashboardData, setDashboardData] = useState({
-    productivityCompany: [],
-    productivityWorker: [],
-    hoursByDay: [],
-    topActivities: []
-  });
 
   const handleCloseAlertsWidget = () => {
     setClosingAlerts(true);
@@ -97,31 +90,6 @@ export default function AdminPage() {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
-
-  // Calcular datos del dashboard cuando records cambia
-  useEffect(() => {
-    if (records.length > 0) {
-      console.log('Calculando dashboard con registros:', records);
-      const productivityCompany = getProductivityByCompany(records);
-      const productivityWorker = getProductivityByWorker(records);
-      const hoursByDay = getHoursByDay(records);
-      const topActivities = getTopActivities(records);
-
-      console.log('Datos calculados:', {
-        productivityCompany,
-        productivityWorker,
-        hoursByDay,
-        topActivities
-      });
-
-      setDashboardData({
-        productivityCompany,
-        productivityWorker,
-        hoursByDay,
-        topActivities
-      });
-    }
-  }, [records]);
 
   const handleLogin = async (username, password) => {
     const result = await loginAdmin(username, password);
@@ -153,6 +121,7 @@ export default function AdminPage() {
     const companiesData = await getCompanies();
     
     console.log('Registros cargados:', recordsData);
+    console.log('Primer registro:', recordsData[0]);
     
     setRecords(recordsData);
     if (!workersData.error) setWorkers(workersData.data || []);
@@ -397,8 +366,7 @@ export default function AdminPage() {
             { id: 'actividades', label: 'Actividades', icon: FileText },
             { id: 'funcionarios', label: 'Funcionarios', icon: Users },
             { id: 'empresas', label: 'Empresas', icon: BarChart3 },
-            { id: 'reportes', label: 'Reportes', icon: Calendar },
-            { id: 'dashboards', label: 'Dashboards', icon: TrendingUp }
+            { id: 'reportes', label: 'Reportes', icon: Calendar }
           ].map(tab => {
             const Icon = tab.icon;
             return (
@@ -1101,120 +1069,6 @@ export default function AdminPage() {
                 )}
               </div>
             )}
-
-        {/* TAB: DASHBOARDS */}
-        {activeTab === 'dashboards' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Productividad por Empresa */}
-            {dashboardData.productivityCompany.length > 0 && (
-              <div className="p-6 rounded-lg" style={{ background: theme.surface }}>
-                <h3 className="text-lg font-semibold mb-4">Productividad por Empresa</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={dashboardData.productivityCompany}>
-                    <CartesianGrid stroke={theme.border} />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fill: theme.text, fontSize: 12 }} />
-                    <YAxis tick={{ fill: theme.text, fontSize: 12 }} />
-                    <Tooltip 
-                      contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '8px' }}
-                      labelStyle={{ color: theme.text }}
-                    />
-                    <Legend />
-                    <Bar dataKey="Horas" fill={theme.primary} radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Productividad por Trabajador */}
-            {dashboardData.productivityWorker.length > 0 && (
-              <div className="p-6 rounded-lg" style={{ background: theme.surface }}>
-                <h3 className="text-lg font-semibold mb-4">Productividad por Trabajador</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={dashboardData.productivityWorker.slice(0, 10)}>
-                    <CartesianGrid stroke={theme.border} />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fill: theme.text, fontSize: 12 }} />
-                    <YAxis tick={{ fill: theme.text, fontSize: 12 }} />
-                    <Tooltip 
-                      contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '8px' }}
-                      labelStyle={{ color: theme.text }}
-                    />
-                    <Legend />
-                    <Bar dataKey="Horas" fill={theme.secondary || '#10b981'} radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Tendencia de Horas (últimos 30 días) */}
-            {dashboardData.hoursByDay.length > 0 && (
-              <div className="p-6 rounded-lg md:col-span-2" style={{ background: theme.surface }}>
-                <h3 className="text-lg font-semibold mb-4">Picos de Trabajo (últimos 30 días)</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={dashboardData.hoursByDay}>
-                    <CartesianGrid stroke={theme.border} />
-                    <XAxis 
-                      dataKey="dia" 
-                      tick={{ fill: theme.text, fontSize: 11 }} 
-                      interval={Math.floor(dashboardData.hoursByDay.length / 7)}
-                    />
-                    <YAxis tick={{ fill: theme.text, fontSize: 12 }} />
-                    <Tooltip 
-                      contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '8px' }}
-                      labelStyle={{ color: theme.text }}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="horas" 
-                      stroke={theme.primary} 
-                      strokeWidth={2}
-                      dot={{ fill: theme.primary, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Top 5 Empresas */}
-            {dashboardData.topActivities.length > 0 && (
-              <div className="p-6 rounded-lg md:col-span-2" style={{ background: theme.surface }}>
-                <h3 className="text-lg font-semibold mb-4">Top 5 Empresas por Horas Trabajadas</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={dashboardData.topActivities}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}h`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {dashboardData.topActivities.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={[theme.primary, '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: '8px' }}
-                      labelStyle={{ color: theme.text }}
-                      formatter={(value) => `${value}h`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {records.length === 0 && (
-              <div className="col-span-1 md:col-span-2 text-center py-12">
-                <p className="text-lg" style={{ color: theme.text }}>No hay datos para mostrar</p>
-                <p className="text-sm mt-2" style={{ color: theme.text }}>registros cargados: {records.length}</p>
-                <p className="text-sm mt-2" style={{ color: theme.text }}>dashboard data: {JSON.stringify(dashboardData)}</p>
-              </div>
-            )}
-          </div>
-        )}
 
           </>
         )}
