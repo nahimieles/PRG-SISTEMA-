@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -304,7 +304,7 @@ export default function AdminPage() {
 
   const exportReport = () => {
     if (reportData && reportData.records.length > 0) {
-      exportToCSV(reportData.records, 'reporte-actividades');
+      exportToExcel(reportData.records, 'reporte-actividades');
     } else {
       alert('No hay datos para exportar');
     }
@@ -474,17 +474,17 @@ export default function AdminPage() {
         {showAlertsWidget && workersWithoutReports.length > 0 && (
           <div
             className={`rounded-xl shadow-lg p-6 mb-6 ${closingAlerts ? 'widget-close' : ''}`}
-            style={{ background: theme.surface, borderLeft: '4px solid #f39c12' }}
+            style={{ background: theme.surface, borderLeft: '4px solid #d4af37' }}
           >
             <div className="flex items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" style={{ color: '#f39c12' }} />
+                <AlertCircle className="w-5 h-5" style={{ color: '#d4af37' }} />
                 <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
               </div>
               <button
                 onClick={handleCloseAlertsWidget}
                 className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
-                style={{ background: '#f39c12', color: '#fff' }}
+                style={{ background: '#d4af37', color: '#fff' }}
               >
                 ✕
               </button>
@@ -504,7 +504,7 @@ export default function AdminPage() {
                   </div>
                   <button
                     className="text-white px-3 py-1 rounded text-xs cursor-pointer hover:opacity-90"
-                    style={{ background: '#f39c12' }}
+                    style={{ background: '#d4af37' }}
                   >
                     Recordar
                   </button>
@@ -548,7 +548,7 @@ export default function AdminPage() {
                   </div>
                   <span
                     className="px-2 py-1 rounded text-white text-xs font-semibold"
-                    style={{ background: issue.severity === 'error' ? '#e74c3c' : '#f39c12' }}
+                    style={{ background: issue.severity === 'error' ? '#e74c3c' : '#d4af37' }}
                   >
                     {issue.severity}
                   </span>
@@ -1093,7 +1093,7 @@ export default function AdminPage() {
           <>
             {/* Colores para gráficos */}
             {(() => {
-              const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
+              const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
               // Calcular datos para gráficos
               const hoursByCompany = {};
@@ -1150,8 +1150,8 @@ export default function AdminPage() {
                       className="rounded-xl shadow-lg p-6"
                       style={{ background: theme.surface }}
                     >
-                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
-                        🏢 Top Empresas por Horas
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                        <Building2 className="w-5 h-5" /> Top Empresas por Horas
                       </h3>
                       {topCompanies.length === 0 ? (
                         <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
@@ -1176,8 +1176,8 @@ export default function AdminPage() {
                       className="rounded-xl shadow-lg p-6"
                       style={{ background: theme.surface }}
                     >
-                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
-                        👤 Productividad por Funcionario
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                        <TrendingUp className="w-5 h-5" /> Productividad por Funcionario
                       </h3>
                       {workerData.length === 0 ? (
                         <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
@@ -1205,8 +1205,8 @@ export default function AdminPage() {
                       className="rounded-xl shadow-lg p-6"
                       style={{ background: theme.surface }}
                     >
-                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
-                        📊 Distribución por Tipo
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                        <BarChart3 className="w-5 h-5" /> Distribución por Tipo
                       </h3>
                       {pieData.every(d => d.value === 0) ? (
                         <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
@@ -1239,8 +1239,8 @@ export default function AdminPage() {
                       className="rounded-xl shadow-lg p-6"
                       style={{ background: theme.surface }}
                     >
-                      <h3 className="text-lg font-bold mb-4" style={{ color: theme.primary }}>
-                        🕐 Actividades Recientes
+                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                        <Clock className="w-5 h-5" /> Actividades Recientes
                       </h3>
                       {recentActivities.length === 0 ? (
                         <p style={{ color: theme.textSecondary }}>No hay actividades recientes</p>
