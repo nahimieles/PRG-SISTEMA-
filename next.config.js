@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Using default Vercel deployment (not static export)
+  // This allows dynamic features like client-side data fetching
 }
 
 module.exports = nextConfig
