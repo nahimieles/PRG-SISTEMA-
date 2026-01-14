@@ -79,6 +79,9 @@ export default function AdminPage() {
   const [attendanceDateFrom, setAttendanceDateFrom] = useState('');
   const [attendanceDateTo, setAttendanceDateTo] = useState('');
 
+  // Estado para selección múltiple (borrado en lote)
+  const [selectedRecords, setSelectedRecords] = useState(new Set());
+
 
   const handleCloseAlertsWidget = () => {
     setClosingAlerts(true);
@@ -245,8 +248,48 @@ export default function AdminPage() {
     const success = await deleteRecord(id);
     if (success) {
       loadAllData();
+      setSelectedRecords(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
+
+  // Funciones para selección múltiple
+  const toggleRecordSelection = (id) => {
+    setSelectedRecords(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = (filteredRecords) => {
+    if (selectedRecords.size === filteredRecords.length) {
+      setSelectedRecords(new Set());
+    } else {
+      setSelectedRecords(new Set(filteredRecords.map(r => r.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRecords.size === 0) return;
+    if (!confirm(`¿Eliminar ${selectedRecords.size} registros seleccionados?`)) return;
+
+    setLoading(true);
+    for (const id of selectedRecords) {
+      await deleteRecord(id);
+    }
+    setSelectedRecords(new Set());
+    loadAllData();
+    setLoading(false);
+  };
+
 
   const handleAddCompany = async (e) => {
     e.preventDefault();
@@ -733,9 +776,38 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
+                  {/* Botón de borrado masivo */}
+                  {selectedRecords.size > 0 && (
+                    <div className="p-4 flex items-center gap-4" style={{ background: isDark ? '#1a1a2e' : '#fff3cd' }}>
+                      <span className="font-semibold">{selectedRecords.size} seleccionados</span>
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={loading}
+                        className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        style={{ background: '#e74c3c' }}
+                      >
+                        <Trash2 className="w-4 h-4" /> Eliminar seleccionados
+                      </button>
+                      <button
+                        onClick={() => setSelectedRecords(new Set())}
+                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer"
+                        style={{ border: `1px solid ${theme.border}`, color: theme.text }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
                   <table className="w-full text-sm">
                     <thead className="text-white" style={{ background: theme.primary }}>
                       <tr>
+                        <th className="px-3 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedRecords.size === filteredRecords.length && filteredRecords.length > 0}
+                            onChange={() => toggleSelectAll(filteredRecords)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </th>
                         <th className="px-4 py-3 text-left">Funcionario</th>
                         <th className="px-4 py-3 text-left">Empresa</th>
                         <th className="px-4 py-3 text-left">Inicio</th>
@@ -753,9 +825,19 @@ export default function AdminPage() {
                           className="border-b hover:opacity-75 transition-opacity"
                           style={{
                             borderColor: theme.border,
-                            background: isDark ? 'transparent' : '#f8f9fa'
+                            background: selectedRecords.has(record.id)
+                              ? (isDark ? '#1a3a5c' : '#e3f2fd')
+                              : (isDark ? 'transparent' : '#f8f9fa')
                           }}
                         >
+                          <td className="px-3 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecords.has(record.id)}
+                              onChange={() => toggleRecordSelection(record.id)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
                           <td className="px-4 py-3">{record.company_name}</td>
                           <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
