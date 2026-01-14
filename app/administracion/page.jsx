@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -81,6 +81,10 @@ export default function AdminPage() {
 
   // Estado para selección múltiple (borrado en lote)
   const [selectedRecords, setSelectedRecords] = useState(new Set());
+  const [deleteMode, setDeleteMode] = useState(false);
+
+  // Estado para modal de detalle de registro
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
 
   const handleCloseAlertsWidget = () => {
@@ -286,7 +290,25 @@ export default function AdminPage() {
       await deleteRecord(id);
     }
     setSelectedRecords(new Set());
+    setDeleteMode(false);
     loadAllData();
+    setLoading(false);
+  };
+
+  const cancelDeleteMode = () => {
+    setDeleteMode(false);
+    setSelectedRecords(new Set());
+  };
+
+  // Función para refrescar datos de asistencia
+  const refreshAttendanceData = async () => {
+    setLoading(true);
+    const attRecords = await getAllAttendanceRecords();
+    setAttendanceRecords(attRecords);
+    const activeAtt = await getActiveAttendances();
+    setActiveAttendances(activeAtt);
+    const attStats = await getAttendanceStats();
+    setAttendanceStats(attStats);
     setLoading(false);
   };
 
@@ -776,38 +798,50 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  {/* Botón de borrado masivo */}
-                  {selectedRecords.size > 0 && (
+                  {/* Barra de modo eliminación */}
+                  {deleteMode ? (
                     <div className="p-4 flex items-center gap-4" style={{ background: isDark ? '#1a1a2e' : '#fff3cd' }}>
                       <span className="font-semibold">{selectedRecords.size} seleccionados</span>
                       <button
                         onClick={handleBulkDelete}
-                        disabled={loading}
+                        disabled={loading || selectedRecords.size === 0}
                         className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                         style={{ background: '#e74c3c' }}
                       >
-                        <Trash2 className="w-4 h-4" /> Eliminar seleccionados
+                        <Trash2 className="w-4 h-4" /> Eliminar
                       </button>
                       <button
-                        onClick={() => setSelectedRecords(new Set())}
-                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer"
+                        onClick={cancelDeleteMode}
+                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2"
                         style={{ border: `1px solid ${theme.border}`, color: theme.text }}
                       >
-                        Cancelar
+                        <X className="w-4 h-4" /> Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-4 flex justify-end">
+                      <button
+                        onClick={() => setDeleteMode(true)}
+                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2 text-sm"
+                        style={{ background: '#e74c3c', color: 'white' }}
+                      >
+                        <Trash2 className="w-4 h-4" /> Seleccionar para eliminar
                       </button>
                     </div>
                   )}
                   <table className="w-full text-sm">
                     <thead className="text-white" style={{ background: theme.primary }}>
                       <tr>
-                        <th className="px-3 py-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedRecords.size === filteredRecords.length && filteredRecords.length > 0}
-                            onChange={() => toggleSelectAll(filteredRecords)}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                        </th>
+                        {deleteMode && (
+                          <th className="px-3 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecords.size === filteredRecords.length && filteredRecords.length > 0}
+                              onChange={() => toggleSelectAll(filteredRecords)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                          </th>
+                        )}
                         <th className="px-4 py-3 text-left">Funcionario</th>
                         <th className="px-4 py-3 text-left">Empresa</th>
                         <th className="px-4 py-3 text-left">Inicio</th>
@@ -815,29 +849,32 @@ export default function AdminPage() {
                         <th className="px-4 py-3 text-left">Horas</th>
                         <th className="px-4 py-3 text-left">Descripción</th>
                         <th className="px-4 py-3 text-left">Archivo</th>
-                        <th className="px-4 py-3 text-left">Acciones</th>
+                        {!deleteMode && <th className="px-4 py-3 text-left">Acciones</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {filteredRecords.map(record => (
                         <tr
                           key={record.id}
-                          className="border-b hover:opacity-75 transition-opacity"
+                          className="border-b hover:opacity-75 transition-opacity cursor-pointer"
                           style={{
                             borderColor: theme.border,
                             background: selectedRecords.has(record.id)
                               ? (isDark ? '#1a3a5c' : '#e3f2fd')
                               : (isDark ? 'transparent' : '#f8f9fa')
                           }}
+                          onClick={() => !deleteMode && setSelectedRecord(record)}
                         >
-                          <td className="px-3 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedRecords.has(record.id)}
-                              onChange={() => toggleRecordSelection(record.id)}
-                              className="w-4 h-4 cursor-pointer"
-                            />
-                          </td>
+                          {deleteMode && (
+                            <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedRecords.has(record.id)}
+                                onChange={() => toggleRecordSelection(record.id)}
+                                className="w-4 h-4 cursor-pointer"
+                              />
+                            </td>
+                          )}
                           <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
                           <td className="px-4 py-3">{record.company_name}</td>
                           <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
@@ -852,22 +889,24 @@ export default function AdminPage() {
                           </td>
                           <td className="px-4 py-3">
                             {record.file_url ? (
-                              <a href={record.file_url} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: theme.secondary }}>
-                                Ver
-                              </a>
+                              <span className="flex items-center gap-1" style={{ color: theme.secondary }}>
+                                <FileText className="w-3 h-3" /> Archivo
+                              </span>
                             ) : (
                               <span style={{ color: theme.textSecondary }}>-</span>
                             )}
                           </td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => handleDeleteRecord(record.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                              style={{ background: '#e74c3c' }}
-                            >
-                              <Trash2 className="w-3 h-3 inline" /> Eliminar
-                            </button>
-                          </td>
+                          {!deleteMode && (
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => handleDeleteRecord(record.id)}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                style={{ background: '#e74c3c' }}
+                              >
+                                <Trash2 className="w-3 h-3 inline" /> Eliminar
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -881,6 +920,21 @@ export default function AdminPage() {
         {/* TAB: ASISTENCIA */}
         {activeTab === 'asistencia' && (
           <>
+            {/* Header con botón de actualizar */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                Control de Asistencia
+              </h2>
+              <button
+                onClick={refreshAttendanceData}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50 text-white"
+                style={{ background: theme.primary }}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+              </button>
+            </div>
+
             {/* Estadísticas de Asistencia */}
             <div
               className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-4 gap-4"
@@ -1799,6 +1853,139 @@ export default function AdminPage() {
           </>
         )}
       </div>
+
+      {/* Modal de detalle de registro */}
+      {selectedRecord && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={() => setSelectedRecord(null)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl"
+            style={{ background: theme.surface }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del modal */}
+            <div className="sticky top-0 p-6 flex justify-between items-center border-b" style={{ borderColor: theme.border, background: theme.surface }}>
+              <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                Detalle de Actividad
+              </h2>
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="p-2 rounded-lg hover:opacity-70 cursor-pointer"
+                style={{ background: isDark ? '#333' : '#eee' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="p-6 space-y-6">
+              {/* Información del registro */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
+                  <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
+                  <p className="text-lg font-bold">{selectedRecord.company_name}</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
+                  <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
+                  <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: theme.primary }}>
+                  <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
+                  <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
+                </div>
+                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
+                  <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
+                <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+              </div>
+
+              {/* Visor de archivo */}
+              {selectedRecord.file_url ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
+                    <a
+                      href={selectedRecord.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90"
+                      style={{ background: theme.primary }}
+                    >
+                      <Download className="w-4 h-4" /> Descargar
+                    </a>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden" style={{ borderColor: theme.border }}>
+                    {/* Visor según tipo de archivo */}
+                    {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                      <img
+                        src={selectedRecord.file_url}
+                        alt="Archivo adjunto"
+                        className="w-full max-h-96 object-contain"
+                      />
+                    ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
+                      <iframe
+                        src={selectedRecord.file_url}
+                        className="w-full h-96"
+                        title="Vista previa PDF"
+                      />
+                    ) : (
+                      /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
+                        className="w-full h-96"
+                        title="Vista previa documento"
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer del modal */}
+            <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3" style={{ borderColor: theme.border, background: theme.surface }}>
+              <button
+                onClick={() => {
+                  handleDeleteRecord(selectedRecord.id);
+                  setSelectedRecord(null);
+                }}
+                className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer"
+                style={{ background: '#e74c3c' }}
+              >
+                <Trash2 className="w-4 h-4" /> Eliminar
+              </button>
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="px-6 py-2 rounded-lg font-semibold cursor-pointer"
+                style={{ background: theme.primary, color: 'white' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
