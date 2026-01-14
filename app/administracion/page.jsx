@@ -7,7 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
@@ -165,6 +165,7 @@ export default function AdminPage() {
   };
 
 
+
   const handleAddWorker = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -173,13 +174,16 @@ export default function AdminPage() {
       return;
     }
 
+    // Hash de la contraseña antes de guardar
+    const hashedPassword = await hashPassword(newWorker.password);
+
     if (editingWorkerId) {
       // Actualizar trabajador existente
       const { error } = await supabase
         .from('workers')
         .update({
           username: newWorker.username,
-          password: newWorker.password,
+          password: hashedPassword,
           full_name: newWorker.full_name,
           email: newWorker.email
         })
@@ -193,10 +197,15 @@ export default function AdminPage() {
       setMessage('Usuario actualizado correctamente');
       setEditingWorkerId(null);
     } else {
-      // Crear nuevo trabajador
+      // Crear nuevo trabajador con contraseña hasheada
       const { data, error } = await supabase
         .from('workers')
-        .insert([newWorker])
+        .insert([{
+          username: newWorker.username,
+          password: hashedPassword,
+          full_name: newWorker.full_name,
+          email: newWorker.email
+        }])
         .select()
         .single();
 
