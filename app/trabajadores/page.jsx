@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Clock, Play, Square } from 'lucide-react';
+import { LogOut, Plus, Clock, Play, Square, X, Download, Trash2, Eye, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -26,6 +26,8 @@ export default function FuncionariosPage() {
   const [myRecords, setMyRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null); // Estado para el modal
+
 
   // Estado para asistencia
   const [activeAttendance, setActiveAttendance] = useState(null);
@@ -359,11 +361,11 @@ export default function FuncionariosPage() {
                   required
                   value={formData.companyName}
                   onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
+                  className="w-full input-professional cursor-pointer text-sm md:text-base"
                   style={{
-                    borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
                     color: theme.text,
+                    borderColor: theme.border
                   }}
                 >
                   <option value="">Selecciona una empresa</option>
@@ -382,11 +384,11 @@ export default function FuncionariosPage() {
                   required
                   value={formData.serviceType}
                   onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
+                  className="w-full input-professional cursor-pointer text-sm md:text-base"
                   style={{
-                    borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
                     color: theme.text,
+                    borderColor: theme.border
                   }}
                 >
                   <option value="">Selecciona tipo de servicio</option>
@@ -406,11 +408,11 @@ export default function FuncionariosPage() {
                   required
                   value={formData.startDateTime}
                   onChange={(e) => setFormData({ ...formData, startDateTime: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
+                  className="w-full input-professional text-sm md:text-base"
                   style={{
-                    borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
                     color: theme.text,
+                    borderColor: theme.border
                   }}
                 />
               </div>
@@ -424,11 +426,11 @@ export default function FuncionariosPage() {
                   required
                   value={formData.endDateTime}
                   onChange={(e) => setFormData({ ...formData, endDateTime: e.target.value })}
-                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
+                  className="w-full input-professional text-sm md:text-base"
                   style={{
-                    borderColor: theme.border,
                     background: isDark ? '#0f1419' : '#fff',
                     color: theme.text,
+                    borderColor: theme.border
                   }}
                 />
               </div>
@@ -443,11 +445,11 @@ export default function FuncionariosPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows="4"
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
+                className="w-full input-professional text-sm md:text-base"
                 style={{
-                  borderColor: theme.border,
                   background: isDark ? '#0f1419' : '#fff',
                   color: theme.text,
+                  borderColor: theme.border
                 }}
                 placeholder="Describe las actividades realizadas..."
               />
@@ -461,11 +463,11 @@ export default function FuncionariosPage() {
                 id="fileInput"
                 type="file"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
+                className="w-full input-professional text-sm md:text-base"
                 style={{
-                  borderColor: theme.border,
                   background: isDark ? '#0f1419' : '#fff',
                   color: theme.text,
+                  borderColor: theme.border
                 }}
                 accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.jpg,.png"
               />
@@ -475,7 +477,7 @@ export default function FuncionariosPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 cursor-pointer text-sm md:text-base"
+              className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 cursor-pointer text-sm md:text-base shadow-professional"
               style={{ background: theme.primary }}
             >
               <Plus className="w-5 h-5 inline mr-2" /> {loading ? 'Guardando...' : 'Guardar Actividad'}
@@ -511,11 +513,14 @@ export default function FuncionariosPage() {
                   {myRecords.map(record => (
                     <tr
                       key={record.id}
-                      className="border-b hover:opacity-75 transition-opacity"
+                      className="border-b transition-colors cursor-pointer"
                       style={{
                         borderColor: theme.border,
                         background: isDark ? 'transparent' : '#f8f9fa'
                       }}
+                      onClick={() => setSelectedRecord(record)}
+                      onMouseEnter={(e) => e.currentTarget.style.background = isDark ? '#1a2f5a' : '#f1f5f9'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = isDark ? 'transparent' : '#f8f9fa'}
                     >
                       <td className="px-4 py-3 font-semibold">{record.company_name}</td>
                       <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
@@ -530,9 +535,9 @@ export default function FuncionariosPage() {
                       </td>
                       <td className="px-4 py-3">
                         {record.file_url ? (
-                          <a href={record.file_url} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: theme.secondary }}>
-                            📥 Ver
-                          </a>
+                          <span className="flex items-center gap-1" style={{ color: theme.secondary }}>
+                            <FileText className="w-3 h-3" /> Archivo
+                          </span>
                         ) : (
                           <span style={{ color: theme.textSecondary }}>-</span>
                         )}
@@ -545,6 +550,128 @@ export default function FuncionariosPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de detalle de registro */}
+      {selectedRecord && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={() => setSelectedRecord(null)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
+            style={{ background: theme.surface }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del modal */}
+            <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+              <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                Detalle de Actividad
+              </h2>
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
+                style={{ background: isDark ? '#333' : '#eee' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido del modal */}
+            <div className="p-6 space-y-6">
+              {/* Información del registro */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
+                  <p className="text-lg font-bold">{selectedRecord.company_name}</p>
+                </div>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Tipo de Servicio</p>
+                  <p className="text-lg font-bold capitalize">{selectedRecord.service_type || 'No especificado'}</p>
+                </div>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
+                  <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
+                </div>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
+                  <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
+                </div>
+                <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
+                  <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
+                  <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
+                </div>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
+                  <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
+                <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+              </div>
+
+              {/* Visor de archivo */}
+              {selectedRecord.file_url ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
+                    <a
+                      href={selectedRecord.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
+                      style={{ background: theme.primary }}
+                    >
+                      <Download className="w-4 h-4" /> Descargar
+                    </a>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
+                    {/* Visor según tipo de archivo */}
+                    {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                      <img
+                        src={selectedRecord.file_url}
+                        alt="Archivo adjunto"
+                        className="w-full max-h-96 object-contain"
+                      />
+                    ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
+                      <iframe
+                        src={selectedRecord.file_url}
+                        className="w-full h-96"
+                        title="Vista previa PDF"
+                      />
+                    ) : (
+                      /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
+                        className="w-full h-96"
+                        title="Vista previa documento"
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer del modal */}
+            <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
+                style={{ background: theme.primary, color: 'white' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

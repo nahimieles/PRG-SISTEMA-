@@ -1229,7 +1229,7 @@ export default function AdminPage() {
                     placeholder="Nombre de usuario"
                     value={newWorker.username}
                     onChange={(e) => setNewWorker({ ...newWorker, username: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1241,7 +1241,7 @@ export default function AdminPage() {
                     placeholder="Contraseña"
                     value={newWorker.password}
                     onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1253,7 +1253,7 @@ export default function AdminPage() {
                     placeholder="Nombre completo"
                     value={newWorker.full_name}
                     onChange={(e) => setNewWorker({ ...newWorker, full_name: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1265,7 +1265,7 @@ export default function AdminPage() {
                     placeholder="Email (opcional)"
                     value={newWorker.email}
                     onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1274,7 +1274,7 @@ export default function AdminPage() {
                   />
                   <button
                     type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer"
+                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
                     style={{ background: '#27ae60' }}
                   >
                     {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
@@ -1329,14 +1329,14 @@ export default function AdminPage() {
                           <td className="px-4 py-3 flex gap-2">
                             <button
                               onClick={() => handleEditWorker(worker)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
                               style={{ background: '#3498db' }}
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDeleteWorker(worker.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
                               style={{ background: '#e74c3c' }}
                             >
                               <Trash2 className="w-3 h-3 inline" /> Eliminar
@@ -1369,7 +1369,7 @@ export default function AdminPage() {
                       setNewCompany({ name: '', type: 'auditoria' });
                     }
                   }}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-professional"
                   style={{ background: theme.primary }}
                 >
                   <Plus className="w-4 h-4" /> {showCompanyForm ? 'Cancelar' : 'Nueva'}
@@ -1383,7 +1383,7 @@ export default function AdminPage() {
                     placeholder="Nombre de la empresa"
                     value={newCompany.name}
                     onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1393,7 +1393,7 @@ export default function AdminPage() {
                   <select
                     value={newCompany.type}
                     onChange={(e) => setNewCompany({ ...newCompany, type: e.target.value })}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none"
+                    className="input-professional focus:outline-none cursor-pointer"
                     style={{
                       borderColor: theme.border,
                       background: isDark ? '#0f1419' : '#fff',
@@ -1405,7 +1405,7 @@ export default function AdminPage() {
                   </select>
                   <button
                     type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer"
+                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
                     style={{ background: '#27ae60' }}
                   >
                     {editingCompanyId ? 'Actualizar Empresa' : 'Crear Empresa'}
@@ -1857,23 +1857,23 @@ export default function AdminPage() {
       {/* Modal de detalle de registro */}
       {selectedRecord && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
           style={{ background: 'rgba(0,0,0,0.7)' }}
           onClick={() => setSelectedRecord(null)}
         >
           <div
-            className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl"
+            className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
             style={{ background: theme.surface }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header del modal */}
-            <div className="sticky top-0 p-6 flex justify-between items-center border-b" style={{ borderColor: theme.border, background: theme.surface }}>
+            <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
               <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
                 Detalle de Actividad
               </h2>
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="p-2 rounded-lg hover:opacity-70 cursor-pointer"
+                className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
                 style={{ background: isDark ? '#333' : '#eee' }}
               >
                 <X className="w-5 h-5" />
@@ -1884,34 +1884,34 @@ export default function AdminPage() {
             <div className="p-6 space-y-6">
               {/* Información del registro */}
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
                   <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
                   <p className="text-lg font-bold">{selectedRecord.company_name}</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
                   <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
                   <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ background: theme.primary }}>
+                <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
                   <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
                   <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
                   <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
                 </div>
               </div>
 
               {/* Descripción */}
-              <div className="p-4 rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+              <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                 <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
                 <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
               </div>
@@ -1925,13 +1925,13 @@ export default function AdminPage() {
                       href={selectedRecord.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90"
+                      className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
                       style={{ background: theme.primary }}
                     >
                       <Download className="w-4 h-4" /> Descargar
                     </a>
                   </div>
-                  <div className="border rounded-lg overflow-hidden" style={{ borderColor: theme.border }}>
+                  <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
                     {/* Visor según tipo de archivo */}
                     {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                       <img
@@ -1956,27 +1956,27 @@ export default function AdminPage() {
                   </div>
                 </div>
               ) : (
-                <div className="p-8 text-center rounded-lg" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                   <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
                 </div>
               )}
             </div>
 
             {/* Footer del modal */}
-            <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3" style={{ borderColor: theme.border, background: theme.surface }}>
+            <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
               <button
                 onClick={() => {
                   handleDeleteRecord(selectedRecord.id);
                   setSelectedRecord(null);
                 }}
-                className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer"
+                className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
                 style={{ background: '#e74c3c' }}
               >
                 <Trash2 className="w-4 h-4" /> Eliminar
               </button>
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="px-6 py-2 rounded-lg font-semibold cursor-pointer"
+                className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
                 style={{ background: theme.primary, color: 'white' }}
               >
                 Cerrar
