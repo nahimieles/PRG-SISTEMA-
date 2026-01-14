@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
@@ -70,6 +70,16 @@ export default function AdminPage() {
   const [closingAlerts, setClosingAlerts] = useState(false);
   const [closingQuality, setClosingQuality] = useState(false);
 
+  // Estado para asistencia
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [activeAttendances, setActiveAttendances] = useState([]);
+  const [attendanceStats, setAttendanceStats] = useState(null);
+  const [attendanceSearchTerm, setAttendanceSearchTerm] = useState('');
+  const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('');
+  const [attendanceDateFrom, setAttendanceDateFrom] = useState('');
+  const [attendanceDateTo, setAttendanceDateTo] = useState('');
+
+
   const handleCloseAlertsWidget = () => {
     setClosingAlerts(true);
     setTimeout(() => setShowAlertsWidget(false), 400);
@@ -120,6 +130,14 @@ export default function AdminPage() {
 
     const stats = await getRealTimeStats();
     setRealtimeStats(stats);
+
+    // Cargar estadísticas de asistencia
+    const attStats = await getAttendanceStats();
+    setAttendanceStats(attStats);
+
+    // Cargar asistencias activas
+    const activeAtt = await getActiveAttendances();
+    setActiveAttendances(activeAtt);
   };
 
   const loadAllData = async () => {
@@ -139,8 +157,13 @@ export default function AdminPage() {
     const issues = await getQualityIssues(recordsData);
     setQualityIssues(issues);
 
+    // Cargar datos de asistencia
+    const attRecords = await getAllAttendanceRecords();
+    setAttendanceRecords(attRecords);
+
     setLoading(false);
   };
+
 
   const handleAddWorker = async (e) => {
     e.preventDefault();
@@ -407,6 +430,7 @@ export default function AdminPage() {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2" style={{ borderBottom: `2px solid ${theme.border}` }}>
           {[
             { id: 'actividades', label: 'Actividades', icon: FileText },
+            { id: 'asistencia', label: 'Asistencia', icon: UserCheck },
             { id: 'funcionarios', label: 'Funcionarios', icon: Users },
             { id: 'empresas', label: 'Empresas', icon: BarChart3 },
             { id: 'dashboards', label: 'Dashboards', icon: PieChart },
@@ -755,6 +779,272 @@ export default function AdminPage() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* TAB: ASISTENCIA */}
+        {activeTab === 'asistencia' && (
+          <>
+            {/* Estadísticas de Asistencia */}
+            <div
+              className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-4 gap-4"
+              style={{ background: theme.surface }}
+            >
+              <StatsCard number={attendanceStats?.activeNow || 0} label="Activos Ahora" bgColor="#27ae60" />
+              <StatsCard number={attendanceStats?.todayCheckIns || 0} label="Check-ins Hoy" bgColor={theme.primary} />
+              <StatsCard number={attendanceStats?.totalHoursToday || '0.00'} label="Horas Hoy" bgColor={theme.primary} />
+              <StatsCard number={attendanceStats?.totalRecords || 0} label="Total Registros" bgColor={theme.primary} />
+            </div>
+
+            {/* Trabajadores Activos Ahora */}
+            {activeAttendances.length > 0 && (
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6"
+                style={{ background: theme.surface, borderLeft: '4px solid #27ae60' }}
+              >
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#27ae60' }}>
+                  <UserCheck className="w-5 h-5" /> Funcionarios en Oficina Ahora ({activeAttendances.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeAttendances.map(att => {
+                    const checkIn = new Date(att.check_in_time);
+                    const now = new Date();
+                    const diff = Math.floor((now - checkIn) / 1000);
+                    const hours = Math.floor(diff / 3600);
+                    const minutes = Math.floor((diff % 3600) / 60);
+                    return (
+                      <div
+                        key={att.id}
+                        className="p-4 rounded-lg flex items-center justify-between"
+                        style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                      >
+                        <div>
+                          <p className="font-semibold">{att.worker_name}</p>
+                          <p className="text-xs" style={{ color: theme.textSecondary }}>
+                            Entrada: {checkIn.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-mono font-bold" style={{ color: '#27ae60' }}>
+                            {hours}h {minutes}m
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Filtros de Asistencia */}
+            <div
+              className="rounded-xl shadow-lg p-6 mb-6"
+              style={{ background: theme.surface }}
+            >
+              <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda de Asistencias</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
+                  <input
+                    type="text"
+                    value={attendanceSearchTerm}
+                    onChange={(e) => setAttendanceSearchTerm(e.target.value)}
+                    placeholder="Nombre del funcionario..."
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Estado</label>
+                  <select
+                    value={attendanceStatusFilter}
+                    onChange={(e) => setAttendanceStatusFilter(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  >
+                    <option value="">Todos los estados</option>
+                    <option value="active">Activo</option>
+                    <option value="completed">Completado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
+                  <input
+                    type="date"
+                    value={attendanceDateFrom}
+                    onChange={(e) => setAttendanceDateFrom(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
+                  <input
+                    type="date"
+                    value={attendanceDateTo}
+                    onChange={(e) => setAttendanceDateTo(e.target.value)}
+                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-between items-center">
+                <button
+                  onClick={() => {
+                    setAttendanceSearchTerm('');
+                    setAttendanceStatusFilter('');
+                    setAttendanceDateFrom('');
+                    setAttendanceDateTo('');
+                  }}
+                  className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer border-2"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                >
+                  Limpiar Filtros
+                </button>
+                <span className="text-sm" style={{ color: theme.textSecondary }}>
+                  {attendanceRecords.filter(r => {
+                    const matchesSearch = !attendanceSearchTerm ||
+                      r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
+                    const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
+                    let matchesDateFrom = true;
+                    let matchesDateTo = true;
+                    if (attendanceDateFrom) {
+                      const recordDate = new Date(r.check_in_time);
+                      const fromDate = new Date(attendanceDateFrom);
+                      matchesDateFrom = recordDate >= fromDate;
+                    }
+                    if (attendanceDateTo) {
+                      const recordDate = new Date(r.check_in_time);
+                      const toDate = new Date(attendanceDateTo);
+                      toDate.setHours(23, 59, 59, 999);
+                      matchesDateTo = recordDate <= toDate;
+                    }
+                    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+                  }).length} registros
+                </span>
+              </div>
+            </div>
+
+            {/* Tabla de Asistencias */}
+            <div
+              className="rounded-xl shadow-lg overflow-hidden"
+              style={{ background: theme.surface }}
+            >
+              {attendanceRecords.length === 0 ? (
+                <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                  No hay registros de asistencia
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-white" style={{ background: theme.primary }}>
+                      <tr>
+                        <th className="px-4 py-3 text-left">Funcionario</th>
+                        <th className="px-4 py-3 text-left">Fecha</th>
+                        <th className="px-4 py-3 text-left">Entrada</th>
+                        <th className="px-4 py-3 text-left">Salida</th>
+                        <th className="px-4 py-3 text-left">Total Horas</th>
+                        <th className="px-4 py-3 text-left">Estado</th>
+                        <th className="px-4 py-3 text-left">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendanceRecords
+                        .filter(r => {
+                          const matchesSearch = !attendanceSearchTerm ||
+                            r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
+                          const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
+                          let matchesDateFrom = true;
+                          let matchesDateTo = true;
+                          if (attendanceDateFrom) {
+                            const recordDate = new Date(r.check_in_time);
+                            const fromDate = new Date(attendanceDateFrom);
+                            matchesDateFrom = recordDate >= fromDate;
+                          }
+                          if (attendanceDateTo) {
+                            const recordDate = new Date(r.check_in_time);
+                            const toDate = new Date(attendanceDateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            matchesDateTo = recordDate <= toDate;
+                          }
+                          return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+                        })
+                        .map(record => (
+                          <tr
+                            key={record.id}
+                            className="border-b hover:opacity-75 transition-opacity"
+                            style={{
+                              borderColor: theme.border,
+                              background: isDark ? 'transparent' : '#f8f9fa'
+                            }}
+                          >
+                            <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
+                            <td className="px-4 py-3 text-xs">
+                              {new Date(record.check_in_time).toLocaleDateString('es-ES')}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              {new Date(record.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              {record.check_out_time
+                                ? new Date(record.check_out_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                                : '-'
+                              }
+                            </td>
+                            <td className="px-4 py-3">
+                              {record.total_hours ? (
+                                <span className="px-3 py-1 rounded-full font-semibold text-sm text-white" style={{ background: theme.primary }}>
+                                  {record.total_hours}h
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className="px-3 py-1 rounded-full font-semibold text-sm text-white"
+                                style={{ background: record.status === 'active' ? '#27ae60' : '#6c757d' }}
+                              >
+                                {record.status === 'active' ? 'Activo' : 'Completado'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('¿Eliminar este registro de asistencia?')) return;
+                                  const success = await deleteAttendanceRecord(record.id);
+                                  if (success) {
+                                    loadAllData();
+                                    loadAlertsAndStats();
+                                  }
+                                }}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                style={{ background: '#e74c3c' }}
+                              >
+                                <Trash2 className="w-3 h-3 inline" /> Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

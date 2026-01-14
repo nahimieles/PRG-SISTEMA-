@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LogOut, Plus } from 'lucide-react';
+import { LogOut, Plus, Clock, Play, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
-import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession } from '../../lib/auth.js';
+import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
 
 export default function FuncionariosPage() {
   const { isDark } = useTheme();
@@ -27,6 +27,12 @@ export default function FuncionariosPage() {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
 
+  // Estado para asistencia
+  const [activeAttendance, setActiveAttendance] = useState(null);
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [elapsedTime, setElapsedTime] = useState('00:00:00');
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
   // Verificar sesión al montar el componente
   useEffect(() => {
     const savedSession = getWorkerSession();
@@ -34,9 +40,36 @@ export default function FuncionariosPage() {
       setCurrentWorker(savedSession);
       setIsAuthenticated(true);
       loadMyRecords(savedSession.id);
+      loadAttendanceData(savedSession.id);
       getCompanies().then(setCompanies);
     }
   }, []);
+
+  // Cronómetro para asistencia activa
+  useEffect(() => {
+    let interval;
+    if (activeAttendance) {
+      const updateElapsed = () => {
+        const checkIn = new Date(activeAttendance.check_in_time);
+        const now = new Date();
+        const diff = Math.floor((now - checkIn) / 1000);
+        const hours = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const seconds = String(diff % 60).padStart(2, '0');
+        setElapsedTime(`${hours}:${minutes}:${seconds}`);
+      };
+      updateElapsed();
+      interval = setInterval(updateElapsed, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeAttendance]);
+
+  const loadAttendanceData = async (workerId) => {
+    const active = await getActiveAttendance(workerId);
+    setActiveAttendance(active);
+    const records = await getWorkerAttendanceRecords(workerId);
+    setAttendanceRecords(records);
+  };
 
   const handleLogin = async (username, password) => {
     const result = await loginWorker(username, password);
@@ -45,6 +78,7 @@ export default function FuncionariosPage() {
       setIsAuthenticated(true);
       saveWorkerSession(result.worker); // Guardar sesión
       loadMyRecords(result.worker.id);
+      loadAttendanceData(result.worker.id); // Cargar asistencia al login
       const companiesData = await getCompanies();
       setCompanies(companiesData);
       return { success: true };
@@ -56,12 +90,38 @@ export default function FuncionariosPage() {
     clearWorkerSession();
     setIsAuthenticated(false);
     setCurrentWorker(null);
+    setActiveAttendance(null);
+    setAttendanceRecords([]);
   };
 
   const loadMyRecords = async (workerId) => {
     const records = await getWorkerRecords(workerId);
     setMyRecords(records);
   };
+
+  // Handlers de asistencia
+  const handleStartAttendance = async () => {
+    setAttendanceLoading(true);
+    const result = await startAttendance(currentWorker.id, currentWorker.full_name);
+    if (result.success) {
+      setActiveAttendance(result.attendance);
+      loadAttendanceData(currentWorker.id);
+    }
+    setAttendanceLoading(false);
+  };
+
+  const handleStopAttendance = async () => {
+    if (!activeAttendance) return;
+    setAttendanceLoading(true);
+    const result = await stopAttendance(activeAttendance.id);
+    if (result.success) {
+      setActiveAttendance(null);
+      setElapsedTime('00:00:00');
+      loadAttendanceData(currentWorker.id);
+    }
+    setAttendanceLoading(false);
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,7 +206,7 @@ export default function FuncionariosPage() {
             ← Volver
           </Link>
           <h1 className="text-xl md:text-2xl font-bold" style={{ color: theme.primary }}>
-            
+
           </h1>
           <div className="flex gap-2 md:gap-4 items-center justify-center flex-wrap">
             <div className="text-right">
@@ -164,6 +224,111 @@ export default function FuncionariosPage() {
           </div>
         </div>
 
+        {/* Sección de Asistencia */}
+        <div
+          className="rounded-2xl shadow-2xl p-4 md:p-8 mb-6"
+          style={{ background: theme.surface, borderLeft: `4px solid ${activeAttendance ? '#27ae60' : theme.primary}` }}
+        >
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2" style={{ color: theme.primary }}>
+                <Clock className="w-6 h-6" /> Control de Asistencia
+              </h2>
+              <p className="text-sm mt-1" style={{ color: theme.textSecondary }}>
+                {activeAttendance
+                  ? `Entrada registrada: ${new Date(activeAttendance.check_in_time).toLocaleString('es-ES')}`
+                  : 'Marca tu entrada al llegar a la oficina'
+                }
+              </p>
+            </div>
+
+            {activeAttendance ? (
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="text-3xl md:text-4xl font-mono font-bold px-6 py-3 rounded-xl"
+                  style={{
+                    background: isDark ? '#0f1419' : '#f8f9fa',
+                    color: '#27ae60',
+                    border: '2px solid #27ae60'
+                  }}
+                >
+                  {elapsedTime}
+                </div>
+                <button
+                  onClick={handleStopAttendance}
+                  disabled={attendanceLoading}
+                  className="w-full text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  style={{ background: '#e74c3c' }}
+                >
+                  <Square className="w-5 h-5" /> {attendanceLoading ? 'Procesando...' : 'Detener Asistencia'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleStartAttendance}
+                disabled={attendanceLoading}
+                className="text-white px-8 py-4 rounded-xl font-semibold hover:opacity-90 transition flex items-center gap-3 cursor-pointer disabled:opacity-50 text-lg"
+                style={{ background: '#27ae60' }}
+              >
+                <Play className="w-6 h-6" /> {attendanceLoading ? 'Procesando...' : 'Iniciar Asistencia'}
+              </button>
+            )}
+          </div>
+
+          {/* Historial reciente de asistencias */}
+          {attendanceRecords.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-3" style={{ color: theme.textSecondary }}>Mis asistencias recientes</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}>
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: theme.textSecondary }}>Fecha</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: theme.textSecondary }}>Entrada</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: theme.textSecondary }}>Salida</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: theme.textSecondary }}>Total</th>
+                      <th className="px-3 py-2 text-left font-semibold" style={{ color: theme.textSecondary }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceRecords.slice(0, 5).map(record => (
+                      <tr key={record.id} className="border-b" style={{ borderColor: theme.border }}>
+                        <td className="px-3 py-2 text-xs">
+                          {new Date(record.check_in_time).toLocaleDateString('es-ES')}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {new Date(record.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {record.check_out_time
+                            ? new Date(record.check_out_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                            : '-'
+                          }
+                        </td>
+                        <td className="px-3 py-2">
+                          {record.total_hours ? (
+                            <span className="px-2 py-1 rounded-full text-white text-xs font-semibold" style={{ background: theme.primary }}>
+                              {record.total_hours}h
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className="px-2 py-1 rounded-full text-white text-xs font-semibold"
+                            style={{ background: record.status === 'active' ? '#27ae60' : '#6c757d' }}
+                          >
+                            {record.status === 'active' ? 'Activo' : 'Completado'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Formulario */}
         <div
           className="rounded-2xl shadow-2xl p-4 md:p-8 mb-6"
@@ -172,7 +337,7 @@ export default function FuncionariosPage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: theme.primary }}>
             Registrar Nueva Actividad
           </h2>
-          
+
           {showSuccess === 'success' && (
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 dark:bg-green-900 dark:text-green-200">
               Actividad registrada exitosamente
@@ -193,7 +358,7 @@ export default function FuncionariosPage() {
                 <select
                   required
                   value={formData.companyName}
-                  onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
@@ -216,7 +381,7 @@ export default function FuncionariosPage() {
                 <select
                   required
                   value={formData.serviceType}
-                  onChange={(e) => setFormData({...formData, serviceType: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
@@ -240,7 +405,7 @@ export default function FuncionariosPage() {
                   type="datetime-local"
                   required
                   value={formData.startDateTime}
-                  onChange={(e) => setFormData({...formData, startDateTime: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, startDateTime: e.target.value })}
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
@@ -258,7 +423,7 @@ export default function FuncionariosPage() {
                   type="datetime-local"
                   required
                   value={formData.endDateTime}
-                  onChange={(e) => setFormData({...formData, endDateTime: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, endDateTime: e.target.value })}
                   className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                   style={{
                     borderColor: theme.border,
@@ -276,7 +441,7 @@ export default function FuncionariosPage() {
               <textarea
                 required
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows="4"
                 className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors text-sm md:text-base"
                 style={{
