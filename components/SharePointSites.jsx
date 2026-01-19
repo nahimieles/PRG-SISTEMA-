@@ -78,10 +78,8 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                 return;
             }
 
-            if (name.includes('prg')) {
-                processed.push(site);
-                return;
-            }
+            // Show EVERYTHING else (PRG, Generic sites, etc.)
+            processed.push(site);
         });
 
         if (contabilidadGroup.subSites.length > 0) {
