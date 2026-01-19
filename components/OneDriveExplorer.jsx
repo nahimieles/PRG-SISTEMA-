@@ -18,6 +18,13 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
+    const [files, setFiles] = useState([]);
+    const [originalFiles, setOriginalFiles] = useState([]); // Store all files for filtering
+    const [currentFolder, setCurrentFolder] = useState("root");
+    const [folderHistory, setFolderHistory] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [searchTerm, setSearchTerm] = useState('');
 
