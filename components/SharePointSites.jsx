@@ -97,25 +97,8 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         }
     }, [accounts]);
 
-    const loadSites = async () => {
-        setLoading(true);
-        try {
-            const request = { ...loginRequest, account: accounts[0] };
-            // Ensure token has Sites.Read.All
-            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenRedirect(request));
-
-            initializeGraphClient(response.accessToken);
-            const fetchedSites = await getFollowedSites();
-            setSites(processSites(fetchedSites));
-        } catch (err) {
-            console.error("Error loading sites:", err);
-            setError("No se pudieron cargar los grupos. Asegúrate de 'Seguir' los sitios en SharePoint.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSiteClick = async (site) => {
+    // Filter and Group Sites
+    const processSites = (rawSites) => {
         setLoading(true); // Temporary loading state while fetching drive
         try {
             const driveId = await getSiteDefaultDrive(site.id);
