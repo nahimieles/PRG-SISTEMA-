@@ -135,6 +135,27 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         return name.substring(0, 2).toUpperCase();
     };
 
+    if (accounts.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center p-10 h-64 text-center rounded-xl border border-dashed"
+                style={{ borderColor: theme.border, background: theme.surface }}>
+                <Users size={48} className="mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: theme.text }}>Conexión Requerida</h3>
+                <p className="mb-6 max-w-md" style={{ color: theme.textSecondary }}>
+                    Necesitamos conectar con tu cuenta de Microsoft para mostrar los grupos de SharePoint.
+                </p>
+                <button
+                    onClick={() => instance.loginRedirect(loginRequest)}
+                    className="px-6 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2"
+                    style={{ background: '#2A5C82' }}
+                >
+                    <Search size={18} />
+                    Conectar Microsoft 365
+                </button>
+            </div>
+        );
+    }
+
     if (loading && sites.length === 0) {
         return (
             <div className="flex justify-center items-center h-48">
