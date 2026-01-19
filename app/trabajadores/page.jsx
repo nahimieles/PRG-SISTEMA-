@@ -10,6 +10,7 @@ import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
+import OneDriveContainer from '../../components/OneDriveContainer';
 
 export default function FuncionariosPage() {
   const router = useRouter();
@@ -21,7 +22,8 @@ export default function FuncionariosPage() {
   const sidebarItems = [
     { id: 'asistencia', label: 'Asistencia', icon: Clock },
     { id: 'registrar', label: 'Registrar Actividad', icon: Plus },
-    { id: 'historial', label: 'Mis Actividades', icon: ClipboardList }
+    { id: 'historial', label: 'Mis Actividades', icon: ClipboardList },
+    { id: 'archivos', label: 'Mis Archivos', icon: FileText }
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -565,6 +567,13 @@ export default function FuncionariosPage() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab: Archivos OneDrive */}
+          {activeTab === 'archivos' && (
+            <div className="animate-fade-in">
+              <OneDriveContainer />
             </div>
           )}
 

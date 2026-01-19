@@ -8,87 +8,112 @@ import { Sparkles, PlusCircle, Loader2, CheckCircle2 } from 'lucide-react';
 const SmartReportGenerator = () => {
     const { instance, accounts } = useMsal();
     const [recentFiles, setRecentFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [scanned, setScanned] = useState(false);
+    const [generatedReport, setGeneratedReport] = useState(null);
 
-    const scanActivity = async () => {
-        if (accounts.length === 0) {
-            instance.loginPopup(loginRequest);
-            return;
-        }
-
+    // Auto-sync on mount if authenticated
+    const checkForRecentActivity = React.useCallback(async () => {
         setLoading(true);
         try {
-            const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request).catch(e => instance.acquireTokenPopup(request));
-
-            initializeGraphClient(response.accessToken);
-
             const files = await getRecentFiles();
-            setRecentFiles(files);
-            setScanned(true);
+            if (files.length > 0) {
+                setRecentFiles(files);
+                // Auto-select files modified today
+                const today = new Date().toDateString();
+                const todayFiles = files.filter(f =>
+                    new Date(f.lastModifiedDateTime || f.remoteItem?.lastModifiedDateTime).toDateString() === today
+                ).map(f => f.id);
+                setSelectedFiles(todayFiles);
+            }
         } catch (error) {
-            console.error(error);
+            console.error("Error auto-syncing:", error);
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    React.useEffect(() => {
+        if (accounts.length > 0) {
+            checkForRecentActivity();
+        }
+    }, [accounts, checkForRecentActivity]);
+
+    const toggleFileSelection = (fileId) => {
+        setSelectedFiles(prev =>
+            prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
+        );
     };
 
-    const addToReport = (fileName) => {
-        // Logic to communicate with parent form would go here
-        // For now just alert visually
-        alert(`Se agregaría: "Trabajo realizado en archivo: ${fileName}" al reporte.`);
-    }
+    const generateReport = () => {
+        if (selectedFiles.length === 0) return;
+
+        const filesToReport = recentFiles.filter(f => selectedFiles.includes(f.id));
+        const reportText = filesToReport.map(f =>
+            `- ${f.name} (Modificado: ${new Date(f.lastModifiedDateTime || f.remoteItem?.lastModifiedDateTime).toLocaleTimeString()})`
+        ).join('\n');
+
+        setGeneratedReport(`Reporte de Actividad Automático:\n${reportText}`);
+    };
+
+    if (accounts.length === 0) return null;
 
     return (
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100 mb-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="bg-white p-2 rounded-lg shadow-sm">
-                        <Sparkles className="text-indigo-600" size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-800">Reporte Inteligente</h3>
-                        <p className="text-sm text-gray-500">Detecta tu actividad reciente automáticamente</p>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <Sparkles className="text-yellow-500" />
+                    <h3 className="font-bold text-gray-800">Generador de Reportes Inteligente</h3>
                 </div>
                 <button
-                    onClick={scanActivity}
-                    disabled={loading}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    onClick={checkForRecentActivity}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                 >
-                    {loading ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                    {scanned ? "Escanear de nuevo" : "Detectar Actividad"}
+                    <Loader2 className={loading ? "animate-spin" : ""} size={14} /> Sincronizar
                 </button>
             </div>
 
-            {scanned && (
-                <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                        Archivos modificados (Últimas 24h)
-                    </h4>
-
-                    {recentFiles.length === 0 ? (
-                        <p className="text-sm text-gray-500 italic">No se detectaron cambios recientes en OneDrive.</p>
-                    ) : (
-                        recentFiles.map((file) => (
-                            <div key={file.id} className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between group hover:border-indigo-300 transition-colors">
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-gray-700">{file.name}</span>
-                                    <span className="text-[10px] text-gray-400">
-                                        Modificado: {new Date(file.lastModifiedDateTime).toLocaleTimeString()}
-                                    </span>
+            {loading && recentFiles.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">Analizando actividad reciente...</div>
+            ) : recentFiles.length === 0 ? (
+                <p className="text-gray-500 text-sm">No se detectó actividad reciente en OneDrive.</p>
+            ) : (
+                <div className="space-y-4">
+                    <div className="grid gap-2 max-h-48 overflow-y-auto">
+                        {recentFiles.map(file => (
+                            <label key={file.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer border border-transparent hover:border-gray-200">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedFiles.includes(file.id)}
+                                    onChange={() => toggleFileSelection(file.id)}
+                                    className="rounded text-blue-600 focus:ring-blue-500"
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{file.name}</p>
+                                    <p className="text-xs text-gray-400">
+                                        {new Date(file.lastModifiedDateTime || file.remoteItem?.lastModifiedDateTime).toLocaleString()}
+                                    </p>
                                 </div>
-                                <button
-                                    onClick={() => addToReport(file.name)}
-                                    className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-full transition-colors flex items-center gap-1 text-xs font-bold"
-                                >
-                                    <PlusCircle size={16} />
-                                    Agregar
-                                </button>
-                            </div>
-                        ))
-                    )}
+                            </label>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={generateReport}
+                        disabled={selectedFiles.length === 0}
+                        className="w-full bg-[#2A5C82] text-white py-2 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                        Generar Reporte ({selectedFiles.length})
+                    </button>
+                </div>
+            )}
+
+            {generatedReport && (
+                <div className="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-sm whitespace-pre-wrap">
+                    {generatedReport}
+                    <div className="mt-2 text-xs text-gray-500 text-center">
+                        * Copia este texto y pégalo en tu registro de actividad diario.
+                    </div>
                 </div>
             )}
         </div>

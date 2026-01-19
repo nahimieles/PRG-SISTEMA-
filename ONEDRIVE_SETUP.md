@@ -10,7 +10,9 @@ Para que el sistema se conecte con OneDrive, necesitas registrar tu aplicación 
 5. **URI de redirección**:
    - Selecciona **SPA** (Single-page application).
    - Escribe: `http://localhost:3000/trabajadores/archivos`
-   *(Nota: Cuando subas la web a internet, tendrás que añadir la dirección real aquí).*
+   - **IMPORTANTE**: Haz clic en "Agregar URI" y añade también tu enlace de Vercel:
+     `https://TU-PROYECTO.vercel.app/trabajadores/archivos`
+   *(Así funcionará tanto en tu PC como en la web publicada).*
 6. Haz clic en **Registrar**.
 
 ## Paso 2: Copiar el ID

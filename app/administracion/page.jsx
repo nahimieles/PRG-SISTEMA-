@@ -12,6 +12,7 @@ import StatsCard from '../../components/StatsCard';
 import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
+import OneDriveContainer from '../../components/OneDriveContainer';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 
 export default function AdminPage() {
@@ -26,7 +27,8 @@ export default function AdminPage() {
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
-    { id: 'reportes', label: 'Reportes', icon: Calendar }
+    { id: 'reportes', label: 'Reportes', icon: Calendar },
+    { id: 'archivos', label: 'Archivos Cloud', icon: FileText }
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -1845,6 +1847,13 @@ export default function AdminPage() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* TAB: ARCHIVOS ONEDRIVE */}
+          {activeTab === 'archivos' && (
+            <div className="animate-fade-in">
+              <OneDriveContainer />
             </div>
           )}
         </div>
