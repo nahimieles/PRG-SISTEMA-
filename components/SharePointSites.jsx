@@ -14,31 +14,32 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const theme = isDark ? darkTheme : lightTheme;
 
     const [sites, setSites] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         if (accounts.length > 0) {
-            const request = {
-                ...loginRequest,
-                account: accounts[0],
-            };
-
-            instance.acquireTokenSilent(request).then((response) => {
-                initializeGraphClient(response.accessToken);
-                getFollowedSites().then(data => {
-                    setSites(data);
-                    setLoading(false);
-                }).catch(err => {
-                    console.error(err);
-                    setError("Error al cargar sitios.");
-                    setLoading(false);
-                });
-            }).catch((e) => {
-                instance.acquireTokenRedirect(request);
-            });
+            loadSites();
         }
-    }, [accounts, instance]);
+    }, [accounts]);
+
+    const loadSites = async () => {
+        setLoading(true);
+        try {
+            const request = { ...loginRequest, account: accounts[0] };
+            // Ensure token has Sites.Read.All
+            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenRedirect(request));
+
+            initializeGraphClient(response.accessToken);
+            const fetchedSites = await getFollowedSites();
+            setSites(processSites(fetchedSites));
+        } catch (err) {
+            console.error("Error loading sites:", err);
+            setError("No se pudieron cargar los grupos. Asegúrate de 'Seguir' los sitios en SharePoint.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Filter and Group Sites
     const processSites = (rawSites) => {
