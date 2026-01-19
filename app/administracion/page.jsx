@@ -13,6 +13,7 @@ import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCo
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import OneDriveContainer from '../../components/OneDriveContainer';
+import SmartReportGenerator from '../../components/SmartReportGenerator'; // Added
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 
 export default function AdminPage() {
@@ -25,7 +26,7 @@ export default function AdminPage() {
     { id: 'actividades', label: 'Actividades', icon: FileText },
     { id: 'asistencia', label: 'Asistencia', icon: Clock },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-    { id: 'empresas', label: 'Empresas', icon: Building2 },
+    // { id: 'empresas', label: 'Empresas', icon: Building2 }, // Deprecated
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'archivos', label: 'Archivos Cloud', icon: FileText }
@@ -661,13 +662,38 @@ export default function AdminPage() {
           {/* TAB: ACTIVIDADES */}
           {activeTab === 'actividades' && (
             <div className="animate-fade-in">
+
+              {/* Sección Principal: Generador de Reportes Automático */}
+              <div className="mb-8">
+                <SmartReportGenerator role="admin" />
+              </div>
+
+              {/* Toggle de Widgets Estorbosos */}
+              <div className="flex justify-end gap-2 mb-4">
+                <button
+                  onClick={() => setShowAlertsWidget(!showAlertsWidget)}
+                  className="text-xs px-3 py-1 rounded border flex items-center gap-1 opacity-70 hover:opacity-100"
+                  style={{ borderColor: theme.border, color: theme.textSecondary }}
+                >
+                  {showAlertsWidget ? <EyeOff size={12} /> : <Eye size={12} />} Alertas
+                </button>
+                <button
+                  onClick={() => setShowQualityWidget(!showQualityWidget)}
+                  className="text-xs px-3 py-1 rounded border flex items-center gap-1 opacity-70 hover:opacity-100"
+                  style={{ borderColor: theme.border, color: theme.textSecondary }}
+                >
+                  {showQualityWidget ? <EyeOff size={12} /> : <Eye size={12} />} Calidad
+                </button>
+              </div>
+
               <div
-                className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-3 gap-4 auto-rows-fr"
+                className="rounded-xl shadow-lg p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4"
                 style={{ background: theme.surface }}
               >
                 <StatsCard number={records.length} label="Actividades" bgColor={theme.primary} />
                 <StatsCard number={workers.length} label="Funcionarios" bgColor={theme.primary} />
                 <StatsCard number={totalHours.toFixed(2)} label="Horas Totales" bgColor={theme.primary} />
+                <StatsCard number={companies.length} label="Empresas (Histórico)" bgColor={theme.primary} />
               </div>
 
               <div
