@@ -1,73 +1,235 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Users, Lock, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
-import PortalCard from '../components/PortalCard';
 import { lightTheme, darkTheme } from '../lib/colors';
+import { loginUnified, saveUnifiedSession, getUnifiedSession } from '../lib/auth';
 
 export default function HomePage() {
+  const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
 
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Verificar sesión existente al cargar
+  useEffect(() => {
+    const session = getUnifiedSession();
+    if (session) {
+      // Redirigir según el rol
+      if (session.role === 'admin') {
+        router.push('/administracion');
+      } else {
+        router.push('/trabajadores');
+      }
+    } else {
+      setCheckingSession(false);
+    }
+  }, [router]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const result = await loginUnified(username, password);
+
+    if (result.success) {
+      // Guardar sesión
+      saveUnifiedSession(result.user, result.role);
+
+      // Redirigir según el rol
+      if (result.role === 'admin') {
+        router.push('/administracion');
+      } else {
+        router.push('/trabajadores');
+      }
+    } else {
+      setError(result.message);
+      setPassword('');
+      setTimeout(() => setError(''), 4000);
+    }
+
+    setLoading(false);
+  };
+
+  // Mostrar loading mientras verifica sesión
+  if (checkingSession) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: theme.background }}
+      >
+        <div className="animate-pulse text-center">
+          <img
+            src="/Sin título-1-08.png"
+            alt="Logo PRG Auditores"
+            className="w-24 h-24 object-contain mx-auto opacity-50"
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="min-h-screen transition-colors p-4"
+      className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors animate-fade-in"
       style={{ background: theme.background, color: theme.text }}
     >
-      <div className="w-full mx-auto">
-        {/* Header con logo, título y tema */}
-        <div className="flex justify-between items-center mb-8 px-4 md:px-8 py-4 rounded-xl shadow-lg" style={{ background: theme.surface }}>
-          {/* Logo */}
-          <img 
-            src="/Sin título-1-08.png"
-            alt="Logo PRG Auditores" 
-            className="w-12 md:w-20 h-12 md:h-20 object-contain flex-shrink-0"
-          />
+      {/* Toggle de tema en esquina superior derecha */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
 
-          {/* Título Centrado - Responsive */}
-          <h1 className="text-lg md:text-3xl font-bold flex-1 text-center px-2" style={{ color: theme.primary }}>
-            Registro de Actividades
+      {/* Contenedor del login */}
+      <div className="w-full max-w-md">
+        {/* Logo y título */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img
+              src="/Sin título-1-08.png"
+              alt="Logo PRG Auditores"
+              className="w-72 h-auto object-contain"
+            />
+          </div>
+          <h1
+            className="text-3xl font-bold mb-2"
+            style={{ color: theme.primary }}
+          >
+            PRG Auditores
           </h1>
-
-          {/* Toggle Tema */}
-          <ThemeToggle />
+          <p style={{ color: theme.textSecondary }}>
+            Sistema de Registro de Actividades
+          </p>
         </div>
 
-        {/* Portal Cards - Acceso rápido visual */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 auto-rows-fr max-w-5xl mx-auto">
-          <PortalCard
-            href="/trabajadores"
-            icon={<Users className="w-16 h-22" />}
-            title="Funcionarios"
-            description="Registra tus actividades diarias"
-            theme={theme}
-          />
-          
-          <PortalCard
-            href="/administracion"
-            icon={<Lock className="w-16 h-22" />}
-            title="Administración"
-            description="Gestión integral del sistema"
-            theme={theme}
-          />
-          
-          <PortalCard
-            href="/clientes"
-            icon={<Building2 className="w-16 h-16" />}
-            title="Clientes"
-            description="Consulta las actividades realizadas"
-            theme={theme}
-          />
+        {/* Formulario de login */}
+        <div
+          className="rounded-2xl shadow-2xl p-8"
+          style={{
+            background: theme.surface,
+            boxShadow: isDark
+              ? '0 25px 50px rgba(0,0,0,0.4)'
+              : '0 25px 50px rgba(0,0,0,0.1)'
+          }}
+        >
+          <h2
+            className="text-xl font-semibold text-center mb-6"
+            style={{ color: theme.text }}
+          >
+            Iniciar Sesión
+          </h2>
+
+          {error && (
+            <div
+              className="mb-4 p-4 rounded-xl text-center text-sm font-medium"
+              style={{
+                background: isDark ? 'rgba(231, 76, 60, 0.2)' : '#fef2f2',
+                color: '#e74c3c',
+                border: '1px solid rgba(231, 76, 60, 0.3)'
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Campo de usuario */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: theme.textSecondary }}
+              >
+                Usuario
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Ingresa tu usuario"
+                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none transition-all"
+                style={{
+                  borderColor: theme.border,
+                  background: isDark ? '#0f1419' : '#fff',
+                  color: theme.text,
+                }}
+                required
+                autoFocus
+              />
+            </div>
+
+            {/* Campo de contraseña */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: theme.textSecondary }}
+              >
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Ingresa tu contraseña"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border-2 focus:outline-none transition-all"
+                  style={{
+                    borderColor: theme.border,
+                    background: isDark ? '#0f1419' : '#fff',
+                    color: theme.text,
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 hover:opacity-70 transition cursor-pointer rounded-lg"
+                  style={{ color: theme.textSecondary }}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Botón de login */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full text-white py-4 rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 text-lg"
+              style={{
+                background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryLight} 100%)`,
+                boxShadow: `0 4px 15px ${theme.primary}40`
+              }}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Ingresar
+                </>
+              )}
+            </button>
+          </form>
         </div>
 
         {/* Footer */}
-        <div
-          className="rounded-2xl shadow-lg p-6 text-center w-full"
-          style={{ background: theme.surface }}
-        >
-          <p style={{ color: theme.textSecondary }}>
+        <div className="text-center mt-8">
+          <p
+            className="text-sm"
+            style={{ color: theme.textSecondary }}
+          >
             © 2026 PRG Auditores • Tu confianza, nuestro compromiso
           </p>
         </div>

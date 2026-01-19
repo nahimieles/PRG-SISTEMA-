@@ -1,21 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
+import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
+import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 
 export default function AdminPage() {
+  const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
+
+  // Menú de navegación del sidebar
+  const sidebarItems = [
+    { id: 'actividades', label: 'Actividades', icon: FileText },
+    { id: 'asistencia', label: 'Asistencia', icon: Clock },
+    { id: 'funcionarios', label: 'Funcionarios', icon: Users },
+    { id: 'empresas', label: 'Empresas', icon: Building2 },
+    { id: 'dashboards', label: 'Dashboards', icon: PieChart },
+    { id: 'reportes', label: 'Reportes', icon: Calendar }
+  ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [activeTab, setActiveTab] = useState('actividades');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -102,7 +116,10 @@ export default function AdminPage() {
     const savedSession = getAdminSession();
     if (savedSession) {
       setIsAuthenticated(true);
+    } else {
+      router.push('/');
     }
+    setCheckingSession(false);
   }, []);
 
   useEffect(() => {
@@ -127,7 +144,9 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
+    router.push('/');
     clearAdminSession();
+    clearUnifiedSession();
     setIsAuthenticated(false);
   };
 
@@ -458,1389 +477,431 @@ export default function AdminPage() {
     return matchesSearch && matchesType;
   });
 
-  if (!isAuthenticated) {
+  // Mostrar loading mientras verifica sesión
+  if (checkingSession) {
     return (
-      <LoginForm
-        title="Administración"
-        subtitle="Sistema de gestión integral"
-        onLogin={handleLogin}
-        showUsername={true}
-        usernamePlaceholder="Tu usuario"
-        passwordPlaceholder="Tu contraseña"
-      />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: theme.background }}
+      >
+        <div className="animate-pulse">
+          <img
+            src="/Sin título-1-08.png"
+            alt="Cargando..."
+            className="w-20 h-20 object-contain opacity-50"
+          />
+        </div>
+      </div>
     );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Obtener el nombre del admin
+  const adminSession = getAdminSession();
+  const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
+
   return (
-    <div
-      className="min-h-screen transition-colors p-4"
-      style={{ background: theme.background, color: theme.text }}
-    >
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div
-          className="rounded-xl shadow-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4"
-          style={{ background: theme.surface, borderBottom: `3px solid ${theme.primary}` }}
-        >
-          <Link href="/" className="flex items-center gap-2 hover:underline text-sm md:text-base cursor-pointer" style={{ color: theme.primary }}>
-            ← Volver
-          </Link>
-          <h1 className="text-xl md:text-2xl font-bold" style={{ color: theme.primary }}>
-            Administración
-          </h1>
-          <div className="flex gap-2 md:gap-4 items-center">
-            <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="text-white px-3 md:px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 cursor-pointer text-sm md:text-base"
-              style={{ background: '#e74c3c' }}
-            >
-              <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Salir</span>
-            </button>
-          </div>
-        </div>
+    <div className="dashboard-layout">
+      {/* Sidebar */}
+      <Sidebar
+        items={sidebarItems}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        userName={adminName}
+        onLogout={handleLogout}
+        showBackButton={false}
+      />
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2" style={{ borderBottom: `2px solid ${theme.border}` }}>
-          {[
-            { id: 'actividades', label: 'Actividades', icon: FileText },
-            { id: 'asistencia', label: 'Asistencia', icon: UserCheck },
-            { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-            { id: 'empresas', label: 'Empresas', icon: BarChart3 },
-            { id: 'dashboards', label: 'Dashboards', icon: PieChart },
-            { id: 'reportes', label: 'Reportes', icon: Calendar }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="px-4 md:px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer text-sm md:text-base"
-                style={{
-                  color: activeTab === tab.id ? theme.primary : theme.textSecondary,
-                  borderBottom: activeTab === tab.id ? `3px solid ${theme.primary}` : 'none'
-                }}
-              >
-                <Icon className="w-4 h-4" /> <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Contenido Principal */}
+      <main
+        className="dashboard-content min-h-screen transition-colors p-4 lg:p-6 page-transition"
+        style={{ background: theme.background, color: theme.text }}
+      >
+        <div className="max-w-7xl mx-auto">
 
-        {/* Message */}
-        {message && (
-          <div className="mb-6 p-4 rounded-lg text-center" style={{
-            background: message.includes('correctamente') ? '#d4edda' : '#f8d7da',
-            color: message.includes('correctamente') ? '#155724' : '#721c24'
-          }}>
-            {message}
-          </div>
-        )}
-
-        {/* ESTADÍSTICAS EN TIEMPO REAL */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div
-            className="rounded-xl shadow-lg p-4"
-            style={{ background: theme.surface }}
-          >
-            <p style={{ color: theme.textSecondary }} className="text-sm">Horas Hoy</p>
-            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-              {realtimeStats?.totalHoursToday.toFixed(2) || '0.00'}h
-            </p>
-          </div>
-          <div
-            className="rounded-xl shadow-lg p-4"
-            style={{ background: theme.surface }}
-          >
-            <p style={{ color: theme.textSecondary }} className="text-sm">Registros Totales</p>
-            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-              {realtimeStats?.totalRecords || 0}
-            </p>
-          </div>
-          <div
-            className="rounded-xl shadow-lg p-4"
-            style={{ background: theme.surface }}
-          >
-            <p style={{ color: theme.textSecondary }} className="text-sm">Problemas de Calidad</p>
-            <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: '#e74c3c' }}>
-              {qualityIssues.length}
-            </p>
-          </div>
-        </div>
-
-        {/* ALERTAS DE FALTA DE REPORTES */}
-        {showAlertsWidget && workersWithoutReports.length > 0 && (
-          <div
-            className={`rounded-xl shadow-lg p-6 mb-6 ${closingAlerts ? 'widget-close' : ''}`}
-            style={{ background: theme.surface, borderLeft: '4px solid #d4af37' }}
-          >
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" style={{ color: '#d4af37' }} />
-                <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
-              </div>
-              <button
-                onClick={handleCloseAlertsWidget}
-                className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
-                style={{ background: '#d4af37', color: '#fff' }}
-              >
-                ✕
-              </button>
+          {/* Message */}
+          {message && (
+            <div className="mb-6 p-4 rounded-lg text-center" style={{
+              background: message.includes('correctamente') ? '#d4edda' : '#f8d7da',
+              color: message.includes('correctamente') ? '#155724' : '#721c24'
+            }}>
+              {message}
             </div>
-            <div className="grid gap-2">
-              {workersWithoutReports.map(worker => (
-                <div
-                  key={worker.id}
-                  className="p-3 rounded-lg flex justify-between items-center"
-                  style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+          )}
+
+          {/* ESTADÍSTICAS EN TIEMPO REAL */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div
+              className="rounded-xl shadow-lg p-4"
+              style={{ background: theme.surface }}
+            >
+              <p style={{ color: theme.textSecondary }} className="text-sm">Horas Hoy</p>
+              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
+                {realtimeStats?.totalHoursToday.toFixed(2) || '0.00'}h
+              </p>
+            </div>
+            <div
+              className="rounded-xl shadow-lg p-4"
+              style={{ background: theme.surface }}
+            >
+              <p style={{ color: theme.textSecondary }} className="text-sm">Registros Totales</p>
+              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
+                {realtimeStats?.totalRecords || 0}
+              </p>
+            </div>
+            <div
+              className="rounded-xl shadow-lg p-4"
+              style={{ background: theme.surface }}
+            >
+              <p style={{ color: theme.textSecondary }} className="text-sm">Problemas de Calidad</p>
+              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: '#e74c3c' }}>
+                {qualityIssues.length}
+              </p>
+            </div>
+          </div>
+
+          {/* ALERTAS DE FALTA DE REPORTES */}
+          {showAlertsWidget && workersWithoutReports.length > 0 && (
+            <div
+              className={`rounded-xl shadow-lg p-6 mb-6 ${closingAlerts ? 'widget-close' : ''}`}
+              style={{ background: theme.surface, borderLeft: '4px solid #d4af37' }}
+            >
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" style={{ color: '#d4af37' }} />
+                  <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
+                </div>
+                <button
+                  onClick={handleCloseAlertsWidget}
+                  className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
+                  style={{ background: '#d4af37', color: '#fff' }}
                 >
-                  <div>
-                    <p className="font-semibold">{worker.name}</p>
-                    <p style={{ color: theme.textSecondary }} className="text-sm">
-                      {worker.daysWithoutReport} días sin reportes {worker.lastReportDate && `(última: ${new Date(worker.lastReportDate).toLocaleDateString('es-ES')})`}
-                    </p>
-                  </div>
-                  <button
-                    className="text-white px-3 py-1 rounded text-xs cursor-pointer hover:opacity-90"
-                    style={{ background: '#d4af37' }}
-                  >
-                    Recordar
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* PROBLEMAS DE CALIDAD */}
-        {showQualityWidget && qualityIssues.length > 0 && (
-          <div
-            className={`rounded-xl shadow-lg p-6 mb-6 ${closingQuality ? 'widget-close' : ''}`}
-            style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
-          >
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
-                <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={handleCloseQualityWidget}
-                className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
-                style={{ background: '#e74c3c', color: '#fff' }}
-              >
-                ✕
-              </button>
+              <div className="grid gap-2">
+                {workersWithoutReports.map(worker => (
+                  <div
+                    key={worker.id}
+                    className="p-3 rounded-lg flex justify-between items-center"
+                    style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                  >
+                    <div>
+                      <p className="font-semibold">{worker.name}</p>
+                      <p style={{ color: theme.textSecondary }} className="text-sm">
+                        {worker.daysWithoutReport} días sin reportes {worker.lastReportDate && `(última: ${new Date(worker.lastReportDate).toLocaleDateString('es-ES')})`}
+                      </p>
+                    </div>
+                    <button
+                      className="text-white px-3 py-1 rounded text-xs cursor-pointer hover:opacity-90"
+                      style={{ background: '#d4af37' }}
+                    >
+                      Recordar
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-2 max-h-64 overflow-y-auto">
-              {qualityIssues.slice(0, 5).map(issue => (
-                <div
-                  key={`${issue.id}-${issue.type}`}
-                  className="p-3 rounded-lg flex justify-between items-center"
-                  style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+          )}
+
+          {/* PROBLEMAS DE CALIDAD */}
+          {showQualityWidget && qualityIssues.length > 0 && (
+            <div
+              className={`rounded-xl shadow-lg p-6 mb-6 ${closingQuality ? 'widget-close' : ''}`}
+              style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
+            >
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
+                  <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
+                </div>
+                <button
+                  onClick={handleCloseQualityWidget}
+                  className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
+                  style={{ background: '#e74c3c', color: '#fff' }}
                 >
-                  <div>
-                    <p className="font-semibold text-sm">{issue.message}</p>
-                    <p style={{ color: theme.textSecondary }} className="text-xs">
-                      {issue.record.worker_name} - {issue.record.company_name}
-                    </p>
+                  ✕
+                </button>
+              </div>
+              <div className="grid gap-2 max-h-64 overflow-y-auto">
+                {qualityIssues.slice(0, 5).map(issue => (
+                  <div
+                    key={`${issue.id}-${issue.type}`}
+                    className="p-3 rounded-lg flex justify-between items-center"
+                    style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                  >
+                    <div>
+                      <p className="font-semibold text-sm">{issue.message}</p>
+                      <p style={{ color: theme.textSecondary }} className="text-xs">
+                        {issue.record.worker_name} - {issue.record.company_name}
+                      </p>
+                    </div>
+                    <span
+                      className="px-2 py-1 rounded text-white text-xs font-semibold"
+                      style={{ background: issue.severity === 'error' ? '#e74c3c' : '#d4af37' }}
+                    >
+                      {issue.severity}
+                    </span>
                   </div>
-                  <span
-                    className="px-2 py-1 rounded text-white text-xs font-semibold"
-                    style={{ background: issue.severity === 'error' ? '#e74c3c' : '#d4af37' }}
-                  >
-                    {issue.severity}
-                  </span>
-                </div>
-              ))}
-              {qualityIssues.length > 5 && (
-                <p style={{ color: theme.textSecondary }} className="text-sm text-center pt-2">
-                  +{qualityIssues.length - 5} problemas más
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB: ACTIVIDADES */}
-        {activeTab === 'actividades' && (
-          <>
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-3 gap-4 auto-rows-fr"
-              style={{ background: theme.surface }}
-            >
-              <StatsCard number={records.length} label="Actividades" bgColor={theme.primary} />
-              <StatsCard number={workers.length} label="Funcionarios" bgColor={theme.primary} />
-              <StatsCard number={totalHours.toFixed(2)} label="Horas Totales" bgColor={theme.primary} />
-            </div>
-
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda Avanzada</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Nombre, empresa o descripción..."
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Funcionario</label>
-                  <select
-                    value={selectedWorker}
-                    onChange={(e) => setSelectedWorker(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  >
-                    <option value="">Todos los funcionarios</option>
-                    {uniqueWorkers.map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Empresa</label>
-                  <select
-                    value={selectedCompany}
-                    onChange={(e) => setSelectedCompany(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  >
-                    <option value="">Todas las empresas</option>
-                    {uniqueCompanies.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 flex-wrap items-center justify-between">
-                <div className="flex gap-2">
-                  <button
-                    onClick={clearFilters}
-                    className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer border-2"
-                    style={{ borderColor: theme.border, color: theme.text }}
-                  >
-                    Limpiar Filtros
-                  </button>
-                  <button
-                    onClick={loadAllData}
-                    disabled={loading}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                    style={{ background: theme.primary }}
-                  >
-                    Actualizar
-                  </button>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <span className="text-sm" style={{ color: theme.textSecondary }}>
-                    {filteredRecords.length} resultados
-                  </span>
-                  <button
-                    onClick={handleExport}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                    style={{ background: '#27ae60' }}
-                  >
-                    <Download className="w-4 h-4" /> Exportar Excel
-                  </button>
-                </div>
+                ))}
+                {qualityIssues.length > 5 && (
+                  <p style={{ color: theme.textSecondary }} className="text-sm text-center pt-2">
+                    +{qualityIssues.length - 5} problemas más
+                  </p>
+                )}
               </div>
             </div>
+          )}
 
-            <div
-              className="rounded-xl shadow-lg overflow-hidden"
-              style={{ background: theme.surface }}
-            >
-              {filteredRecords.length === 0 ? (
-                <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                  No hay actividades registradas
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  {/* Barra de modo eliminación */}
-                  {deleteMode ? (
-                    <div className="p-4 flex items-center gap-4" style={{ background: isDark ? '#1a1a2e' : '#fff3cd' }}>
-                      <span className="font-semibold">{selectedRecords.size} seleccionados</span>
-                      <button
-                        onClick={handleBulkDelete}
-                        disabled={loading || selectedRecords.size === 0}
-                        className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                        style={{ background: '#e74c3c' }}
-                      >
-                        <Trash2 className="w-4 h-4" /> Eliminar
-                      </button>
-                      <button
-                        onClick={cancelDeleteMode}
-                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2"
-                        style={{ border: `1px solid ${theme.border}`, color: theme.text }}
-                      >
-                        <X className="w-4 h-4" /> Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="p-4 flex justify-end">
-                      <button
-                        onClick={() => setDeleteMode(true)}
-                        className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2 text-sm"
-                        style={{ background: '#e74c3c', color: 'white' }}
-                      >
-                        <Trash2 className="w-4 h-4" /> Seleccionar para eliminar
-                      </button>
-                    </div>
-                  )}
-                  <table className="w-full text-sm">
-                    <thead className="text-white" style={{ background: theme.primary }}>
-                      <tr>
-                        {deleteMode && (
-                          <th className="px-3 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedRecords.size === filteredRecords.length && filteredRecords.length > 0}
-                              onChange={() => toggleSelectAll(filteredRecords)}
-                              className="w-4 h-4 cursor-pointer"
-                            />
-                          </th>
-                        )}
-                        <th className="px-4 py-3 text-left">Funcionario</th>
-                        <th className="px-4 py-3 text-left">Empresa</th>
-                        <th className="px-4 py-3 text-left">Inicio</th>
-                        <th className="px-4 py-3 text-left">Fin</th>
-                        <th className="px-4 py-3 text-left">Horas</th>
-                        <th className="px-4 py-3 text-left">Descripción</th>
-                        <th className="px-4 py-3 text-left">Archivo</th>
-                        {!deleteMode && <th className="px-4 py-3 text-left">Acciones</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRecords.map(record => (
-                        <tr
-                          key={record.id}
-                          className="border-b hover:opacity-75 transition-opacity cursor-pointer"
-                          style={{
-                            borderColor: theme.border,
-                            background: selectedRecords.has(record.id)
-                              ? (isDark ? '#1a3a5c' : '#e3f2fd')
-                              : (isDark ? 'transparent' : '#f8f9fa')
-                          }}
-                          onClick={() => !deleteMode && setSelectedRecord(record)}
-                        >
-                          {deleteMode && (
-                            <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={selectedRecords.has(record.id)}
-                                onChange={() => toggleRecordSelection(record.id)}
-                                className="w-4 h-4 cursor-pointer"
-                              />
-                            </td>
-                          )}
-                          <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
-                          <td className="px-4 py-3">{record.company_name}</td>
-                          <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
-                          <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-3 py-1 rounded-full font-semibold text-sm text-white" style={{ background: theme.primary }}>
-                              {record.hours_worked}h
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 max-w-xs truncate" title={record.description}>
-                            {record.description}
-                          </td>
-                          <td className="px-4 py-3">
-                            {record.file_url ? (
-                              <span className="flex items-center gap-1" style={{ color: theme.secondary }}>
-                                <FileText className="w-3 h-3" /> Archivo
-                              </span>
-                            ) : (
-                              <span style={{ color: theme.textSecondary }}>-</span>
-                            )}
-                          </td>
-                          {!deleteMode && (
-                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => handleDeleteRecord(record.id)}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                                style={{ background: '#e74c3c' }}
-                              >
-                                <Trash2 className="w-3 h-3 inline" /> Eliminar
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* TAB: ASISTENCIA */}
-        {activeTab === 'asistencia' && (
-          <>
-            {/* Header con botón de actualizar */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
-                Control de Asistencia
-              </h2>
-              <button
-                onClick={refreshAttendanceData}
-                disabled={loading}
-                className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50 text-white"
-                style={{ background: theme.primary }}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-              </button>
-            </div>
-
-            {/* Estadísticas de Asistencia */}
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-4 gap-4"
-              style={{ background: theme.surface }}
-            >
-              <StatsCard number={attendanceStats?.activeNow || 0} label="Activos Ahora" bgColor="#27ae60" />
-              <StatsCard number={attendanceStats?.todayCheckIns || 0} label="Check-ins Hoy" bgColor={theme.primary} />
-              <StatsCard number={attendanceStats?.totalHoursToday || '0.00'} label="Horas Hoy" bgColor={theme.primary} />
-              <StatsCard number={attendanceStats?.totalRecords || 0} label="Total Registros" bgColor={theme.primary} />
-            </div>
-
-            {/* Trabajadores Activos Ahora */}
-            {activeAttendances.length > 0 && (
+          {/* TAB: ACTIVIDADES */}
+          {activeTab === 'actividades' && (
+            <div className="animate-fade-in">
               <div
-                className="rounded-xl shadow-lg p-6 mb-6"
-                style={{ background: theme.surface, borderLeft: '4px solid #27ae60' }}
-              >
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#27ae60' }}>
-                  <UserCheck className="w-5 h-5" /> Funcionarios en Oficina Ahora ({activeAttendances.length})
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activeAttendances.map(att => {
-                    const checkIn = new Date(att.check_in_time);
-                    const now = new Date();
-                    const diff = Math.floor((now - checkIn) / 1000);
-                    const hours = Math.floor(diff / 3600);
-                    const minutes = Math.floor((diff % 3600) / 60);
-                    return (
-                      <div
-                        key={att.id}
-                        className="p-4 rounded-lg flex items-center justify-between"
-                        style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
-                      >
-                        <div>
-                          <p className="font-semibold">{att.worker_name}</p>
-                          <p className="text-xs" style={{ color: theme.textSecondary }}>
-                            Entrada: {checkIn.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-mono font-bold" style={{ color: '#27ae60' }}>
-                            {hours}h {minutes}m
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Filtros de Asistencia */}
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda de Asistencias</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
-                  <input
-                    type="text"
-                    value={attendanceSearchTerm}
-                    onChange={(e) => setAttendanceSearchTerm(e.target.value)}
-                    placeholder="Nombre del funcionario..."
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Estado</label>
-                  <select
-                    value={attendanceStatusFilter}
-                    onChange={(e) => setAttendanceStatusFilter(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="active">Activo</option>
-                    <option value="completed">Completado</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
-                  <input
-                    type="date"
-                    value={attendanceDateFrom}
-                    onChange={(e) => setAttendanceDateFrom(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
-                  <input
-                    type="date"
-                    value={attendanceDateTo}
-                    onChange={(e) => setAttendanceDateTo(e.target.value)}
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-between items-center">
-                <button
-                  onClick={() => {
-                    setAttendanceSearchTerm('');
-                    setAttendanceStatusFilter('');
-                    setAttendanceDateFrom('');
-                    setAttendanceDateTo('');
-                  }}
-                  className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer border-2"
-                  style={{ borderColor: theme.border, color: theme.text }}
-                >
-                  Limpiar Filtros
-                </button>
-                <span className="text-sm" style={{ color: theme.textSecondary }}>
-                  {attendanceRecords.filter(r => {
-                    const matchesSearch = !attendanceSearchTerm ||
-                      r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
-                    const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
-                    let matchesDateFrom = true;
-                    let matchesDateTo = true;
-                    if (attendanceDateFrom) {
-                      const recordDate = new Date(r.check_in_time);
-                      const fromDate = new Date(attendanceDateFrom);
-                      matchesDateFrom = recordDate >= fromDate;
-                    }
-                    if (attendanceDateTo) {
-                      const recordDate = new Date(r.check_in_time);
-                      const toDate = new Date(attendanceDateTo);
-                      toDate.setHours(23, 59, 59, 999);
-                      matchesDateTo = recordDate <= toDate;
-                    }
-                    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
-                  }).length} registros
-                </span>
-              </div>
-            </div>
-
-            {/* Tabla de Asistencias */}
-            <div
-              className="rounded-xl shadow-lg overflow-hidden"
-              style={{ background: theme.surface }}
-            >
-              {attendanceRecords.length === 0 ? (
-                <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                  No hay registros de asistencia
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-white" style={{ background: theme.primary }}>
-                      <tr>
-                        <th className="px-4 py-3 text-left">Funcionario</th>
-                        <th className="px-4 py-3 text-left">Fecha</th>
-                        <th className="px-4 py-3 text-left">Entrada</th>
-                        <th className="px-4 py-3 text-left">Salida</th>
-                        <th className="px-4 py-3 text-left">Total Horas</th>
-                        <th className="px-4 py-3 text-left">Estado</th>
-                        <th className="px-4 py-3 text-left">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attendanceRecords
-                        .filter(r => {
-                          const matchesSearch = !attendanceSearchTerm ||
-                            r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
-                          const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
-                          let matchesDateFrom = true;
-                          let matchesDateTo = true;
-                          if (attendanceDateFrom) {
-                            const recordDate = new Date(r.check_in_time);
-                            const fromDate = new Date(attendanceDateFrom);
-                            matchesDateFrom = recordDate >= fromDate;
-                          }
-                          if (attendanceDateTo) {
-                            const recordDate = new Date(r.check_in_time);
-                            const toDate = new Date(attendanceDateTo);
-                            toDate.setHours(23, 59, 59, 999);
-                            matchesDateTo = recordDate <= toDate;
-                          }
-                          return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
-                        })
-                        .map(record => (
-                          <tr
-                            key={record.id}
-                            className="border-b hover:opacity-75 transition-opacity"
-                            style={{
-                              borderColor: theme.border,
-                              background: isDark ? 'transparent' : '#f8f9fa'
-                            }}
-                          >
-                            <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
-                            <td className="px-4 py-3 text-xs">
-                              {new Date(record.check_in_time).toLocaleDateString('es-ES')}
-                            </td>
-                            <td className="px-4 py-3 text-xs">
-                              {new Date(record.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                            <td className="px-4 py-3 text-xs">
-                              {record.check_out_time
-                                ? new Date(record.check_out_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-                                : '-'
-                              }
-                            </td>
-                            <td className="px-4 py-3">
-                              {record.total_hours ? (
-                                <span className="px-3 py-1 rounded-full font-semibold text-sm text-white" style={{ background: theme.primary }}>
-                                  {record.total_hours}h
-                                </span>
-                              ) : '-'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className="px-3 py-1 rounded-full font-semibold text-sm text-white"
-                                style={{ background: record.status === 'active' ? '#27ae60' : '#6c757d' }}
-                              >
-                                {record.status === 'active' ? 'Activo' : 'Completado'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={async () => {
-                                  if (!confirm('¿Eliminar este registro de asistencia?')) return;
-                                  const success = await deleteAttendanceRecord(record.id);
-                                  if (success) {
-                                    loadAllData();
-                                    loadAlertsAndStats();
-                                  }
-                                }}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                                style={{ background: '#e74c3c' }}
-                              >
-                                <Trash2 className="w-3 h-3 inline" /> Eliminar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* TAB: FUNCIONARIOS */}
-        {activeTab === 'funcionarios' && (
-          <>
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">{editingWorkerId ? 'Editar Funcionario' : 'Crear Funcionario'}</h2>
-                <button
-                  onClick={() => {
-                    setShowUserForm(!showUserForm);
-                    if (!showUserForm) {
-                      setEditingWorkerId(null);
-                      setNewWorker({ username: '', password: '', full_name: '', email: '' });
-                    }
-                  }}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                  style={{ background: theme.primary }}
-                >
-                  <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
-                </button>
-              </div>
-
-              {showUserForm && (
-                <form onSubmit={handleAddWorker} className="grid md:grid-cols-2 gap-4 mt-4">
-                  <input
-                    type="text"
-                    placeholder="Nombre de usuario"
-                    value={newWorker.username}
-                    onChange={(e) => setNewWorker({ ...newWorker, username: e.target.value })}
-                    className="input-professional focus:outline-none"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Contraseña"
-                    value={newWorker.password}
-                    onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
-                    className="input-professional focus:outline-none"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nombre completo"
-                    value={newWorker.full_name}
-                    onChange={(e) => setNewWorker({ ...newWorker, full_name: e.target.value })}
-                    className="input-professional focus:outline-none"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email (opcional)"
-                    value={newWorker.email}
-                    onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
-                    className="input-professional focus:outline-none"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
-                    style={{ background: '#27ae60' }}
-                  >
-                    {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
-                  </button>
-                </form>
-              )}
-            </div>
-
-            <div
-              className="rounded-xl shadow-lg overflow-hidden"
-              style={{ background: theme.surface }}
-            >
-              {workers.length === 0 ? (
-                <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                  No hay funcionarios registrados
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-white" style={{ background: theme.primary }}>
-                      <tr>
-                        <th className="px-4 py-3 text-left">Usuario</th>
-                        <th className="px-4 py-3 text-left">Nombre</th>
-                        <th className="px-4 py-3 text-left">Email</th>
-                        <th className="px-4 py-3 text-left">Contraseña</th>
-                        <th className="px-4 py-3 text-left">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {workers.map(worker => (
-                        <tr
-                          key={worker.id}
-                          className="border-b hover:opacity-75 transition-opacity"
-                          style={{
-                            borderColor: theme.border,
-                            background: isDark ? 'transparent' : '#f8f9fa'
-                          }}
-                        >
-                          <td className="px-4 py-3 font-semibold">{worker.username}</td>
-                          <td className="px-4 py-3">{worker.full_name}</td>
-                          <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
-                          <td className="px-4 py-3 flex items-center gap-2">
-                            <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
-                            <button
-                              onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
-                              className="hover:opacity-70"
-                              style={{ color: theme.primary }}
-                            >
-                              {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3 flex gap-2">
-                            <button
-                              onClick={() => handleEditWorker(worker)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                              style={{ background: '#3498db' }}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDeleteWorker(worker.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                              style={{ background: '#e74c3c' }}
-                            >
-                              <Trash2 className="w-3 h-3 inline" /> Eliminar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* TAB: EMPRESAS */}
-        {activeTab === 'empresas' && (
-          <>
-            <div
-              className="rounded-xl shadow-lg p-6 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">{editingCompanyId ? 'Editar Empresa' : 'Crear Empresa'}</h2>
-                <button
-                  onClick={() => {
-                    setShowCompanyForm(!showCompanyForm);
-                    if (!showCompanyForm) {
-                      setEditingCompanyId(null);
-                      setNewCompany({ name: '', type: 'auditoria' });
-                    }
-                  }}
-                  className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-professional"
-                  style={{ background: theme.primary }}
-                >
-                  <Plus className="w-4 h-4" /> {showCompanyForm ? 'Cancelar' : 'Nueva'}
-                </button>
-              </div>
-
-              {showCompanyForm && (
-                <form onSubmit={handleAddCompany} className="grid md:grid-cols-2 gap-4 mt-4">
-                  <input
-                    type="text"
-                    placeholder="Nombre de la empresa"
-                    value={newCompany.name}
-                    onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                    className="input-professional focus:outline-none"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                  <select
-                    value={newCompany.type}
-                    onChange={(e) => setNewCompany({ ...newCompany, type: e.target.value })}
-                    className="input-professional focus:outline-none cursor-pointer"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  >
-                    <option value="auditoria">Auditoría</option>
-                    <option value="contabilidad">Contabilidad</option>
-                  </select>
-                  <button
-                    type="submit"
-                    className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
-                    style={{ background: '#27ae60' }}
-                  >
-                    {editingCompanyId ? 'Actualizar Empresa' : 'Crear Empresa'}
-                  </button>
-                </form>
-              )}
-            </div>
-
-            {/* Búsqueda de Empresas */}
-            <div
-              className="rounded-xl shadow-lg p-4 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <div className="flex gap-4 flex-wrap items-center">
-                <div className="flex-1 min-w-[200px]">
-                  <input
-                    type="text"
-                    value={companySearchTerm}
-                    onChange={(e) => setCompanySearchTerm(e.target.value)}
-                    placeholder="Buscar empresa por nombre..."
-                    className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  />
-                </div>
-                <select
-                  value={companyTypeFilter}
-                  onChange={(e) => setCompanyTypeFilter(e.target.value)}
-                  className="px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
-                  style={{
-                    borderColor: theme.border,
-                    background: isDark ? '#0f1419' : '#fff',
-                    color: theme.text,
-                  }}
-                >
-                  <option value="">Todos los tipos</option>
-                  <option value="auditoria">Auditoría</option>
-                  <option value="contabilidad">Contabilidad</option>
-                </select>
-                <span className="text-sm" style={{ color: theme.textSecondary }}>
-                  {filteredCompanies.length} empresas
-                </span>
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl shadow-lg overflow-hidden"
-              style={{ background: theme.surface }}
-            >
-              {filteredCompanies.length === 0 ? (
-                <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                  No hay empresas registradas
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="text-white" style={{ background: theme.primary }}>
-                      <tr>
-                        <th className="px-4 py-3 text-left">Nombre</th>
-                        <th className="px-4 py-3 text-left">Tipo</th>
-                        <th className="px-4 py-3 text-left">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredCompanies.map(company => (
-                        <tr
-                          key={company.id}
-                          className="border-b hover:opacity-75 transition-opacity"
-                          style={{
-                            borderColor: theme.border,
-                            background: isDark ? 'transparent' : '#f8f9fa'
-                          }}
-                        >
-                          <td className="px-4 py-3 font-semibold">{company.name}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2 flex-wrap">
-                              {(company.types || [company.type]).map(type => (
-                                <span
-                                  key={type}
-                                  className="px-3 py-1 rounded-full text-white text-xs font-semibold"
-                                  style={{
-                                    background: type === 'auditoria' ? '#3498db' : '#27ae60'
-                                  }}
-                                >
-                                  {type === 'auditoria' ? 'Auditoría' : 'Contabilidad'}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 flex gap-2">
-                            <button
-                              onClick={() => handleEditCompany(company)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                              style={{ background: '#3498db' }}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCompany(company.id)}
-                              className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                              style={{ background: '#e74c3c' }}
-                            >
-                              <Trash2 className="w-3 h-3 inline" /> Eliminar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-        {/* TAB: DASHBOARDS */}
-        {activeTab === 'dashboards' && (
-          <>
-            {/* Colores para gráficos */}
-            {(() => {
-              const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
-
-              // Calcular datos para gráficos
-              const hoursByCompany = {};
-              const hoursByWorker = {};
-              const hoursByType = { auditoria: 0, contabilidad: 0 };
-
-              records.forEach(r => {
-                const hours = parseFloat(r.hours_worked || 0);
-
-                // Por empresa
-                if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
-                hoursByCompany[r.company_name] += hours;
-
-                // Por funcionario
-                if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
-                hoursByWorker[r.worker_name] += hours;
-              });
-
-              // Determinar tipo de empresa
-              companies.forEach(c => {
-                const companyHours = hoursByCompany[c.name] || 0;
-                if (c.type === 'auditoria') {
-                  hoursByType.auditoria += companyHours;
-                } else {
-                  hoursByType.contabilidad += companyHours;
-                }
-              });
-
-              const topCompanies = Object.entries(hoursByCompany)
-                .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
-                .sort((a, b) => b.horas - a.horas)
-                .slice(0, 8);
-
-              const workerData = Object.entries(hoursByWorker)
-                .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
-                .sort((a, b) => b.horas - a.horas)
-                .slice(0, 8);
-
-              const pieData = [
-                { name: 'Auditoría', value: parseFloat(hoursByType.auditoria.toFixed(2)) },
-                { name: 'Contabilidad', value: parseFloat(hoursByType.contabilidad.toFixed(2)) }
-              ];
-
-              const recentActivities = [...records]
-                .sort((a, b) => new Date(b.created_at || b.start_datetime) - new Date(a.created_at || a.start_datetime))
-                .slice(0, 8);
-
-              return (
-                <div className="space-y-6">
-                  {/* Top Empresas y Productividad por Funcionario */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Top Empresas */}
-                    <div
-                      className="rounded-xl shadow-lg p-6"
-                      style={{ background: theme.surface }}
-                    >
-                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                        <Building2 className="w-5 h-5" /> Top Empresas por Horas
-                      </h3>
-                      {topCompanies.length === 0 ? (
-                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={topCompanies} layout="vertical" margin={{ left: 20, right: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                            <XAxis type="number" stroke={theme.textSecondary} />
-                            <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                            <Tooltip
-                              contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                              formatter={(value) => [`${value}h`, 'Horas']}
-                            />
-                            <Bar dataKey="horas" fill="#3498db" radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-
-                    {/* Productividad por Funcionario */}
-                    <div
-                      className="rounded-xl shadow-lg p-6"
-                      style={{ background: theme.surface }}
-                    >
-                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                        <TrendingUp className="w-5 h-5" /> Productividad por Funcionario
-                      </h3>
-                      {workerData.length === 0 ? (
-                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={workerData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                            <XAxis type="number" stroke={theme.textSecondary} />
-                            <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                            <Tooltip
-                              contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                              formatter={(value) => [`${value}h`, 'Horas']}
-                            />
-                            <Bar dataKey="horas" fill="#27ae60" radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Distribución y Actividades Recientes */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Distribución por Tipo */}
-                    <div
-                      className="rounded-xl shadow-lg p-6"
-                      style={{ background: theme.surface }}
-                    >
-                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                        <BarChart3 className="w-5 h-5" /> Distribución por Tipo
-                      </h3>
-                      {pieData.every(d => d.value === 0) ? (
-                        <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={300}>
-                          <RechartsPie>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={100}
-                              paddingAngle={5}
-                              dataKey="value"
-                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                            >
-                              {pieData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip formatter={(value) => [`${value}h`, 'Horas']} />
-                            <Legend />
-                          </RechartsPie>
-                        </ResponsiveContainer>
-                      )}
-                    </div>
-
-                    {/* Actividades Recientes */}
-                    <div
-                      className="rounded-xl shadow-lg p-6"
-                      style={{ background: theme.surface }}
-                    >
-                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                        <Clock className="w-5 h-5" /> Actividades Recientes
-                      </h3>
-                      {recentActivities.length === 0 ? (
-                        <p style={{ color: theme.textSecondary }}>No hay actividades recientes</p>
-                      ) : (
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                          {recentActivities.map((activity, index) => (
-                            <div
-                              key={activity.id}
-                              className="flex items-start gap-3 p-3 rounded-lg"
-                              style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
-                            >
-                              <div
-                                className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                                style={{ background: COLORS[index % COLORS.length] }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start gap-2">
-                                  <p className="font-semibold text-sm truncate">{activity.worker_name}</p>
-                                  <span
-                                    className="text-xs px-2 py-1 rounded-full text-white flex-shrink-0"
-                                    style={{ background: theme.primary }}
-                                  >
-                                    {activity.hours_worked}h
-                                  </span>
-                                </div>
-                                <p className="text-xs truncate" style={{ color: theme.textSecondary }}>
-                                  {activity.company_name}
-                                </p>
-                                <p className="text-xs" style={{ color: theme.textSecondary }}>
-                                  {new Date(activity.start_datetime).toLocaleDateString('es-ES')}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </>
-        )}
-
-        {/* TAB: REPORTES */}
-        {activeTab === 'reportes' && (
-          <>
-            <div
-              className="rounded-xl shadow-lg p-4 md:p-6 mb-6 overflow-x-auto"
-              style={{ background: theme.surface }}
-            >
-              <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
-                  <input
-                    type="datetime-local"
-                    value={reportFilters.startDate}
-                    onChange={(e) => setReportFilters({ ...reportFilters, startDate: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2 text-sm md:text-base">Hasta</label>
-                  <input
-                    type="datetime-local"
-                    value={reportFilters.endDate}
-                    onChange={(e) => setReportFilters({ ...reportFilters, endDate: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
-                  <select
-                    value={reportFilters.worker}
-                    onChange={(e) => setReportFilters({ ...reportFilters, worker: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text
-                    }}
-                  >
-                    <option value="">Todos</option>
-                    {workersList.map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    onClick={generateReport}
-                    className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold cursor-pointer text-sm md:text-base"
-                    style={{ background: theme.primary }}
-                  >
-                    <Calendar className="w-4 h-4" /> <span className="hidden sm:inline">Generar</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {reportData && (
-              <div
-                className="rounded-xl shadow-lg p-6"
+                className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-3 gap-4 auto-rows-fr"
                 style={{ background: theme.surface }}
               >
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold">Resultados</h2>
-                  <button
-                    onClick={exportReport}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                    style={{ background: '#27ae60' }}
-                  >
-                    <Download className="w-4 h-4" /> Exportar CSV
-                  </button>
-                </div>
+                <StatsCard number={records.length} label="Actividades" bgColor={theme.primary} />
+                <StatsCard number={workers.length} label="Funcionarios" bgColor={theme.primary} />
+                <StatsCard number={totalHours.toFixed(2)} label="Horas Totales" bgColor={theme.primary} />
+              </div>
 
-                <div className="grid md:grid-cols-3 gap-4 mb-6">
-                  <StatsCard number={reportData.summary.total} label="Actividades" bgColor={theme.primary} />
-                  <StatsCard number={reportData.summary.hours} label="Horas" bgColor={theme.primary} />
-                  <StatsCard number={reportData.summary.workers} label="Funcionarios" bgColor={theme.primary} />
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6"
+                style={{ background: theme.surface }}
+              >
+                <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda Avanzada</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nombre, empresa o descripción..."
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Funcionario</label>
+                    <select
+                      value={selectedWorker}
+                      onChange={(e) => setSelectedWorker(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    >
+                      <option value="">Todos los funcionarios</option>
+                      {uniqueWorkers.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Empresa</label>
+                    <select
+                      value={selectedCompany}
+                      onChange={(e) => setSelectedCompany(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    >
+                      <option value="">Todas las empresas</option>
+                      {uniqueCompanies.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
                 </div>
+                <div className="flex gap-2 flex-wrap items-center justify-between">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={clearFilters}
+                      className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer border-2"
+                      style={{ borderColor: theme.border, color: theme.text }}
+                    >
+                      Limpiar Filtros
+                    </button>
+                    <button
+                      onClick={loadAllData}
+                      disabled={loading}
+                      className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                      style={{ background: theme.primary }}
+                    >
+                      Actualizar
+                    </button>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <span className="text-sm" style={{ color: theme.textSecondary }}>
+                      {filteredRecords.length} resultados
+                    </span>
+                    <button
+                      onClick={handleExport}
+                      className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                      style={{ background: '#27ae60' }}
+                    >
+                      <Download className="w-4 h-4" /> Exportar Excel
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-                {reportData.records.length === 0 ? (
+              <div
+                className="rounded-xl shadow-lg overflow-hidden"
+                style={{ background: theme.surface }}
+              >
+                {filteredRecords.length === 0 ? (
                   <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                    No hay actividades en ese período
+                    No hay actividades registradas
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
+                    {/* Barra de modo eliminación */}
+                    {deleteMode ? (
+                      <div className="p-4 flex items-center gap-4" style={{ background: isDark ? '#1a1a2e' : '#fff3cd' }}>
+                        <span className="font-semibold">{selectedRecords.size} seleccionados</span>
+                        <button
+                          onClick={handleBulkDelete}
+                          disabled={loading || selectedRecords.size === 0}
+                          className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                          style={{ background: '#e74c3c' }}
+                        >
+                          <Trash2 className="w-4 h-4" /> Eliminar
+                        </button>
+                        <button
+                          onClick={cancelDeleteMode}
+                          className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2"
+                          style={{ border: `1px solid ${theme.border}`, color: theme.text }}
+                        >
+                          <X className="w-4 h-4" /> Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 flex justify-end">
+                        <button
+                          onClick={() => setDeleteMode(true)}
+                          className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer flex items-center gap-2 text-sm"
+                          style={{ background: '#e74c3c', color: 'white' }}
+                        >
+                          <Trash2 className="w-4 h-4" /> Seleccionar para eliminar
+                        </button>
+                      </div>
+                    )}
                     <table className="w-full text-sm">
                       <thead className="text-white" style={{ background: theme.primary }}>
                         <tr>
+                          {deleteMode && (
+                            <th className="px-3 py-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedRecords.size === filteredRecords.length && filteredRecords.length > 0}
+                                onChange={() => toggleSelectAll(filteredRecords)}
+                                className="w-4 h-4 cursor-pointer"
+                              />
+                            </th>
+                          )}
                           <th className="px-4 py-3 text-left">Funcionario</th>
                           <th className="px-4 py-3 text-left">Empresa</th>
                           <th className="px-4 py-3 text-left">Inicio</th>
                           <th className="px-4 py-3 text-left">Fin</th>
                           <th className="px-4 py-3 text-left">Horas</th>
                           <th className="px-4 py-3 text-left">Descripción</th>
+                          <th className="px-4 py-3 text-left">Archivo</th>
+                          {!deleteMode && <th className="px-4 py-3 text-left">Acciones</th>}
                         </tr>
                       </thead>
                       <tbody>
-                        {reportData.records.map(record => (
-                          <tr key={record.id} className="border-b" style={{ borderColor: theme.border }}>
+                        {filteredRecords.map(record => (
+                          <tr
+                            key={record.id}
+                            className="border-b hover:opacity-75 transition-opacity cursor-pointer"
+                            style={{
+                              borderColor: theme.border,
+                              background: selectedRecords.has(record.id)
+                                ? (isDark ? '#1a3a5c' : '#e3f2fd')
+                                : (isDark ? 'transparent' : '#f8f9fa')
+                            }}
+                            onClick={() => !deleteMode && setSelectedRecord(record)}
+                          >
+                            {deleteMode && (
+                              <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedRecords.has(record.id)}
+                                  onChange={() => toggleRecordSelection(record.id)}
+                                  className="w-4 h-4 cursor-pointer"
+                                />
+                              </td>
+                            )}
                             <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
                             <td className="px-4 py-3">{record.company_name}</td>
                             <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
                             <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
                             <td className="px-4 py-3">
-                              <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ background: theme.primary }}>
+                              <span className="px-3 py-1 rounded-full font-semibold text-sm text-white" style={{ background: theme.primary }}>
                                 {record.hours_worked}h
                               </span>
                             </td>
-                            <td className="px-4 py-3 max-w-xs truncate">{record.description}</td>
+                            <td className="px-4 py-3 max-w-xs truncate" title={record.description}>
+                              {record.description}
+                            </td>
+                            <td className="px-4 py-3">
+                              {record.file_url ? (
+                                <span className="flex items-center gap-1" style={{ color: theme.secondary }}>
+                                  <FileText className="w-3 h-3" /> Archivo
+                                </span>
+                              ) : (
+                                <span style={{ color: theme.textSecondary }}>-</span>
+                              )}
+                            </td>
+                            {!deleteMode && (
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => handleDeleteRecord(record.id)}
+                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                  style={{ background: '#e74c3c' }}
+                                >
+                                  <Trash2 className="w-3 h-3 inline" /> Eliminar
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -1848,143 +909,1078 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-            )}
-
-          </>
-        )}
-      </div>
-
-      {/* Modal de detalle de registro */}
-      {selectedRecord && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
-          style={{ background: 'rgba(0,0,0,0.7)' }}
-          onClick={() => setSelectedRecord(null)}
-        >
-          <div
-            className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
-            style={{ background: theme.surface }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header del modal */}
-            <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-              <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
-                Detalle de Actividad
-              </h2>
-              <button
-                onClick={() => setSelectedRecord(null)}
-                className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
-                style={{ background: isDark ? '#333' : '#eee' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
+          )}
 
-            {/* Contenido del modal */}
-            <div className="p-6 space-y-6">
-              {/* Información del registro */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
-                  <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
-                </div>
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
-                  <p className="text-lg font-bold">{selectedRecord.company_name}</p>
-                </div>
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
-                  <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
-                </div>
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
-                  <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
-                </div>
-                <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
-                  <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
-                  <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
-                </div>
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
-                  <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
-                </div>
+          {/* TAB: ASISTENCIA */}
+          {activeTab === 'asistencia' && (
+            <div className="animate-fade-in">
+              {/* Header con botón de actualizar */}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                  Control de Asistencia
+                </h2>
+                <button
+                  onClick={refreshAttendanceData}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer disabled:opacity-50 text-white"
+                  style={{ background: theme.primary }}
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+                </button>
               </div>
 
-              {/* Descripción */}
-              <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
-                <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+              {/* Estadísticas de Asistencia */}
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6 grid md:grid-cols-4 gap-4"
+                style={{ background: theme.surface }}
+              >
+                <StatsCard number={attendanceStats?.activeNow || 0} label="Activos Ahora" bgColor="#27ae60" />
+                <StatsCard number={attendanceStats?.todayCheckIns || 0} label="Check-ins Hoy" bgColor={theme.primary} />
+                <StatsCard number={attendanceStats?.totalHoursToday || '0.00'} label="Horas Hoy" bgColor={theme.primary} />
+                <StatsCard number={attendanceStats?.totalRecords || 0} label="Total Registros" bgColor={theme.primary} />
               </div>
 
-              {/* Visor de archivo */}
-              {selectedRecord.file_url ? (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
-                    <a
-                      href={selectedRecord.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
-                      style={{ background: theme.primary }}
-                    >
-                      <Download className="w-4 h-4" /> Descargar
-                    </a>
+              {/* Trabajadores Activos Ahora */}
+              {activeAttendances.length > 0 && (
+                <div
+                  className="rounded-xl shadow-lg p-6 mb-6"
+                  style={{ background: theme.surface, borderLeft: '4px solid #27ae60' }}
+                >
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#27ae60' }}>
+                    <UserCheck className="w-5 h-5" /> Funcionarios en Oficina Ahora ({activeAttendances.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {activeAttendances.map(att => {
+                      const checkIn = new Date(att.check_in_time);
+                      const now = new Date();
+                      const diff = Math.floor((now - checkIn) / 1000);
+                      const hours = Math.floor(diff / 3600);
+                      const minutes = Math.floor((diff % 3600) / 60);
+                      return (
+                        <div
+                          key={att.id}
+                          className="p-4 rounded-lg flex items-center justify-between"
+                          style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                        >
+                          <div>
+                            <p className="font-semibold">{att.worker_name}</p>
+                            <p className="text-xs" style={{ color: theme.textSecondary }}>
+                              Entrada: {checkIn.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-mono font-bold" style={{ color: '#27ae60' }}>
+                              {hours}h {minutes}m
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
-                    {/* Visor según tipo de archivo */}
-                    {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                      <img
-                        src={selectedRecord.file_url}
-                        alt="Archivo adjunto"
-                        className="w-full max-h-96 object-contain"
-                      />
-                    ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
-                      <iframe
-                        src={selectedRecord.file_url}
-                        className="w-full h-96"
-                        title="Vista previa PDF"
-                      />
-                    ) : (
-                      /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
-                      <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
-                        className="w-full h-96"
-                        title="Vista previa documento"
-                      />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
                 </div>
               )}
-            </div>
 
-            {/* Footer del modal */}
-            <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-              <button
-                onClick={() => {
-                  handleDeleteRecord(selectedRecord.id);
-                  setSelectedRecord(null);
-                }}
-                className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
-                style={{ background: '#e74c3c' }}
+              {/* Filtros de Asistencia */}
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6"
+                style={{ background: theme.surface }}
               >
-                <Trash2 className="w-4 h-4" /> Eliminar
-              </button>
-              <button
-                onClick={() => setSelectedRecord(null)}
-                className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
-                style={{ background: theme.primary, color: 'white' }}
+                <h3 className="font-semibold mb-4" style={{ color: theme.primary }}>Búsqueda de Asistencias</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Buscar</label>
+                    <input
+                      type="text"
+                      value={attendanceSearchTerm}
+                      onChange={(e) => setAttendanceSearchTerm(e.target.value)}
+                      placeholder="Nombre del funcionario..."
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Estado</label>
+                    <select
+                      value={attendanceStatusFilter}
+                      onChange={(e) => setAttendanceStatusFilter(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    >
+                      <option value="">Todos los estados</option>
+                      <option value="active">Activo</option>
+                      <option value="completed">Completado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Desde</label>
+                    <input
+                      type="date"
+                      value={attendanceDateFrom}
+                      onChange={(e) => setAttendanceDateFrom(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Hasta</label>
+                    <input
+                      type="date"
+                      value={attendanceDateTo}
+                      onChange={(e) => setAttendanceDateTo(e.target.value)}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-between items-center">
+                  <button
+                    onClick={() => {
+                      setAttendanceSearchTerm('');
+                      setAttendanceStatusFilter('');
+                      setAttendanceDateFrom('');
+                      setAttendanceDateTo('');
+                    }}
+                    className="px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer border-2"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                  >
+                    Limpiar Filtros
+                  </button>
+                  <span className="text-sm" style={{ color: theme.textSecondary }}>
+                    {attendanceRecords.filter(r => {
+                      const matchesSearch = !attendanceSearchTerm ||
+                        r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
+                      const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
+                      let matchesDateFrom = true;
+                      let matchesDateTo = true;
+                      if (attendanceDateFrom) {
+                        const recordDate = new Date(r.check_in_time);
+                        const fromDate = new Date(attendanceDateFrom);
+                        matchesDateFrom = recordDate >= fromDate;
+                      }
+                      if (attendanceDateTo) {
+                        const recordDate = new Date(r.check_in_time);
+                        const toDate = new Date(attendanceDateTo);
+                        toDate.setHours(23, 59, 59, 999);
+                        matchesDateTo = recordDate <= toDate;
+                      }
+                      return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+                    }).length} registros
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabla de Asistencias */}
+              <div
+                className="rounded-xl shadow-lg overflow-hidden"
+                style={{ background: theme.surface }}
               >
-                Cerrar
-              </button>
+                {attendanceRecords.length === 0 ? (
+                  <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                    No hay registros de asistencia
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-white" style={{ background: theme.primary }}>
+                        <tr>
+                          <th className="px-4 py-3 text-left">Funcionario</th>
+                          <th className="px-4 py-3 text-left">Fecha</th>
+                          <th className="px-4 py-3 text-left">Entrada</th>
+                          <th className="px-4 py-3 text-left">Salida</th>
+                          <th className="px-4 py-3 text-left">Total Horas</th>
+                          <th className="px-4 py-3 text-left">Estado</th>
+                          <th className="px-4 py-3 text-left">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attendanceRecords
+                          .filter(r => {
+                            const matchesSearch = !attendanceSearchTerm ||
+                              r.worker_name.toLowerCase().includes(attendanceSearchTerm.toLowerCase());
+                            const matchesStatus = !attendanceStatusFilter || r.status === attendanceStatusFilter;
+                            let matchesDateFrom = true;
+                            let matchesDateTo = true;
+                            if (attendanceDateFrom) {
+                              const recordDate = new Date(r.check_in_time);
+                              const fromDate = new Date(attendanceDateFrom);
+                              matchesDateFrom = recordDate >= fromDate;
+                            }
+                            if (attendanceDateTo) {
+                              const recordDate = new Date(r.check_in_time);
+                              const toDate = new Date(attendanceDateTo);
+                              toDate.setHours(23, 59, 59, 999);
+                              matchesDateTo = recordDate <= toDate;
+                            }
+                            return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
+                          })
+                          .map(record => (
+                            <tr
+                              key={record.id}
+                              className="border-b hover:opacity-75 transition-opacity"
+                              style={{
+                                borderColor: theme.border,
+                                background: isDark ? 'transparent' : '#f8f9fa'
+                              }}
+                            >
+                              <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
+                              <td className="px-4 py-3 text-xs">
+                                {new Date(record.check_in_time).toLocaleDateString('es-ES')}
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                {new Date(record.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="px-4 py-3 text-xs">
+                                {record.check_out_time
+                                  ? new Date(record.check_out_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                                  : '-'
+                                }
+                              </td>
+                              <td className="px-4 py-3">
+                                {record.total_hours ? (
+                                  <span className="px-3 py-1 rounded-full font-semibold text-sm text-white" style={{ background: theme.primary }}>
+                                    {record.total_hours}h
+                                  </span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className="px-3 py-1 rounded-full font-semibold text-sm text-white"
+                                  style={{ background: record.status === 'active' ? '#27ae60' : '#6c757d' }}
+                                >
+                                  {record.status === 'active' ? 'Activo' : 'Completado'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm('¿Eliminar este registro de asistencia?')) return;
+                                    const success = await deleteAttendanceRecord(record.id);
+                                    if (success) {
+                                      loadAllData();
+                                      loadAlertsAndStats();
+                                    }
+                                  }}
+                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                  style={{ background: '#e74c3c' }}
+                                >
+                                  <Trash2 className="w-3 h-3 inline" /> Eliminar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: FUNCIONARIOS */}
+          {activeTab === 'funcionarios' && (
+            <div className="animate-fade-in">
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6"
+                style={{ background: theme.surface }}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">{editingWorkerId ? 'Editar Funcionario' : 'Crear Funcionario'}</h2>
+                  <button
+                    onClick={() => {
+                      setShowUserForm(!showUserForm);
+                      if (!showUserForm) {
+                        setEditingWorkerId(null);
+                        setNewWorker({ username: '', password: '', full_name: '', email: '' });
+                      }
+                    }}
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                    style={{ background: theme.primary }}
+                  >
+                    <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
+                  </button>
+                </div>
+
+                {showUserForm && (
+                  <form onSubmit={handleAddWorker} className="grid md:grid-cols-2 gap-4 mt-4">
+                    <input
+                      type="text"
+                      placeholder="Nombre de usuario"
+                      value={newWorker.username}
+                      onChange={(e) => setNewWorker({ ...newWorker, username: e.target.value })}
+                      className="input-professional focus:outline-none"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Contraseña"
+                      value={newWorker.password}
+                      onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
+                      className="input-professional focus:outline-none"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Nombre completo"
+                      value={newWorker.full_name}
+                      onChange={(e) => setNewWorker({ ...newWorker, full_name: e.target.value })}
+                      className="input-professional focus:outline-none"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email (opcional)"
+                      value={newWorker.email}
+                      onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
+                      className="input-professional focus:outline-none"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
+                      style={{ background: '#27ae60' }}
+                    >
+                      {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <div
+                className="rounded-xl shadow-lg overflow-hidden"
+                style={{ background: theme.surface }}
+              >
+                {workers.length === 0 ? (
+                  <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                    No hay funcionarios registrados
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-white" style={{ background: theme.primary }}>
+                        <tr>
+                          <th className="px-4 py-3 text-left">Usuario</th>
+                          <th className="px-4 py-3 text-left">Nombre</th>
+                          <th className="px-4 py-3 text-left">Email</th>
+                          <th className="px-4 py-3 text-left">Contraseña</th>
+                          <th className="px-4 py-3 text-left">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workers.map(worker => (
+                          <tr
+                            key={worker.id}
+                            className="border-b hover:opacity-75 transition-opacity"
+                            style={{
+                              borderColor: theme.border,
+                              background: isDark ? 'transparent' : '#f8f9fa'
+                            }}
+                          >
+                            <td className="px-4 py-3 font-semibold">{worker.username}</td>
+                            <td className="px-4 py-3">{worker.full_name}</td>
+                            <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
+                            <td className="px-4 py-3 flex items-center gap-2">
+                              <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
+                              <button
+                                onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
+                                className="hover:opacity-70"
+                                style={{ color: theme.primary }}
+                              >
+                                {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 flex gap-2">
+                              <button
+                                onClick={() => handleEditWorker(worker)}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
+                                style={{ background: '#3498db' }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteWorker(worker.id)}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
+                                style={{ background: '#e74c3c' }}
+                              >
+                                <Trash2 className="w-3 h-3 inline" /> Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: EMPRESAS */}
+          {activeTab === 'empresas' && (
+            <div className="animate-fade-in">
+              <div
+                className="rounded-xl shadow-lg p-6 mb-6"
+                style={{ background: theme.surface }}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">{editingCompanyId ? 'Editar Empresa' : 'Crear Empresa'}</h2>
+                  <button
+                    onClick={() => {
+                      setShowCompanyForm(!showCompanyForm);
+                      if (!showCompanyForm) {
+                        setEditingCompanyId(null);
+                        setNewCompany({ name: '', type: 'auditoria' });
+                      }
+                    }}
+                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-professional"
+                    style={{ background: theme.primary }}
+                  >
+                    <Plus className="w-4 h-4" /> {showCompanyForm ? 'Cancelar' : 'Nueva'}
+                  </button>
+                </div>
+
+                {showCompanyForm && (
+                  <form onSubmit={handleAddCompany} className="grid md:grid-cols-2 gap-4 mt-4">
+                    <input
+                      type="text"
+                      placeholder="Nombre de la empresa"
+                      value={newCompany.name}
+                      onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+                      className="input-professional focus:outline-none"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                    <select
+                      value={newCompany.type}
+                      onChange={(e) => setNewCompany({ ...newCompany, type: e.target.value })}
+                      className="input-professional focus:outline-none cursor-pointer"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    >
+                      <option value="auditoria">Auditoría</option>
+                      <option value="contabilidad">Contabilidad</option>
+                    </select>
+                    <button
+                      type="submit"
+                      className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
+                      style={{ background: '#27ae60' }}
+                    >
+                      {editingCompanyId ? 'Actualizar Empresa' : 'Crear Empresa'}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              {/* Búsqueda de Empresas */}
+              <div
+                className="rounded-xl shadow-lg p-4 mb-6"
+                style={{ background: theme.surface }}
+              >
+                <div className="flex gap-4 flex-wrap items-center">
+                  <div className="flex-1 min-w-[200px]">
+                    <input
+                      type="text"
+                      value={companySearchTerm}
+                      onChange={(e) => setCompanySearchTerm(e.target.value)}
+                      placeholder="Buscar empresa por nombre..."
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text,
+                      }}
+                    />
+                  </div>
+                  <select
+                    value={companyTypeFilter}
+                    onChange={(e) => setCompanyTypeFilter(e.target.value)}
+                    className="px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
+                    style={{
+                      borderColor: theme.border,
+                      background: isDark ? '#0f1419' : '#fff',
+                      color: theme.text,
+                    }}
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option value="auditoria">Auditoría</option>
+                    <option value="contabilidad">Contabilidad</option>
+                  </select>
+                  <span className="text-sm" style={{ color: theme.textSecondary }}>
+                    {filteredCompanies.length} empresas
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="rounded-xl shadow-lg overflow-hidden"
+                style={{ background: theme.surface }}
+              >
+                {filteredCompanies.length === 0 ? (
+                  <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                    No hay empresas registradas
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-white" style={{ background: theme.primary }}>
+                        <tr>
+                          <th className="px-4 py-3 text-left">Nombre</th>
+                          <th className="px-4 py-3 text-left">Tipo</th>
+                          <th className="px-4 py-3 text-left">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCompanies.map(company => (
+                          <tr
+                            key={company.id}
+                            className="border-b hover:opacity-75 transition-opacity"
+                            style={{
+                              borderColor: theme.border,
+                              background: isDark ? 'transparent' : '#f8f9fa'
+                            }}
+                          >
+                            <td className="px-4 py-3 font-semibold">{company.name}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2 flex-wrap">
+                                {(company.types || [company.type]).map(type => (
+                                  <span
+                                    key={type}
+                                    className="px-3 py-1 rounded-full text-white text-xs font-semibold"
+                                    style={{
+                                      background: type === 'auditoria' ? '#3498db' : '#27ae60'
+                                    }}
+                                  >
+                                    {type === 'auditoria' ? 'Auditoría' : 'Contabilidad'}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 flex gap-2">
+                              <button
+                                onClick={() => handleEditCompany(company)}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                style={{ background: '#3498db' }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCompany(company.id)}
+                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
+                                style={{ background: '#e74c3c' }}
+                              >
+                                <Trash2 className="w-3 h-3 inline" /> Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* TAB: DASHBOARDS */}
+          {activeTab === 'dashboards' && (
+            <div className="animate-fade-in">
+              {/* Colores para gráficos */}
+              {(() => {
+                const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
+
+                // Calcular datos para gráficos
+                const hoursByCompany = {};
+                const hoursByWorker = {};
+                const hoursByType = { auditoria: 0, contabilidad: 0 };
+
+                records.forEach(r => {
+                  const hours = parseFloat(r.hours_worked || 0);
+
+                  // Por empresa
+                  if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
+                  hoursByCompany[r.company_name] += hours;
+
+                  // Por funcionario
+                  if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
+                  hoursByWorker[r.worker_name] += hours;
+                });
+
+                // Determinar tipo de empresa
+                companies.forEach(c => {
+                  const companyHours = hoursByCompany[c.name] || 0;
+                  if (c.type === 'auditoria') {
+                    hoursByType.auditoria += companyHours;
+                  } else {
+                    hoursByType.contabilidad += companyHours;
+                  }
+                });
+
+                const topCompanies = Object.entries(hoursByCompany)
+                  .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
+                  .sort((a, b) => b.horas - a.horas)
+                  .slice(0, 8);
+
+                const workerData = Object.entries(hoursByWorker)
+                  .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
+                  .sort((a, b) => b.horas - a.horas)
+                  .slice(0, 8);
+
+                const pieData = [
+                  { name: 'Auditoría', value: parseFloat(hoursByType.auditoria.toFixed(2)) },
+                  { name: 'Contabilidad', value: parseFloat(hoursByType.contabilidad.toFixed(2)) }
+                ];
+
+                const recentActivities = [...records]
+                  .sort((a, b) => new Date(b.created_at || b.start_datetime) - new Date(a.created_at || a.start_datetime))
+                  .slice(0, 8);
+
+                return (
+                  <div className="space-y-6">
+                    {/* Top Empresas y Productividad por Funcionario */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Top Empresas */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <Building2 className="w-5 h-5" /> Top Empresas por Horas
+                        </h3>
+                        {topCompanies.length === 0 ? (
+                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={topCompanies} layout="vertical" margin={{ left: 20, right: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                              <XAxis type="number" stroke={theme.textSecondary} />
+                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                              <Tooltip
+                                contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                                formatter={(value) => [`${value}h`, 'Horas']}
+                              />
+                              <Bar dataKey="horas" fill="#3498db" radius={[0, 4, 4, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+
+                      {/* Productividad por Funcionario */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <TrendingUp className="w-5 h-5" /> Productividad por Funcionario
+                        </h3>
+                        {workerData.length === 0 ? (
+                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={workerData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                              <XAxis type="number" stroke={theme.textSecondary} />
+                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                              <Tooltip
+                                contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                                formatter={(value) => [`${value}h`, 'Horas']}
+                              />
+                              <Bar dataKey="horas" fill="#27ae60" radius={[0, 4, 4, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Distribución y Actividades Recientes */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Distribución por Tipo */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <BarChart3 className="w-5 h-5" /> Distribución por Tipo
+                        </h3>
+                        {pieData.every(d => d.value === 0) ? (
+                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={300}>
+                            <RechartsPie>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={5}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              >
+                                {pieData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip formatter={(value) => [`${value}h`, 'Horas']} />
+                              <Legend />
+                            </RechartsPie>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+
+                      {/* Actividades Recientes */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <Clock className="w-5 h-5" /> Actividades Recientes
+                        </h3>
+                        {recentActivities.length === 0 ? (
+                          <p style={{ color: theme.textSecondary }}>No hay actividades recientes</p>
+                        ) : (
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                            {recentActivities.map((activity, index) => (
+                              <div
+                                key={activity.id}
+                                className="flex items-start gap-3 p-3 rounded-lg"
+                                style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
+                              >
+                                <div
+                                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+                                  style={{ background: COLORS[index % COLORS.length] }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <p className="font-semibold text-sm truncate">{activity.worker_name}</p>
+                                    <span
+                                      className="text-xs px-2 py-1 rounded-full text-white flex-shrink-0"
+                                      style={{ background: theme.primary }}
+                                    >
+                                      {activity.hours_worked}h
+                                    </span>
+                                  </div>
+                                  <p className="text-xs truncate" style={{ color: theme.textSecondary }}>
+                                    {activity.company_name}
+                                  </p>
+                                  <p className="text-xs" style={{ color: theme.textSecondary }}>
+                                    {new Date(activity.start_datetime).toLocaleDateString('es-ES')}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* TAB: REPORTES */}
+          {activeTab === 'reportes' && (
+            <div className="animate-fade-in">
+              <div
+                className="rounded-xl shadow-lg p-4 md:p-6 mb-6 overflow-x-auto"
+                style={{ background: theme.surface }}
+              >
+                <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
+                    <input
+                      type="datetime-local"
+                      value={reportFilters.startDate}
+                      onChange={(e) => setReportFilters({ ...reportFilters, startDate: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-2 text-sm md:text-base">Hasta</label>
+                    <input
+                      type="datetime-local"
+                      value={reportFilters.endDate}
+                      onChange={(e) => setReportFilters({ ...reportFilters, endDate: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
+                    <select
+                      value={reportFilters.worker}
+                      onChange={(e) => setReportFilters({ ...reportFilters, worker: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
+                      style={{
+                        borderColor: theme.border,
+                        background: isDark ? '#0f1419' : '#fff',
+                        color: theme.text
+                      }}
+                    >
+                      <option value="">Todos</option>
+                      {workersList.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={generateReport}
+                      className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold cursor-pointer text-sm md:text-base"
+                      style={{ background: theme.primary }}
+                    >
+                      <Calendar className="w-4 h-4" /> <span className="hidden sm:inline">Generar</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {reportData && (
+                <div
+                  className="rounded-xl shadow-lg p-6"
+                  style={{ background: theme.surface }}
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold">Resultados</h2>
+                    <button
+                      onClick={exportReport}
+                      className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                      style={{ background: '#27ae60' }}
+                    >
+                      <Download className="w-4 h-4" /> Exportar CSV
+                    </button>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4 mb-6">
+                    <StatsCard number={reportData.summary.total} label="Actividades" bgColor={theme.primary} />
+                    <StatsCard number={reportData.summary.hours} label="Horas" bgColor={theme.primary} />
+                    <StatsCard number={reportData.summary.workers} label="Funcionarios" bgColor={theme.primary} />
+                  </div>
+
+                  {reportData.records.length === 0 ? (
+                    <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                      No hay actividades en ese período
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-white" style={{ background: theme.primary }}>
+                          <tr>
+                            <th className="px-4 py-3 text-left">Funcionario</th>
+                            <th className="px-4 py-3 text-left">Empresa</th>
+                            <th className="px-4 py-3 text-left">Inicio</th>
+                            <th className="px-4 py-3 text-left">Fin</th>
+                            <th className="px-4 py-3 text-left">Horas</th>
+                            <th className="px-4 py-3 text-left">Descripción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.records.map(record => (
+                            <tr key={record.id} className="border-b" style={{ borderColor: theme.border }}>
+                              <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
+                              <td className="px-4 py-3">{record.company_name}</td>
+                              <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
+                              <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ background: theme.primary }}>
+                                  {record.hours_worked}h
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 max-w-xs truncate">{record.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          )}
+        </div>
+
+        {/* Modal de detalle de registro */}
+        {selectedRecord && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
+            style={{ background: 'rgba(0,0,0,0.7)' }}
+            onClick={() => setSelectedRecord(null)}
+          >
+            <div
+              className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
+              style={{ background: theme.surface }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del modal */}
+              <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+                <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                  Detalle de Actividad
+                </h2>
+                <button
+                  onClick={() => setSelectedRecord(null)}
+                  className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
+                  style={{ background: isDark ? '#333' : '#eee' }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Contenido del modal */}
+              <div className="p-6 space-y-6">
+                {/* Información del registro */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
+                    <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
+                  </div>
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
+                    <p className="text-lg font-bold">{selectedRecord.company_name}</p>
+                  </div>
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
+                    <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
+                  </div>
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
+                    <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
+                  </div>
+                  <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
+                    <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
+                    <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
+                  </div>
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
+                    <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
+                  </div>
+                </div>
+
+                {/* Descripción */}
+                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
+                  <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+                </div>
+
+                {/* Visor de archivo */}
+                {selectedRecord.file_url ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
+                      <a
+                        href={selectedRecord.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
+                        style={{ background: theme.primary }}
+                      >
+                        <Download className="w-4 h-4" /> Descargar
+                      </a>
+                    </div>
+                    <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
+                      {/* Visor según tipo de archivo */}
+                      {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <img
+                          src={selectedRecord.file_url}
+                          alt="Archivo adjunto"
+                          className="w-full max-h-96 object-contain"
+                        />
+                      ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
+                        <iframe
+                          src={selectedRecord.file_url}
+                          className="w-full h-96"
+                          title="Vista previa PDF"
+                        />
+                      ) : (
+                        /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
+                        <iframe
+                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
+                          className="w-full h-96"
+                          title="Vista previa documento"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer del modal */}
+              <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+                <button
+                  onClick={() => {
+                    handleDeleteRecord(selectedRecord.id);
+                    setSelectedRecord(null);
+                  }}
+                  className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
+                  style={{ background: '#e74c3c' }}
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar
+                </button>
+                <button
+                  onClick={() => setSelectedRecord(null)}
+                  className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
+                  style={{ background: theme.primary, color: 'white' }}
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }

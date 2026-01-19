@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@aws-sdk/lib-storage": "^3.966.0",
+    "@azure/msal-browser": "^5.0.2",
+    "@azure/msal-react": "^5.0.2",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@supabase/supabase-js": "^2.90.1",
     "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",

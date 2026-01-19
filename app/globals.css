@@ -7,7 +7,8 @@
   --accent: #4a90d9;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -78,65 +79,58 @@ body {
    ANIMACIONES Y EFECTOS
    ============================================ */
 
-/* Animación de cierre de widgets */
-@keyframes slideOutUp {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-    max-height: 500px;
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-20px);
-    max-height: 0;
-  }
-}
-
+/* Animaciones sutiles y profesionales */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
   }
+
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
-@keyframes slideUp {
+@keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.widget-close {
-  animation: slideOutUp 0.4s ease-out forwards;
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-.modal-animate {
-  animation: fadeIn 0.2s ease-out;
+.animate-slide-up {
+  animation: slideInUp 0.5s ease-out forwards;
 }
 
-.slide-up {
-  animation: slideUp 0.3s ease-out;
+/* Transiciones suaves para elementos interactivos */
+.transition-all-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ============================================
-   BOTONES Y CONTROLES
-   ============================================ */
-
-button {
-  cursor: pointer;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+/* Page transition wrapper */
+.page-transition {
+  animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Animaciones fluidas */
+/* Hover effects cards */
+.card-hover-effect {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Animaciones sutiles globales */
 * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -145,11 +139,15 @@ a {
   transition: color 0.2s ease;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(32, 59, 112, 0.15);
 }
@@ -260,4 +258,282 @@ tbody tr {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ============================================
+   DASHBOARD LAYOUT CON SIDEBAR
+   ============================================ */
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-content {
+    margin-left: 256px;
+  }
+}
+
+/* ============================================
+   CARDS ESTILO MODERNO
+   ============================================ */
+
+.stat-card {
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translate(20px, -20px);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+/* ============================================
+   TABLAS MODERNAS
+   ============================================ */
+
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modern-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.modern-table tbody td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modern-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================
+   FORMULARIOS MEJORADOS
+   ============================================ */
+
+.modern-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.modern-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modern-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ============================================
+   BOTONES MEJORADOS
+   ============================================ */
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(32, 59, 112, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+}
+
+/* ============================================
+   ALERTAS Y BADGES
+   ============================================ */
+
+.alert-warning {
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-left: 4px solid #d4af37;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.alert-error {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-left: 4px solid #e74c3c;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.alert-success {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  border-left: 4px solid #2ecc71;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.badge-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+}
+
+.badge-success {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+}
+
+.badge-warning {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #d4af37 0%, #f39c12 100%);
+  color: white;
+}
+
+/* ============================================
+   ANIMACIONES ADICIONALES
+   ============================================ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.05) 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.pulse-indicator {
+  position: relative;
+}
+
+.pulse-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: pulse-ring 1.5s infinite;
 }
