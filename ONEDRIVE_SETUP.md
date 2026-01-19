@@ -33,10 +33,22 @@ export const msalConfig = {
 };
 ```
 
-## Paso 4: ¡Listo!
-Ahora, entra al Dashboard de Trabajadores o Administración. En la pestaña **"Mis Archivos"** o **"Archivos Cloud"**, aparecerá el botón **"Conectar OneDrive"**.
-- Cada trabajador iniciará sesión con **su propia cuenta**.
-- El sistema recordará su sesión.
+## Paso 4: Habilitar Permisos de SharePoint (CRUCIAL)
+Para que el sistema vea los "Grupos de Trabajo", debes dar permiso explícito:
+
+1. En tu App de Azure, busca **"Permisos de API"** en el menú izquierdo.
+2. Haz clic en **"Agregar un permiso"** -> **"Microsoft Graph"**.
+3. Elige **"Permisos delegados"** (Delegated permissions).
+4. En la barra de búsqueda escribe: `Sites`.
+5. Marca la casilla: **`Sites.Read.All`** (Leer todos los sitios).
+6. Haz clic en **"Agregar permisos"**.
+   - *Nota: Si ves un botón que dice "Conceder consentimiento de administrador", dale clic y acepta.*
+
+## Paso 5: ¡Listo!
+Ahora, entra al Dashboard.
+- Al conectar tu cuenta, verás tus **Grupos de SharePoint** (Auditoría, Contabilidad...) como tarjetas de colores.
+- Haz clic en uno para ver sus archivos.
+- El sistema detectará automáticamente cuando edites archivos de esos grupos.
 
 ## Solución de Problemas Comunes
 
@@ -48,6 +60,6 @@ Si al conectar ves un mensaje de error que dice **"The redirect URI '...' specif
 2. En el menú izquierdo, haz clic en **Autenticación**.
 3. En la sección **URI de redirección (SPA)**, asegúrate de tener EXACTAMENTE esta URL:
    `https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app`
-4. **Borra** cualquier otra que tengas que termine en `/trabajadores/archivos` u otra sub-ruta. Solo debe quedar la raíz.
+4. **Borra** cualquier otra que tengas que termine en `/trabajadores/archivos`, `localhost` (si estás en producción) u otra sub-ruta. Solo debe quedar la raíz.
 5. Haz clic en **Guardar** arriba.
 6. Espera un minuto y prueba de nuevo.

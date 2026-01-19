@@ -5,7 +5,7 @@ import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles } from "@/lib/onedriveService";
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft } from 'lucide-react';
 
-const OneDriveExplorer = () => {
+const OneDriveExplorer = ({ driveId }) => {
     const { instance, accounts } = useMsal();
     const [files, setFiles] = useState([]);
     const [currentFolder, setCurrentFolder] = useState("root");
@@ -14,7 +14,7 @@ const OneDriveExplorer = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (accounts.length > 0) {
+        if (accounts.length > 0 && driveId) {
             const request = {
                 ...loginRequest,
                 account: accounts[0],
@@ -28,13 +28,14 @@ const OneDriveExplorer = () => {
                 instance.acquireTokenRedirect(request);
             });
         }
-    }, [accounts, instance]);
+    }, [accounts, instance, driveId]);
 
     const loadFiles = async (folderId) => {
+        if (!driveId) return;
         setLoading(true);
         setError(null);
         try {
-            const result = await getFiles(folderId);
+            const result = await getFiles(folderId, driveId);
             setFiles(result);
         } catch (err) {
             setError("No se pudieron cargar los archivos. Verifica tu conexión.");
@@ -99,7 +100,7 @@ const OneDriveExplorer = () => {
                             <ArrowLeft size={20} className="text-gray-600" />
                         </button>
                     )}
-                    <h2 className="font-semibold text-gray-700">Mis Archivos</h2>
+                    <h2 className="font-semibold text-gray-700">Archivos del Grupo</h2>
                 </div>
                 <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Lectura Segura</span>
             </div>
