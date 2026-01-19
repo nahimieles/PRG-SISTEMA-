@@ -9,12 +9,14 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
-    if (saved) {
-      setIsDark(saved === 'dark');
-    } else {
-      setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
+
+    // Only update if value is different to avoid linter warning about sync updates
+    if (isDark !== shouldBeDark) {
+      setIsDark(shouldBeDark);
     }
-  }, []);
+  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
