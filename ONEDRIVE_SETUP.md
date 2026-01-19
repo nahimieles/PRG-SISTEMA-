@@ -9,9 +9,9 @@ Para que el sistema se conecte con OneDrive, necesitas registrar tu aplicación 
 4. **Tipos de cuenta compatibles**: Selecciona *"Cuentas en cualquier directorio de organización y cuentas personales de Microsoft"* (esto permite que los chicos usen sus cuentas personales o de trabajo).
 5. **URI de redirección**:
    - Selecciona **SPA** (Single-page application).
-   - Escribe: `http://localhost:3000/trabajadores/archivos`
-   - **IMPORTANTE**: Haz clic en "Agregar URI" y añade también tu enlace de Vercel:
-     `https://TU-PROYECTO.vercel.app/trabajadores/archivos`
+   - Escribe: `http://localhost:3000`
+   - **IMPORTANTE**: Haz clic en "Agregar URI" y añade también tu enlace de Vercel (solo el dominio raíz):
+     `https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app`
    *(Así funcionará tanto en tu PC como en la web publicada).*
 6. Haz clic en **Registrar**.
 
@@ -34,6 +34,20 @@ export const msalConfig = {
 ```
 
 ## Paso 4: ¡Listo!
-Ahora, cuando entres a la página `/trabajadores/archivos`, aparecerá un botón **"Conectar OneDrive"**.
+Ahora, entra al Dashboard de Trabajadores o Administración. En la pestaña **"Mis Archivos"** o **"Archivos Cloud"**, aparecerá el botón **"Conectar OneDrive"**.
 - Cada trabajador iniciará sesión con **su propia cuenta**.
 - El sistema recordará su sesión.
+
+## Solución de Problemas Comunes
+
+### Error AADSTS50011 (Redirect URI Mismatch)
+Si al conectar ves un mensaje de error que dice **"The redirect URI '...' specified in the request does not match..."**, significa que la URL que configuraste en Azure no es EXACTAMENTE igual a la que usa tu app.
+
+**Solución rápida en Azure:**
+1. Ve a tu aplicación en el Portal de Azure.
+2. En el menú izquierdo, haz clic en **Autenticación**.
+3. En la sección **URI de redirección (SPA)**, asegúrate de tener EXACTAMENTE esta URL:
+   `https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app`
+4. **Borra** cualquier otra que tengas que termine en `/trabajadores/archivos` u otra sub-ruta. Solo debe quedar la raíz.
+5. Haz clic en **Guardar** arriba.
+6. Espera un minuto y prueba de nuevo.

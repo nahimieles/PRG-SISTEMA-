@@ -24,10 +24,8 @@ const OneDriveExplorer = () => {
                 initializeGraphClient(response.accessToken);
                 loadFiles("root");
             }).catch((e) => {
-                instance.acquireTokenPopup(request).then((response) => {
-                    initializeGraphClient(response.accessToken);
-                    loadFiles("root");
-                });
+                // If silent fails, redirect to login
+                instance.acquireTokenRedirect(request);
             });
         }
     }, [accounts, instance]);
@@ -73,7 +71,7 @@ const OneDriveExplorer = () => {
             <div className="flex flex-col items-center justify-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                 <p className="text-lg text-gray-600 mb-4">Conecta tu cuenta para ver tus archivos</p>
                 <button
-                    onClick={() => instance.loginPopup(loginRequest)}
+                    onClick={() => instance.loginRedirect(loginRequest)}
                     className="bg-[#2A5C82] text-white px-6 py-2 rounded-lg hover:bg-[#1e4a6d] transition-colors"
                 >
                     Conectar OneDrive

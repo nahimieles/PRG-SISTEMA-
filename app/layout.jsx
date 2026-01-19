@@ -1,6 +1,7 @@
 import './globals.css'
 import { Montserrat } from 'next/font/google'
 import { ThemeProvider } from '../contexts/ThemeContext'
+import MsalWrapper from '../components/MsalWrapper'
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -16,9 +17,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className={montserrat.className}>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <MsalWrapper>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </MsalWrapper>
       </body>
     </html>
   )
