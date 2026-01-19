@@ -53,12 +53,7 @@ const OneDriveContainer = () => {
                 )}
             </header>
 
-            {/* Sección de Productividad "Inteligente" - SOLO ADMINS */}
-            {currentRole === 'admin' && (
-                <section>
-                    <SmartReportGenerator role={currentRole} />
-                </section>
-            )}
+
 
             {/* Contenido Principal */}
             <section>

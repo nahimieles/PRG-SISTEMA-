@@ -5,6 +5,9 @@ import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles } from "@/lib/onedriveService";
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft } from 'lucide-react';
 
+import { useTheme } from "@/contexts/ThemeContext";
+import { lightTheme, darkTheme } from "@/lib/colors";
+
 // Helper to normalize strings for comparison (remove accents, case insensitive)
 const normalize = (str) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -12,6 +15,9 @@ const normalize = (str) => {
 
 const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const { instance, accounts } = useMsal();
+    const { isDark } = useTheme();
+    const theme = isDark ? darkTheme : lightTheme;
+
     const [files, setFiles] = useState([]);
     const [originalFiles, setOriginalFiles] = useState([]); // Store all files for filtering
     const [currentFolder, setCurrentFolder] = useState("root");
@@ -93,8 +99,11 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
     if (accounts.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center p-10 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                <p className="text-lg text-gray-600 mb-4">Conecta tu cuenta para ver tus archivos</p>
+            <div
+                className="flex flex-col items-center justify-center p-10 rounded-lg border border-dashed"
+                style={{ background: theme.surface, borderColor: theme.border }}
+            >
+                <p className="text-lg mb-4" style={{ color: theme.textSecondary }}>Conecta tu cuenta para ver tus archivos</p>
                 <button
                     onClick={() => instance.loginRedirect(loginRequest)}
                     className="bg-[#2A5C82] text-white px-6 py-2 rounded-lg hover:bg-[#1e4a6d] transition-colors"
@@ -116,22 +125,25 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-[#F8FAFC]">
+        <div
+            className="rounded-xl shadow-lg overflow-hidden border"
+            style={{ background: theme.surface, borderColor: theme.border }}
+        >
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
                 <div className="flex items-center gap-2">
                     {folderHistory.length > 0 && (
-                        <button onClick={navigateUp} className="p-1 hover:bg-gray-200 rounded-full transition cursor-pointer">
-                            <ArrowLeft size={20} className="text-gray-600" />
+                        <button onClick={navigateUp} className="p-1 hover:opacity-70 rounded-full transition cursor-pointer">
+                            <ArrowLeft size={20} style={{ color: theme.text }} />
                         </button>
                     )}
-                    <h2 className="font-semibold text-gray-700">
+                    <h2 className="font-semibold" style={{ color: theme.text }}>
                         {folderHistory.length === 0 ? `Archivos: ${siteName}` : folderHistory[folderHistory.length - 1].name}
                     </h2>
                 </div>
                 {role === 'admin' ? (
-                    <span className="text-xs text-blue-800 bg-blue-100 px-2 py-1 rounded-full font-bold">Modo Administrador</span>
+                    <span className="text-xs px-2 py-1 rounded-full font-bold" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Modo Admin</span>
                 ) : (
-                    <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Lectura Segura</span>
+                    <span className="text-xs px-2 py-1 rounded-full" style={{ background: isDark ? '#333' : '#eee', color: theme.textSecondary }}>Lectura Segura</span>
                 )}
             </div>
 
@@ -143,7 +155,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                 ) : error ? (
                     <div className="text-red-500 text-center p-4">{error}</div>
                 ) : files.length === 0 ? (
-                    <div className="text-center text-gray-400 p-8">
+                    <div className="text-center p-8" style={{ color: theme.textSecondary }}>
                         {role !== 'admin' && siteName === 'PRG AUDITORES'
                             ? "No encontramos tu carpeta personal en este grupo."
                             : "Carpeta vacía"}
@@ -153,27 +165,34 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         {files.map((item) => (
                             <div
                                 key={item.id}
-                                className={`group relative p-3 rounded-xl border transition-all hover:shadow-md cursor-pointer ${item.folder ? 'bg-blue-50 border-blue-100' : 'bg-white border-gray-200'}`}
+                                className={`group relative p-3 rounded-xl border transition-all hover:bg-opacity-50 cursor-pointer ${item.folder ? 'folder-card' : 'file-card'}`}
+                                style={{
+                                    background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
+                                    borderColor: theme.border
+                                }}
                                 onClick={() => item.folder ? navigateToFolder(item.id, item.name) : openPreview(item)}
                             >
                                 <div className="flex flex-col items-center gap-3 p-2">
                                     {item.folder ? (
                                         <Folder className="w-12 h-12 text-blue-500 fill-blue-500/20" />
                                     ) : item.thumbnails && item.thumbnails.length > 0 ? (
-                                        <img
-                                            src={item.thumbnails[0].medium.url}
-                                            alt={item.name}
-                                            className="w-full h-32 object-cover rounded-lg"
-                                        />
+                                        <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                                            <img
+                                                src={item.thumbnails[0].medium.url}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                            />
+                                        </div>
                                     ) : (
-                                        <div className="w-full h-32 flex items-center justify-center bg-gray-50 rounded-lg">
+                                        <div className="w-full h-32 flex items-center justify-center rounded-lg" style={{ background: isDark ? '#111' : '#f9fafb' }}>
                                             {getFileIcon(item.name)}
                                         </div>
                                     )}
 
                                     <div className="w-full text-center">
-                                        <p className="font-medium text-sm text-gray-700 truncate w-full" title={item.name}>{item.name}</p>
-                                        <p className="text-[10px] text-gray-400">
+                                        <p className="font-medium text-sm truncate w-full" style={{ color: theme.text }} title={item.name}>{item.name}</p>
+                                        <p className="text-[10px]" style={{ color: theme.textSecondary }}>
                                             {new Date(item.lastModifiedDateTime).toLocaleDateString()}
                                         </p>
                                     </div>
@@ -184,23 +203,31 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                 )}
             </div>
 
-            {/* Modal de Vista Previa (Mejorado) */}
+            {/* Modal de Vista Previa (Sin Blur Pesado) */}
             {previewFile && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={closePreview}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ background: 'rgba(0,0,0,0.85)' }}
+                    onClick={closePreview}
+                >
+                    <div
+                        className="rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden"
+                        style={{ background: theme.surface }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: theme.border }}>
                             <div>
-                                <h3 className="font-bold text-gray-800 text-lg truncate pr-4">{previewFile.name}</h3>
-                                <p className="text-xs text-gray-500">
+                                <h3 className="font-bold text-lg truncate pr-4" style={{ color: theme.text }}>{previewFile.name}</h3>
+                                <p className="text-xs" style={{ color: theme.textSecondary }}>
                                     Modificado por: <strong>{previewFile.lastModifiedBy?.user?.displayName || 'Desconocido'}</strong> el {new Date(previewFile.lastModifiedDateTime).toLocaleString()}
                                 </p>
                             </div>
-                            <button onClick={closePreview} className="p-2 hover:bg-gray-200 rounded-full transition">
-                                <ArrowLeft size={24} className="text-gray-500" />
+                            <button onClick={closePreview} className="p-2 hover:opacity-70 rounded-full transition">
+                                <ArrowLeft size={24} style={{ color: theme.text }} />
                             </button>
                         </div>
 
-                        <div className="flex-1 p-8 flex flex-col items-center justify-center gap-8 bg-gray-100 overflow-y-auto">
+                        <div className="flex-1 p-8 flex flex-col items-center justify-center gap-8 overflow-y-auto" style={{ background: isDark ? '#111' : '#f3f4f6' }}>
                             {previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
                                 <img
                                     src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium.url}
@@ -208,18 +235,17 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                     className="max-h-[60vh] w-auto shadow-2xl rounded-lg object-contain"
                                 />
                             ) : (
-                                <div className="w-48 h-48 flex items-center justify-center bg-white rounded-full shadow-lg">
+                                <div className="w-48 h-48 flex items-center justify-center rounded-full shadow-lg" style={{ background: theme.surface }}>
                                     {getFileIcon(previewFile.name)}
                                 </div>
                             )}
 
                             <div className="flex gap-4">
-                                {/* Botón "Abrir en Escritorio" usando ms- protocolos */}
                                 <a
-                                    href={previewFile.webUrl} // Fallback to web if scheme fails or logic complex
+                                    href={previewFile.webUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition shadow-xl"
+                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-8 py-4 rounded-xl font-bold text-lg hover:opacity-90 transition shadow-xl"
                                 >
                                     <FileIcon size={24} />
                                     Abrir Documento
@@ -240,5 +266,4 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         </div>
     );
 };
-
 export default OneDriveExplorer;

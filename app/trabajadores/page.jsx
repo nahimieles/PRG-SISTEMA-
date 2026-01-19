@@ -16,12 +16,12 @@ export default function FuncionariosPage() {
   const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
-  const [activeTab, setActiveTab] = useState('registrar');
+  const [activeTab, setActiveTab] = useState('asistencia'); // Changed default
 
   // Menú del sidebar para trabajadores
   const sidebarItems = [
     { id: 'asistencia', label: 'Asistencia', icon: Clock },
-    { id: 'registrar', label: 'Registrar Actividad', icon: Plus },
+    // { id: 'registrar', label: 'Registrar Actividad', icon: Plus }, // Removed
     { id: 'historial', label: 'Mis Actividades', icon: ClipboardList },
     { id: 'archivos', label: 'Mis Archivos', icon: FileText }
   ];
@@ -347,161 +347,7 @@ export default function FuncionariosPage() {
             </div>
           )}
 
-          {/* Formulario */}
-          {activeTab === 'registrar' && (
-            <div
-              className="rounded-2xl shadow-2xl p-4 md:p-8 mb-6"
-              style={{ background: theme.surface }}
-            >
-              <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: theme.primary }}>
-                Registrar Nueva Actividad
-              </h2>
 
-              {showSuccess === 'success' && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 dark:bg-green-900 dark:text-green-200">
-                  Actividad registrada exitosamente
-                </div>
-              )}
-              {showSuccess.startsWith('error-') && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 dark:bg-red-900 dark:text-red-200">
-                  {showSuccess.replace('error-', '')}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">
-                      Empresa *
-                    </label>
-                    <select
-                      required
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      className="w-full input-professional cursor-pointer text-sm md:text-base"
-                      style={{
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                        borderColor: theme.border
-                      }}
-                    >
-                      <option value="">Selecciona una empresa</option>
-                      {companies.map(company => (
-                        <option key={company.id} value={company.name}>
-                          {company.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">
-                      Tipo de Servicio *
-                    </label>
-                    <select
-                      required
-                      value={formData.serviceType}
-                      onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                      className="w-full input-professional cursor-pointer text-sm md:text-base"
-                      style={{
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                        borderColor: theme.border
-                      }}
-                    >
-                      <option value="">Selecciona tipo de servicio</option>
-                      <option value="auditoria">Auditoría</option>
-                      <option value="contabilidad">Contabilidad</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">
-                      Fecha y Hora de Inicio *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={formData.startDateTime}
-                      onChange={(e) => setFormData({ ...formData, startDateTime: e.target.value })}
-                      className="w-full input-professional text-sm md:text-base"
-                      style={{
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                        borderColor: theme.border
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">
-                      Fecha y Hora de Fin *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={formData.endDateTime}
-                      onChange={(e) => setFormData({ ...formData, endDateTime: e.target.value })}
-                      className="w-full input-professional text-sm md:text-base"
-                      style={{
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                        borderColor: theme.border
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2 text-sm md:text-base">
-                    Descripción del Trabajo *
-                  </label>
-                  <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows="4"
-                    className="w-full input-professional text-sm md:text-base"
-                    style={{
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                      borderColor: theme.border
-                    }}
-                    placeholder="Describe las actividades realizadas..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2 text-sm md:text-base">
-                    Adjunta archivo (Opcional)
-                  </label>
-                  <input
-                    id="fileInput"
-                    type="file"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full input-professional text-sm md:text-base"
-                    style={{
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                      borderColor: theme.border
-                    }}
-                    accept=".pdf,.doc,.docx,.xlsx,.xls,.txt,.jpg,.png"
-                  />
-                  {file && <p className="text-xs md:text-sm text-green-600 mt-2 dark:text-green-400">{file.name}</p>}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 cursor-pointer text-sm md:text-base shadow-professional"
-                  style={{ background: theme.primary }}
-                >
-                  <Plus className="w-5 h-5 inline mr-2" /> {loading ? 'Guardando...' : 'Guardar Actividad'}
-                </button>
-              </form>
-            </div>
-          )}
 
           {/* Mis Actividades */}
           {activeTab === 'historial' && (

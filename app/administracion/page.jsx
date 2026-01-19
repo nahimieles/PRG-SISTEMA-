@@ -566,98 +566,60 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* ALERTAS DE FALTA DE REPORTES */}
-          {showAlertsWidget && workersWithoutReports.length > 0 && (
-            <div
-              className={`rounded-xl shadow-lg p-6 mb-6 ${closingAlerts ? 'widget-close' : ''}`}
-              style={{ background: theme.surface, borderLeft: '4px solid #d4af37' }}
-            >
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" style={{ color: '#d4af37' }} />
-                  <h2 className="text-lg font-bold">Funcionarios Sin Reportes Recientes</h2>
-                </div>
-                <button
-                  onClick={handleCloseAlertsWidget}
-                  className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
-                  style={{ background: '#d4af37', color: '#fff' }}
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="grid gap-2">
-                {workersWithoutReports.map(worker => (
-                  <div
-                    key={worker.id}
-                    className="p-3 rounded-lg flex justify-between items-center"
-                    style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
-                  >
-                    <div>
-                      <p className="font-semibold">{worker.name}</p>
-                      <p style={{ color: theme.textSecondary }} className="text-sm">
-                        {worker.daysWithoutReport} días sin reportes {worker.lastReportDate && `(última: ${new Date(worker.lastReportDate).toLocaleDateString('es-ES')})`}
-                      </p>
-                    </div>
-                    <button
-                      className="text-white px-3 py-1 rounded text-xs cursor-pointer hover:opacity-90"
-                      style={{ background: '#d4af37' }}
-                    >
-                      Recordar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* WIDGETS COMPACTOS (Notificaciones) */}
+          <div className="flex flex-col gap-2 mb-6">
 
-          {/* PROBLEMAS DE CALIDAD */}
-          {showQualityWidget && qualityIssues.length > 0 && (
-            <div
-              className={`rounded-xl shadow-lg p-6 mb-6 ${closingQuality ? 'widget-close' : ''}`}
-              style={{ background: theme.surface, borderLeft: '4px solid #e74c3c' }}
-            >
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" style={{ color: '#e74c3c' }} />
-                  <h2 className="text-lg font-bold">Problemas de Calidad Detectados</h2>
-                </div>
-                <button
-                  onClick={handleCloseQualityWidget}
-                  className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80 transition"
-                  style={{ background: '#e74c3c', color: '#fff' }}
+            {/* ALERTAS COMPACTAS */}
+            {showAlertsWidget && workersWithoutReports.length > 0 && (
+              <details className="group">
+                <summary
+                  className="list-none cursor-pointer p-3 rounded-lg flex items-center justify-between text-sm font-medium shadow-sm border transition-all hover:opacity-90"
+                  style={{ background: '#fffbeb', borderColor: '#fcd34d', color: '#92400e' }}
                 >
-                  ✕
-                </button>
-              </div>
-              <div className="grid gap-2 max-h-64 overflow-y-auto">
-                {qualityIssues.slice(0, 5).map(issue => (
-                  <div
-                    key={`${issue.id}-${issue.type}`}
-                    className="p-3 rounded-lg flex justify-between items-center"
-                    style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
-                  >
-                    <div>
-                      <p className="font-semibold text-sm">{issue.message}</p>
-                      <p style={{ color: theme.textSecondary }} className="text-xs">
-                        {issue.record.worker_name} - {issue.record.company_name}
-                      </p>
-                    </div>
-                    <span
-                      className="px-2 py-1 rounded text-white text-xs font-semibold"
-                      style={{ background: issue.severity === 'error' ? '#e74c3c' : '#d4af37' }}
-                    >
-                      {issue.severity}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={16} />
+                    <span>{workersWithoutReports.length} Funcionarios sin reportes recientes</span>
                   </div>
-                ))}
-                {qualityIssues.length > 5 && (
-                  <p style={{ color: theme.textSecondary }} className="text-sm text-center pt-2">
-                    +{qualityIssues.length - 5} problemas más
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+                  <span className="text-xs underline group-open:no-underline">Ver detalles</span>
+                </summary>
+                <div className="mt-2 p-3 bg-white rounded-lg border border-yellow-100 shadow-inner grid gap-2">
+                  {workersWithoutReports.map(worker => (
+                    <div key={worker.id} className="flex justify-between items-center text-xs p-2 rounded bg-yellow-50">
+                      <span>{worker.name} ({worker.daysWithoutReport} días)</span>
+                      <button className="text-yellow-700 font-bold hover:underline">Recordar</button>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* CALIDAD COMPACTA */}
+            {showQualityWidget && qualityIssues.length > 0 && (
+              <details className="group">
+                <summary
+                  className="list-none cursor-pointer p-3 rounded-lg flex items-center justify-between text-sm font-medium shadow-sm border transition-all hover:opacity-90"
+                  style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#b91c1c' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={16} />
+                    <span>{qualityIssues.length} Problemas de calidad detectados</span>
+                  </div>
+                  <span className="text-xs underline group-open:no-underline">Ver detalles</span>
+                </summary>
+                <div className="mt-2 p-3 bg-white rounded-lg border border-red-100 shadow-inner grid gap-2 max-h-60 overflow-y-auto">
+                  {qualityIssues.map((issue, idx) => (
+                    <div key={idx} className="flex justify-between items-start text-xs p-2 rounded bg-red-50">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{issue.message}</span>
+                        <span className="opacity-75">{issue.record.worker_name}</span>
+                      </div>
+                      <span className="text-red-700 font-bold">{issue.severity}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
 
           {/* TAB: ACTIVIDADES */}
           {activeTab === 'actividades' && (
