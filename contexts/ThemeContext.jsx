@@ -8,22 +8,47 @@ export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    // Check local storage or system preference on mount
     const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = saved ? saved === 'dark' : prefersDark;
-
-    // Only update if value is different to avoid linter warning about sync updates
-    if (isDark !== shouldBeDark) {
-      setIsDark(shouldBeDark);
+    // If no saved preference, default to light explicitly as per user request (or system)
+    // User complaint implies it resets.
+    if (saved === 'dark') {
+      setIsDark(true);
+      document.documentElement.classList.add('dark');
+    } else if (saved === 'light') {
+      setIsDark(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      // Fallback to system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        setIsDark(true);
+        document.documentElement.classList.add('dark');
+      }
     }
-  }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const newVal = !prev;
+      localStorage.setItem('theme', newVal ? 'dark' : 'light');
+      if (newVal) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return newVal;
+    });
+  };
+
+  // Sync state changes if modified elsewhere (e.g. system preference change listener could go here, but keeping it simple)
   useEffect(() => {
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
     if (isDark) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [isDark]);
 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft } from 'lucide-react';
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search } from 'lucide-react';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -29,6 +29,17 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const [folderCache, setFolderCache] = useState({}); // Cache: { folderId: [files] }
+
+    // PERSISTENCE: Load viewMode
+    useEffect(() => {
+        const savedView = localStorage.getItem('onedrive_view_mode');
+        if (savedView) setViewMode(savedView);
+    }, []);
+
+    // PERSISTENCE: Save viewMode
+    useEffect(() => {
+        localStorage.setItem('onedrive_view_mode', viewMode);
+    }, [viewMode]);
 
     useEffect(() => {
         if (accounts.length > 0 && driveId) {
