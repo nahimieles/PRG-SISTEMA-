@@ -86,6 +86,7 @@ export default function AdminPage() {
   const [showQualityWidget, setShowQualityWidget] = useState(true);
   const [closingAlerts, setClosingAlerts] = useState(false);
   const [closingQuality, setClosingQuality] = useState(false);
+  const [showAlertDetails, setShowAlertDetails] = useState(false);
 
   // Estado para asistencia
   const [attendanceRecords, setAttendanceRecords] = useState([]);
