@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles } from "@/lib/onedriveService";
+import { initializeGraphClient, getFiles, searchFiles } from "@/lib/onedriveService";
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search } from 'lucide-react';
 
 import { useTheme } from "@/contexts/ThemeContext";
@@ -27,6 +27,36 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Deep Search Implementation
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchTerm.trim().length > 0) {
+                setLoading(true);
+                try {
+                    // Search in current drive, from current folder (or root if deep search desired from root)
+                    // User wants "deep search". Usually searching from ROOT of the drive is best.
+                    // But maybe from current folder? 
+                    // Let's search from ROOT of the drive to be finding things "inside groups".
+                    const results = await searchFiles(searchTerm, driveId, "root");
+                    setFiles(results);
+                } catch (e) {
+                    setError("Error en la búsqueda");
+                } finally {
+                    setLoading(false);
+                }
+            } else if (searchTerm === '' && files !== originalFiles) {
+                // Restore current folder view
+                if (folderCache[currentFolder]) {
+                    setFiles(folderCache[currentFolder]);
+                } else {
+                    loadFiles(currentFolder);
+                }
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timer);
+    }, [searchTerm, driveId]);
 
     const [folderCache, setFolderCache] = useState({}); // Cache: { folderId: [files] }
 
@@ -55,7 +85,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                 instance.acquireTokenRedirect(request);
             });
         }
-    }, [accounts, instance, driveId]);
+    }, [accounts, instance, driveId, currentUser]);
 
     const loadFiles = async (folderId) => {
         if (!driveId) return;
@@ -74,16 +104,19 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             setOriginalFiles(result);
 
             // Filter by Worker Name if needed
-            let filtered = result;
-            const workerName = currentUser && currentUser.full_name ? normalize(currentUser.full_name) : null;
+            const isRestricted = role !== 'admin' && normalize(siteName).includes('prg') && folderId === 'root';
 
-            if (
-                role !== 'admin' &&
-                normalize(siteName).includes('prg') &&
-                folderId === 'root' &&
-                workerName
-            ) {
-                filtered = result.filter(file => {
+            if (isRestricted) {
+                // FAIL-SAFE: If user data is missing, show nothing (wait for update)
+                const workerName = currentUser && currentUser.full_name ? normalize(currentUser.full_name) : null;
+
+                if (!workerName) {
+                    setFiles([]);
+                    setLoading(false);
+                    return;
+                }
+
+                const filtered = result.filter(file => {
                     if (!file.folder) return false;
                     return normalize(file.name).includes(workerName) || workerName.includes(normalize(file.name));
                 });
@@ -108,6 +141,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     };
 
     const navigateToFolder = (folderId, folderName) => {
+        setSearchTerm(''); // Reset search on navigation
         setFolderHistory(prev => {
             // Avoid duplicate entries if auto-open triggers
             if (prev.length > 0 && prev[prev.length - 1].id === folderId) return prev;
@@ -214,7 +248,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                 borderColor: theme.border
                             }}
                         />
-                        <span className="absolute left-2 top-1.5 text-gray-400">🔍</span>
+                        <Search className="absolute left-2 top-2 text-gray-400" size={16} />
                     </div>
                     <button
                         onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}

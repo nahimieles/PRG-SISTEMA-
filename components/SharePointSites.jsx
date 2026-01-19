@@ -69,9 +69,14 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
             // 1. BLACKLIST: Exclude "C LTDA" or specific noise
             if (name.includes('c ltda') || name.includes('cia. ltda')) return;
 
-            // 2. CONTABILIDAD: Group all "Contabilidad" sites
+            // 2. CONTABILIDAD: Group all "Contabilidad" sites (Restricted)
             if (name.includes('contabilidad')) {
-                contabilidadGroup.subSites.push(site);
+                const username = currentUser?.username?.toLowerCase() || '';
+                const isAdmin = role === 'admin' || username === 'valeria';
+
+                if (isAdmin) {
+                    contabilidadGroup.subSites.push(site);
+                }
                 return;
             }
 
