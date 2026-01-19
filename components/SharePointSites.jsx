@@ -97,8 +97,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         }
     }, [accounts]);
 
-    // Filter and Group Sites
-    const processSites = (rawSites) => {
+    const handleSiteClick = async (site) => {
         setLoading(true); // Temporary loading state while fetching drive
         try {
             const driveId = await getSiteDefaultDrive(site.id);
