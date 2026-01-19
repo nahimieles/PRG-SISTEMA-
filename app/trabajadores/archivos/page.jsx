@@ -7,28 +7,33 @@ import OneDriveExplorer from "@/components/OneDriveExplorer";
 import SmartReportGenerator from "@/components/SmartReportGenerator";
 
 // Initialize MSAL outside component to avoid re-instantiation
-const msalInstance = new PublicClientApplication(msalConfig);
+// Initialize MSAL outside component to avoid re-instantiation
+// Ensure this only runs in browser environment
+const msalInstance = typeof window !== "undefined" ? new PublicClientApplication(msalConfig) : null;
 
 export default function OneDrivePage() {
-    // Need to initialize msal instance (async in newer versions, but basic setup here for simplicity)
-    // Ideally this is done in a top-level layout provider or context.
-    // For this specific module isolation, we wrap it here.
-
-    // Note: In Next.js 14+ w/ App Router, it's safer to init MSAL in a client-side wrapper.
-    // We'll rely on this being a "use client" page.
-
     React.useEffect(() => {
+        if (!msalInstance) return;
+
         // Initialize instance if not already active
-        if (!msalInstance.getActiveAccount() && msalInstance.getAllAccounts().length > 0) {
-            msalInstance.setActiveAccount(msalInstance.getAllAccounts()[0]);
-        }
-        // Next.js fast refresh might need checking init status, but PCA handles it mostly.
         const init = async () => {
-            await msalInstance.initialize();
+            try {
+                // Check if not initialized before calling initialize
+                // Note: msal-browser v3+ handles initialize() differently, but v2 requires it
+                await msalInstance.initialize();
+            } catch (e) {
+                // Ignore if already initialized or other init errors
+                console.log("MSAL init check:", e);
+            }
+
+            if (!msalInstance.getActiveAccount() && msalInstance.getAllAccounts().length > 0) {
+                msalInstance.setActiveAccount(msalInstance.getAllAccounts()[0]);
+            }
         };
         init();
-
     }, []);
+
+    if (!msalInstance) return null; // Avoid rendering on server or if init failed
 
     return (
         <MsalProvider instance={msalInstance}>
