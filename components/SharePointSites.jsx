@@ -11,6 +11,42 @@ const SharePointSites = ({ onSelectSite }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Filter and Group Sites
+    const processSites = (rawSites) => {
+        const processed = [];
+        const contabilidadGroup = {
+            id: 'group-contabilidad',
+            displayName: 'Contabilidad', // Nombre genérico
+            isGroup: true,
+            subSites: []
+        };
+
+        rawSites.forEach(site => {
+            if (site.displayName.toLowerCase().includes('contabilidad')) {
+                contabilidadGroup.subSites.push(site);
+            } else {
+                processed.push(site); // Otros sitios (PRG, Auditoría, etc.)
+            }
+        });
+
+        if (contabilidadGroup.subSites.length > 0) {
+            processed.push(contabilidadGroup);
+        }
+
+        // Ordenar alfabéticamente
+        return processed.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    };
+
+    const handleCardClick = (item) => {
+        if (item.isGroup) {
+            setGroupSelection(item.subSites); // Abrir modal de selección
+        } else {
+            handleSiteClick(item);
+        }
+    };
+
+    const [groupSelection, setGroupSelection] = useState(null); // Para el modal de sub-sitios
+
     useEffect(() => {
         if (accounts.length > 0) {
             loadSites();
@@ -26,7 +62,7 @@ const SharePointSites = ({ onSelectSite }) => {
 
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
-            setSites(fetchedSites);
+            setSites(processSites(fetchedSites));
         } catch (err) {
             console.error("Error loading sites:", err);
             setError("No se pudieron cargar los grupos. Asegúrate de 'Seguir' los sitios en SharePoint.");
@@ -96,35 +132,62 @@ const SharePointSites = ({ onSelectSite }) => {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
-            {sites.map((site) => (
-                <div
-                    key={site.id}
-                    onClick={() => handleSiteClick(site)}
-                    className="group relative bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
-                >
-                    {/* Header Colorido (Card Top) */}
-                    <div className={`${getSiteColor(site.displayName)} h-20 p-4 flex justify-between items-start`}>
-                        <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded flex items-center justify-center text-white font-bold text-sm">
-                            {getInitials(site.displayName)}
+        <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+                {sites.map((site) => (
+                    <div
+                        key={site.id}
+                        onClick={() => handleCardClick(site)}
+                        className="group relative bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-all hover:-translate-y-1"
+                    >
+                        {/* Header Colorido (Card Top) */}
+                        <div className={`${getSiteColor(site.displayName)} h-20 p-4 flex justify-between items-start`}>
+                            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded flex items-center justify-center text-white font-bold text-sm">
+                                {getInitials(site.displayName)}
+                            </div>
+                            <Users className="text-white/80" size={18} />
                         </div>
-                        <Users className="text-white/80" size={18} />
+
+                        {/* Content */}
+                        <div className="p-4">
+                            <h4 className="font-bold text-gray-800 truncate mb-1" title={site.displayName}>
+                                {site.displayName}
+                            </h4>
+                            <p className="text-xs text-gray-500">
+                                {site.isGroup ? `${site.subSites.length} grupos agrupados` : 'Grupo de Trabajo'}
+                            </p>
+
+                            <div className="mt-4 flex items-center text-blue-600 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Ver archivos <ArrowRight size={12} className="ml-1" />
+                            </div>
+                        </div>
                     </div>
+                ))}
+            </div>
 
-                    {/* Content */}
-                    <div className="p-4">
-                        <h4 className="font-bold text-gray-800 truncate mb-1" title={site.displayName}>
-                            {site.displayName}
-                        </h4>
-                        <p className="text-xs text-gray-500">Grupo de Trabajo</p>
-
-                        <div className="mt-4 flex items-center text-blue-600 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                            Ver archivos <ArrowRight size={12} className="ml-1" />
+            {/* Modal de Selección de Grupo (Contabilidad) */}
+            {groupSelection && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setGroupSelection(null)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b bg-gray-50">
+                            <h3 className="font-bold text-gray-800">Selecciona el grupo específico</h3>
+                        </div>
+                        <div className="p-4 grid gap-2">
+                            {groupSelection.map(subSite => (
+                                <button
+                                    key={subSite.id}
+                                    onClick={() => handleSiteClick(subSite)}
+                                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-200 transition text-left"
+                                >
+                                    <span className="font-medium text-gray-700">{subSite.displayName}</span>
+                                    <ArrowRight size={16} className="text-gray-400" />
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
-            ))}
-        </div>
+            )}
+        </>
     );
 };
 

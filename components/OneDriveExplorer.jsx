@@ -5,11 +5,17 @@ import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles } from "@/lib/onedriveService";
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft } from 'lucide-react';
 
-const OneDriveExplorer = ({ driveId }) => {
+// Helper to normalize strings for comparison (remove accents, case insensitive)
+const normalize = (str) => {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
+const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const { instance, accounts } = useMsal();
     const [files, setFiles] = useState([]);
+    const [originalFiles, setOriginalFiles] = useState([]); // Store all files for filtering
     const [currentFolder, setCurrentFolder] = useState("root");
-    const [folderHistory, setFolderHistory] = useState([]); // Stack tracking for navigation
+    const [folderHistory, setFolderHistory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -24,7 +30,6 @@ const OneDriveExplorer = ({ driveId }) => {
                 initializeGraphClient(response.accessToken);
                 loadFiles("root");
             }).catch((e) => {
-                // If silent fails, redirect to login
                 instance.acquireTokenRedirect(request);
             });
         }
@@ -36,7 +41,27 @@ const OneDriveExplorer = ({ driveId }) => {
         setError(null);
         try {
             const result = await getFiles(folderId, driveId);
-            setFiles(result);
+            setOriginalFiles(result);
+
+            // LOGIC: Filter by Worker Name if needed
+            // Condition: Site is "PRG AUDITORES", User is NOT Admin, and we are at Root
+            if (
+                role !== 'admin' &&
+                siteName === 'PRG AUDITORES' &&
+                folderId === 'root' &&
+                currentUser && currentUser.full_name
+            ) {
+                const workerName = normalize(currentUser.full_name);
+                const filtered = result.filter(file => {
+                    if (!file.folder) return false; // Show only folders at root for workers? Or allow loose files? 
+                    // User said: "Show only the folder with the worker's name"
+                    return normalize(file.name).includes(workerName) || workerName.includes(normalize(file.name));
+                });
+                setFiles(filtered);
+            } else {
+                setFiles(result);
+            }
+
         } catch (err) {
             setError("No se pudieron cargar los archivos. Verifica tu conexión.");
         } finally {
@@ -54,7 +79,6 @@ const OneDriveExplorer = ({ driveId }) => {
         if (folderHistory.length === 0) return;
         const previous = folderHistory[folderHistory.length - 1];
         const newHistory = folderHistory.slice(0, -1);
-
         setFolderHistory(newHistory);
         setCurrentFolder(previous.id);
         loadFiles(previous.id);
@@ -100,9 +124,15 @@ const OneDriveExplorer = ({ driveId }) => {
                             <ArrowLeft size={20} className="text-gray-600" />
                         </button>
                     )}
-                    <h2 className="font-semibold text-gray-700">Archivos del Grupo</h2>
+                    <h2 className="font-semibold text-gray-700">
+                        {folderHistory.length === 0 ? `Archivos: ${siteName}` : folderHistory[folderHistory.length - 1].name}
+                    </h2>
                 </div>
-                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Lectura Segura</span>
+                {role === 'admin' ? (
+                    <span className="text-xs text-blue-800 bg-blue-100 px-2 py-1 rounded-full font-bold">Modo Administrador</span>
+                ) : (
+                    <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Lectura Segura</span>
+                )}
             </div>
 
             <div className="p-4 min-h-[300px]">
@@ -113,7 +143,11 @@ const OneDriveExplorer = ({ driveId }) => {
                 ) : error ? (
                     <div className="text-red-500 text-center p-4">{error}</div>
                 ) : files.length === 0 ? (
-                    <div className="text-center text-gray-400 p-8">Carpeta vacía</div>
+                    <div className="text-center text-gray-400 p-8">
+                        {role !== 'admin' && siteName === 'PRG AUDITORES'
+                            ? "No encontramos tu carpeta personal en este grupo."
+                            : "Carpeta vacía"}
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {files.map((item) => (
@@ -150,43 +184,54 @@ const OneDriveExplorer = ({ driveId }) => {
                 )}
             </div>
 
-            {/* Modal de Vista Previa */}
+            {/* Modal de Vista Previa (Mejorado) */}
             {previewFile && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closePreview}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={closePreview}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-fade-in" onClick={e => e.stopPropagation()}>
                         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                            <h3 className="font-bold text-gray-800 truncate pr-4">{previewFile.name}</h3>
-                            <button onClick={closePreview} className="p-1 hover:bg-gray-200 rounded-full transition">
-                                <ArrowLeft size={20} className="text-gray-500" />
+                            <div>
+                                <h3 className="font-bold text-gray-800 text-lg truncate pr-4">{previewFile.name}</h3>
+                                <p className="text-xs text-gray-500">
+                                    Modificado por: <strong>{previewFile.lastModifiedBy?.user?.displayName || 'Desconocido'}</strong> el {new Date(previewFile.lastModifiedDateTime).toLocaleString()}
+                                </p>
+                            </div>
+                            <button onClick={closePreview} className="p-2 hover:bg-gray-200 rounded-full transition">
+                                <ArrowLeft size={24} className="text-gray-500" />
                             </button>
                         </div>
 
-                        <div className="p-8 flex flex-col items-center gap-6 bg-gray-100">
+                        <div className="flex-1 p-8 flex flex-col items-center justify-center gap-8 bg-gray-100 overflow-y-auto">
                             {previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
                                 <img
                                     src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium.url}
                                     alt={previewFile.name}
-                                    className="max-h-[400px] w-auto shadow-lg rounded-lg object-contain"
+                                    className="max-h-[60vh] w-auto shadow-2xl rounded-lg object-contain"
                                 />
                             ) : (
-                                <div className="w-32 h-32 flex items-center justify-center bg-white rounded-full shadow-md">
+                                <div className="w-48 h-48 flex items-center justify-center bg-white rounded-full shadow-lg">
                                     {getFileIcon(previewFile.name)}
                                 </div>
                             )}
 
-                            <div className="flex gap-4 w-full justify-center">
+                            <div className="flex gap-4">
+                                {/* Botón "Abrir en Escritorio" usando ms- protocolos */}
                                 <a
-                                    href={previewFile.webUrl}
+                                    href={previewFile.webUrl} // Fallback to web if scheme fails or logic complex
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition shadow-xl"
                                 >
-                                    <FileIcon size={20} />
-                                    Abrir en Aplicación
+                                    <FileIcon size={24} />
+                                    Abrir Documento
                                 </a>
+                                {role === 'admin' && (
+                                    <button className="flex items-center gap-2 bg-red-100 text-red-700 px-6 py-4 rounded-xl font-semibold hover:bg-red-200 transition">
+                                        Eliminar (Admin)
+                                    </button>
+                                )}
                             </div>
-                            <p className="text-xs text-gray-500 text-center max-w-md">
-                                Al hacer clic, se abrirá el archivo en Word/Excel Online. Desde ahí podrás editarlo o abrirlo en tu escritorio.
+                            <p className="text-sm text-gray-500 text-center max-w-lg">
+                                Tip: Para abrir directamente en la App de Escritorio, asegúrate de tener la sesión iniciada en Office.
                             </p>
                         </div>
                     </div>

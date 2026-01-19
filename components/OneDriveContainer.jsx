@@ -5,9 +5,21 @@ import OneDriveExplorer from "@/components/OneDriveExplorer";
 import SmartReportGenerator from "@/components/SmartReportGenerator";
 import { ArrowLeft, Building2 } from 'lucide-react';
 
+import { getUnifiedSession } from "@/lib/auth";
+
 const OneDriveContainer = () => {
     const [selectedSite, setSelectedSite] = useState(null);
     const [selectedDriveId, setSelectedDriveId] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [currentRole, setCurrentRole] = useState(null);
+
+    useEffect(() => {
+        const session = getUnifiedSession();
+        if (session) {
+            setCurrentUser(session.user);
+            setCurrentRole(session.role);
+        }
+    }, []);
 
     const handleSiteSelect = (site, driveId) => {
         setSelectedSite(site);
@@ -41,19 +53,24 @@ const OneDriveContainer = () => {
                 )}
             </header>
 
-            {/* Sección de Productividad "Inteligente" 
-               (Podemos mantenerla o moverla, por ahora la dejamos visible siempre) 
-            */}
-            <section>
-                <SmartReportGenerator />
-            </section>
+            {/* Sección de Productividad "Inteligente" - SOLO ADMINS */}
+            {currentRole === 'admin' && (
+                <section>
+                    <SmartReportGenerator role={currentRole} />
+                </section>
+            )}
 
             {/* Contenido Principal */}
             <section>
                 {!selectedSite ? (
                     <SharePointSites onSelectSite={handleSiteSelect} />
                 ) : (
-                    <OneDriveExplorer driveId={selectedDriveId} />
+                    <OneDriveExplorer
+                        driveId={selectedDriveId}
+                        siteName={selectedSite.displayName}
+                        currentUser={currentUser}
+                        role={currentRole}
+                    />
                 )}
             </section>
         </div>
