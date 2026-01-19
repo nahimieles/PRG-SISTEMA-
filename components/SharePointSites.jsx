@@ -8,6 +8,11 @@ import { lightTheme, darkTheme } from "@/lib/colors";
 import { Loader2, Users, ArrowRight, Search } from 'lucide-react';
 
 
+// Helper to normalize strings
+const normalize = (str) => {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const { instance, accounts } = useMsal();
     const { isDark } = useTheme();
@@ -51,8 +56,13 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
             subSites: []
         };
 
+        const seenIds = new Set(); // Deduplication
+
         rawSites.forEach(site => {
-            const name = site.displayName.toLowerCase();
+            if (seenIds.has(site.id)) return;
+            seenIds.add(site.id);
+
+            const name = normalize(site.displayName);
 
             if (name.includes('contabilidad')) {
                 contabilidadGroup.subSites.push(site);
@@ -68,7 +78,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                 return;
             }
 
-            if (name.includes('prg auditores')) {
+            if (name.includes('prg')) {
                 processed.push(site);
                 return;
             }
