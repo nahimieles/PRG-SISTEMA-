@@ -79,7 +79,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
             if (
                 role !== 'admin' &&
-                siteName === 'PRG AUDITORES' &&
+                normalize(siteName).includes('prg') &&
                 folderId === 'root' &&
                 workerName
             ) {
