@@ -13,7 +13,32 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
-    // ... (rest of the file until processSites)
+    const [sites, setSites] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (accounts.length > 0) {
+            const request = {
+                ...loginRequest,
+                account: accounts[0],
+            };
+
+            instance.acquireTokenSilent(request).then((response) => {
+                initializeGraphClient(response.accessToken);
+                getFollowedSites().then(data => {
+                    setSites(data);
+                    setLoading(false);
+                }).catch(err => {
+                    console.error(err);
+                    setError("Error al cargar sitios.");
+                    setLoading(false);
+                });
+            }).catch((e) => {
+                instance.acquireTokenRedirect(request);
+            });
+        }
+    }, [accounts, instance]);
 
     // Filter and Group Sites
     const processSites = (rawSites) => {

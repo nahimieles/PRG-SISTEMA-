@@ -35,9 +35,20 @@ const SmartReportGenerator = () => {
 
     React.useEffect(() => {
         if (accounts.length > 0) {
-            checkForRecentActivity();
+            const request = {
+                ...loginRequest,
+                account: accounts[0],
+            };
+
+            instance.acquireTokenSilent(request).then((response) => {
+                initializeGraphClient(response.accessToken);
+                checkForRecentActivity();
+            }).catch((e) => {
+                // Silent fail or redirect if needed, but for a widget maybe silent is better
+                console.warn("SmartReport: Auth required", e);
+            });
         }
-    }, [accounts, checkForRecentActivity]);
+    }, [accounts, instance, checkForRecentActivity]);
 
     const toggleFileSelection = (fileId) => {
         setSelectedFiles(prev =>
