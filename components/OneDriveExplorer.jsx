@@ -30,13 +30,13 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
     const [folderCache, setFolderCache] = useState({}); // Cache: { folderId: [files] }
 
-    // PERSISTENCE: Load viewMode
+    // Load viewMode
     useEffect(() => {
         const savedView = localStorage.getItem('onedrive_view_mode');
         if (savedView) setViewMode(savedView);
     }, []);
 
-    // PERSISTENCE: Save viewMode
+    // Save viewMode
     useEffect(() => {
         localStorage.setItem('onedrive_view_mode', viewMode);
     }, [viewMode]);
@@ -73,7 +73,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             const result = await getFiles(folderId, driveId);
             setOriginalFiles(result);
 
-            // LOGIC: Filter by Worker Name if needed
+            // Filter by Worker Name if needed
             let filtered = result;
             const workerName = currentUser && currentUser.full_name ? normalize(currentUser.full_name) : null;
 
@@ -89,7 +89,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                 });
                 setFiles(filtered);
 
-                // AUTO-OPEN: If only one folder remains and it matches the worker, enter it.
+                // If only one folder remains and it matches the worker, enter it.
                 if (filtered.length === 1 && filtered[0].folder) {
                     navigateToFolder(filtered[0].id, filtered[0].name);
                 }
@@ -157,6 +157,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         return <FileIcon className="text-gray-500" />;
     };
 
+    const [previewFile, setPreviewFile] = useState(null);
+
+    const openPreview = (file) => {
+        setPreviewFile(file);
+    };
+
+    const closePreview = () => {
+        setPreviewFile(null);
+    };
+
     if (accounts.length === 0) {
         return (
             <div
@@ -173,16 +183,6 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             </div>
         );
     }
-
-    const [previewFile, setPreviewFile] = useState(null);
-
-    const openPreview = (file) => {
-        setPreviewFile(file);
-    };
-
-    const closePreview = () => {
-        setPreviewFile(null);
-    };
 
     return (
         <div

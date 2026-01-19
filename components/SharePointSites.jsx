@@ -53,25 +53,20 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         rawSites.forEach(site => {
             const name = site.displayName.toLowerCase();
 
-            // STRICT FILTERING LOGIC
-
-            // 1. Contabilidad Grouping
             if (name.includes('contabilidad')) {
                 contabilidadGroup.subSites.push(site);
                 return;
             }
 
-            // 2. AUDITORIA Restriction (Only Admin or Valeria)
             if (name.includes('auditoria')) {
                 const isAdmin = role === 'admin';
-                const isValeria = currentUser?.username?.toLowerCase() === 'valeria'; // Placeholder
+                const isValeria = currentUser?.username?.toLowerCase() === 'valeria';
                 if (isAdmin || isValeria) {
                     processed.push(site);
                 }
                 return;
             }
 
-            // 3. PRG Auditores (Allow for everyone)
             if (name.includes('prg auditores')) {
                 processed.push(site);
                 return;
@@ -82,7 +77,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
             processed.push(contabilidadGroup);
         }
 
-        // Ordenar alfabéticamente
         return processed.sort((a, b) => a.displayName.localeCompare(b.displayName));
     };
 

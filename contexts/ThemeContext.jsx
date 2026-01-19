@@ -41,19 +41,8 @@ export function ThemeProvider({ children }) {
     });
   };
 
-  // Sync state changes if modified elsewhere (e.g. system preference change listener could go here, but keeping it simple)
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDark]);
-
   return (
-    <ThemeContext.Provider value={{ isDark, setIsDark }}>
+    <ThemeContext.Provider value={{ isDark, setIsDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
