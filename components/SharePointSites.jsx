@@ -21,6 +21,8 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [groupSelection, setGroupSelection] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (accounts.length > 0) {
@@ -97,13 +99,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         }
     };
 
-    const [groupSelection, setGroupSelection] = useState(null); // Para el modal de sub-sitios
-
-    useEffect(() => {
-        if (accounts.length > 0) {
-            loadSites();
-        }
-    }, [accounts]);
+    // Duplicate useEffect and state moved to top
 
     const handleSiteClick = async (site) => {
         setLoading(true); // Temporary loading state while fetching drive
@@ -189,7 +185,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         );
     }
 
-    const [searchTerm, setSearchTerm] = useState('');
+    // searchTerm moved to top
 
     // ... (rest of logic)
 
