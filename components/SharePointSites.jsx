@@ -53,36 +53,51 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         const processed = [];
         const contabilidadGroup = {
             id: 'group-contabilidad',
-            displayName: 'Contabilidad', // Nombre genérico
+            displayName: 'Contabilidad',
             isGroup: true,
             subSites: []
         };
 
-        const seenIds = new Set(); // Deduplication
+        const seenIds = new Set();
 
         rawSites.forEach(site => {
             if (seenIds.has(site.id)) return;
             seenIds.add(site.id);
 
-            // Exclude noise/duplicates
-            if (name.includes('prg auditores c ltda')) return;
+            const name = normalize(site.displayName);
 
+            // 1. BLACKLIST: Exclude "C LTDA" or specific noise
+            if (name.includes('c ltda') || name.includes('cia. ltda')) return;
+
+            // 2. CONTABILIDAD: Group all "Contabilidad" sites
             if (name.includes('contabilidad')) {
                 contabilidadGroup.subSites.push(site);
                 return;
             }
 
+            // 3. AUDITORIA: Restricted Access
             if (name.includes('auditoria')) {
-                const isAdmin = role === 'admin';
-                const isValeria = currentUser?.username?.toLowerCase() === 'valeria';
-                if (isAdmin || isValeria) {
+                // IMPORTANT: "PRG AUDITORES" does not contain "auditoria" (usually), 
+                // but if it did, we'd handle it. "AUDITORIA" is the target.
+                const username = currentUser?.username?.toLowerCase() || '';
+                const isAdmin = role === 'admin' || username === 'valeria';
+
+                if (isAdmin) {
                     processed.push(site);
                 }
+                return; // Hide for everyone else
+            }
+
+            // 4. PRG AUDITORES: Main Site (Allow for everyone)
+            if (name.includes('prg auditores')) {
+                processed.push(site);
                 return;
             }
 
-            // Show EVERYTHING else (PRG, Generic sites, etc.)
-            processed.push(site);
+            // 5. OTHERS: Hide unknown sites to be safe (strict whitelist)
+            // Only PRG, Contabilidad, and Auditoria (if admin) are allowed.
+            // Anything else is considered noise and is skipped.
+            return;
         });
 
         if (contabilidadGroup.subSites.length > 0) {
@@ -274,7 +289,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                                     <button
                                         key={subSite.id}
                                         onClick={() => handleSiteClick(subSite)}
-                                        className="flex items-center justify-between p-3 rounded-lg border hover:opacity-80 transition text-left"
+                                        className="flex items-center justify-between p-3 rounded-lg border transition-all duration-300 hover:scale-[1.02] hover:shadow-md hover:border-blue-300 transform text-left animate-fade-in"
                                         style={{ borderColor: theme.border, background: isDark ? '#1a1a2e' : '#f8f9fa' }}
                                     >
                                         <span className="font-medium" style={{ color: theme.text }}>{subSite.displayName}</span>
