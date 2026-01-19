@@ -6,8 +6,7 @@ import { initializeGraphClient, getFollowedSites, getSiteDefaultDrive } from "@/
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import { Loader2, Users, ArrowRight } from 'lucide-react';
-import { useTheme } from '@/components/theme-provider'; // Assuming this path for useTheme
-import { darkTheme, lightTheme } from '@/lib/themes'; // Assuming this path for theme objects
+
 
 const SharePointSites = ({ onSelectSite }) => {
     const { instance, accounts } = useMsal();
