@@ -268,7 +268,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                             .map((item) => (
                                 <div
                                     key={item.id}
-                                    className={`group relative p-3 rounded-xl border transition-all hover:bg-opacity-50 cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
+                                    className={`group relative p-3 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
                                     style={{
                                         background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
                                         borderColor: theme.border

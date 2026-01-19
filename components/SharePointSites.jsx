@@ -64,7 +64,8 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
             if (seenIds.has(site.id)) return;
             seenIds.add(site.id);
 
-            const name = normalize(site.displayName);
+            // Exclude noise/duplicates
+            if (name.includes('prg auditores c ltda')) return;
 
             if (name.includes('contabilidad')) {
                 contabilidadGroup.subSites.push(site);
@@ -219,7 +220,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                             <div
                                 key={site.id}
                                 onClick={() => handleCardClick(site)}
-                                className="group relative p-4 rounded-xl border transition-all hover:bg-opacity-50 cursor-pointer flex flex-col items-center gap-3 hover:shadow-sm"
+                                className="group relative p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-blue-300/50 cursor-pointer flex flex-col items-center gap-3 animate-fade-in-up"
                                 style={{ background: theme.surface, borderColor: theme.border }}
                             >
                                 <div className="relative">
