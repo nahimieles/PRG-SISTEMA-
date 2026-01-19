@@ -535,36 +535,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ESTADÍSTICAS EN TIEMPO REAL */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div
-              className="rounded-xl shadow-lg p-4"
-              style={{ background: theme.surface }}
-            >
-              <p style={{ color: theme.textSecondary }} className="text-sm">Horas Hoy</p>
-              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-                {realtimeStats?.totalHoursToday.toFixed(2) || '0.00'}h
-              </p>
-            </div>
-            <div
-              className="rounded-xl shadow-lg p-4"
-              style={{ background: theme.surface }}
-            >
-              <p style={{ color: theme.textSecondary }} className="text-sm">Registros Totales</p>
-              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: theme.primary }}>
-                {realtimeStats?.totalRecords || 0}
-              </p>
-            </div>
-            <div
-              className="rounded-xl shadow-lg p-4"
-              style={{ background: theme.surface }}
-            >
-              <p style={{ color: theme.textSecondary }} className="text-sm">Problemas de Calidad</p>
-              <p className="text-2xl md:text-3xl font-bold mt-2" style={{ color: '#e74c3c' }}>
-                {qualityIssues.length}
-              </p>
-            </div>
-          </div>
+
 
           {/* WIDGETS COMPACTOS (Notificaciones) */}
           <div className="flex flex-col gap-2 mb-6">
@@ -648,15 +619,7 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div
-                className="rounded-xl shadow-lg p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4"
-                style={{ background: theme.surface }}
-              >
-                <StatsCard number={records.length} label="Actividades" bgColor={theme.primary} />
-                <StatsCard number={workers.length} label="Funcionarios" bgColor={theme.primary} />
-                <StatsCard number={totalHours.toFixed(2)} label="Horas Totales" bgColor={theme.primary} />
-                <StatsCard number={companies.length} label="Empresas (Histórico)" bgColor={theme.primary} />
-              </div>
+
 
               <div
                 className="rounded-xl shadow-lg p-6 mb-6"

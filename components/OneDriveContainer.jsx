@@ -58,7 +58,11 @@ const OneDriveContainer = () => {
             {/* Contenido Principal */}
             <section>
                 {!selectedSite ? (
-                    <SharePointSites onSelectSite={handleSiteSelect} />
+                    <SharePointSites
+                        onSelectSite={handleSiteSelect}
+                        role={currentRole}
+                        currentUser={currentUser}
+                    />
                 ) : (
                     <OneDriveExplorer
                         driveId={selectedDriveId}

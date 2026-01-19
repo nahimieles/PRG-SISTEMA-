@@ -8,14 +8,12 @@ import { lightTheme, darkTheme } from "@/lib/colors";
 import { Loader2, Users, ArrowRight } from 'lucide-react';
 
 
-const SharePointSites = ({ onSelectSite }) => {
+const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const { instance, accounts } = useMsal();
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
-    const [sites, setSites] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // ... (rest of the file until processSites)
 
     // Filter and Group Sites
     const processSites = (rawSites) => {
@@ -28,10 +26,30 @@ const SharePointSites = ({ onSelectSite }) => {
         };
 
         rawSites.forEach(site => {
-            if (site.displayName.toLowerCase().includes('contabilidad')) {
+            const name = site.displayName.toLowerCase();
+
+            // STRICT FILTERING LOGIC
+
+            // 1. Contabilidad Grouping
+            if (name.includes('contabilidad')) {
                 contabilidadGroup.subSites.push(site);
-            } else {
-                processed.push(site); // Otros sitios (PRG, Auditoría, etc.)
+                return;
+            }
+
+            // 2. AUDITORIA Restriction (Only Admin or Valeria)
+            if (name.includes('auditoria')) {
+                const isAdmin = role === 'admin';
+                const isValeria = currentUser?.username?.toLowerCase() === 'valeria'; // Placeholder
+                if (isAdmin || isValeria) {
+                    processed.push(site);
+                }
+                return;
+            }
+
+            // 3. PRG Auditores (Allow for everyone)
+            if (name.includes('prg auditores')) {
+                processed.push(site);
+                return;
             }
         });
 

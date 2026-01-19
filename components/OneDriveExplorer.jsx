@@ -18,12 +18,10 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
-    const [files, setFiles] = useState([]);
-    const [originalFiles, setOriginalFiles] = useState([]); // Store all files for filtering
-    const [currentFolder, setCurrentFolder] = useState("root");
-    const [folderHistory, setFolderHistory] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const [folderCache, setFolderCache] = useState({}); // Cache: { folderId: [files] }
 
     useEffect(() => {
         if (accounts.length > 0 && driveId) {
@@ -43,6 +41,14 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
     const loadFiles = async (folderId) => {
         if (!driveId) return;
+
+        // Check Cache
+        if (folderCache[folderId]) {
+            setFiles(folderCache[folderId]);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
@@ -50,22 +56,30 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             setOriginalFiles(result);
 
             // LOGIC: Filter by Worker Name if needed
-            // Condition: Site is "PRG AUDITORES", User is NOT Admin, and we are at Root
+            let filtered = result;
+            const workerName = currentUser && currentUser.full_name ? normalize(currentUser.full_name) : null;
+
             if (
                 role !== 'admin' &&
                 siteName === 'PRG AUDITORES' &&
                 folderId === 'root' &&
-                currentUser && currentUser.full_name
+                workerName
             ) {
-                const workerName = normalize(currentUser.full_name);
-                const filtered = result.filter(file => {
-                    if (!file.folder) return false; // Show only folders at root for workers? Or allow loose files? 
-                    // User said: "Show only the folder with the worker's name"
+                filtered = result.filter(file => {
+                    if (!file.folder) return false;
                     return normalize(file.name).includes(workerName) || workerName.includes(normalize(file.name));
                 });
                 setFiles(filtered);
+
+                // AUTO-OPEN: If only one folder remains and it matches the worker, enter it.
+                if (filtered.length === 1 && filtered[0].folder) {
+                    navigateToFolder(filtered[0].id, filtered[0].name);
+                }
+
             } else {
                 setFiles(result);
+                // Update Cache
+                setFolderCache(prev => ({ ...prev, [folderId]: result }));
             }
 
         } catch (err) {
@@ -76,9 +90,37 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     };
 
     const navigateToFolder = (folderId, folderName) => {
-        setFolderHistory([...folderHistory, { id: currentFolder, name: folderName || "Atrás" }]);
+        setFolderHistory(prev => {
+            // Avoid duplicate entries if auto-open triggers
+            if (prev.length > 0 && prev[prev.length - 1].id === folderId) return prev;
+            return [...prev, { id: currentFolder, name: folderName || "Atrás" }];
+        });
         setCurrentFolder(folderId);
-        loadFiles(folderId);
+        updateFilesForFolder(folderId);
+    };
+
+    // Separate fetcher to avoid confusion with the initial load logic
+    const updateFilesForFolder = async (folderId) => {
+        // Instant load from cache if available
+        if (folderCache[folderId]) {
+            setFiles(folderCache[folderId]);
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await getFiles(folderId, driveId);
+            setOriginalFiles(result);
+            setFiles(result); // No filtering inside subfolders usually
+
+            // Update Cache
+            setFolderCache(prev => ({ ...prev, [folderId]: result }));
+        } catch (err) {
+            setError("Error al cargar carpeta.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const navigateUp = () => {
@@ -140,17 +182,58 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         {folderHistory.length === 0 ? `Archivos: ${siteName}` : folderHistory[folderHistory.length - 1].name}
                     </h2>
                 </div>
-                {role === 'admin' ? (
-                    <span className="text-xs px-2 py-1 rounded-full font-bold" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Modo Admin</span>
-                ) : (
-                    <span className="text-xs px-2 py-1 rounded-full" style={{ background: isDark ? '#333' : '#eee', color: theme.textSecondary }}>Lectura Segura</span>
-                )}
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Buscar archivo..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8 pr-4 py-1 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            style={{
+                                background: isDark ? 'rgba(255,255,255,0.1)' : 'white',
+                                color: theme.text,
+                                borderColor: theme.border
+                            }}
+                        />
+                        <span className="absolute left-2 top-1.5 text-gray-400">🔍</span>
+                    </div>
+                    <button
+                        onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
+                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition"
+                        style={{ borderColor: theme.border }}
+                        title={viewMode === 'grid' ? "Ver como lista" : "Ver como cuadrícula"}
+                    >
+                        {viewMode === 'grid' ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        )}
+                    </button>
+                    {role === 'admin' ? (
+                        <span className="text-xs px-2 py-1 rounded-full font-bold flex items-center" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Modo Admin</span>
+                    ) : (
+                        <span className="text-xs px-2 py-1 rounded-full flex items-center" style={{ background: isDark ? '#333' : '#eee', color: theme.textSecondary }}>Lectura Segura</span>
+                    )}
+                </div>
             </div>
 
             <div className="p-4 min-h-[300px]">
                 {loading ? (
-                    <div className="flex justify-center items-center h-48">
-                        <Loader2 className="animate-spin text-[#5FA5F9]" size={32} />
+                    <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                            <div
+                                key={i}
+                                className={`rounded-xl border animate-pulse p-3 ${viewMode === 'list' ? 'flex items-center gap-4 h-16' : 'h-48 flex flex-col items-center justify-center gap-4'}`}
+                                style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderColor: 'transparent' }}
+                            >
+                                <div className={`bg-gray-300 dark:bg-gray-700 rounded-lg ${viewMode === 'list' ? 'w-10 h-10' : 'w-24 h-24'}`}></div>
+                                <div className="space-y-2 w-full px-2">
+                                    <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+                                    {viewMode === 'grid' && <div className="h-2 bg-gray-300 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : error ? (
                     <div className="text-red-500 text-center p-4">{error}</div>
@@ -161,44 +244,66 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                             : "Carpeta vacía"}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {files.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`group relative p-3 rounded-xl border transition-all hover:bg-opacity-50 cursor-pointer ${item.folder ? 'folder-card' : 'file-card'}`}
-                                style={{
-                                    background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
-                                    borderColor: theme.border
-                                }}
-                                onClick={() => item.folder ? navigateToFolder(item.id, item.name) : openPreview(item)}
-                            >
-                                <div className="flex flex-col items-center gap-3 p-2">
-                                    {item.folder ? (
-                                        <Folder className="w-12 h-12 text-blue-500 fill-blue-500/20" />
-                                    ) : item.thumbnails && item.thumbnails.length > 0 ? (
-                                        <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                                            <img
-                                                src={item.thumbnails[0].medium.url}
-                                                alt={item.name}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
+                    <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
+                        {files
+                            .filter(f => normalize(f.name).includes(normalize(searchTerm)))
+                            .map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`group relative p-3 rounded-xl border transition-all hover:bg-opacity-50 cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
+                                    style={{
+                                        background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
+                                        borderColor: theme.border
+                                    }}
+                                    onClick={() => item.folder ? navigateToFolder(item.id, item.name) : openPreview(item)}
+                                >
+                                    {viewMode === 'grid' ? (
+                                        // GRID VIEW
+                                        <div className="flex flex-col items-center gap-3 p-2">
+                                            {item.folder ? (
+                                                <Folder className="w-12 h-12 text-blue-500 fill-blue-500/20" />
+                                            ) : item.thumbnails && item.thumbnails.length > 0 ? (
+                                                <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+                                                    <img
+                                                        src={item.thumbnails[0].medium.url}
+                                                        alt={item.name}
+                                                        className="w-full h-full object-cover"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="w-full h-32 flex items-center justify-center rounded-lg" style={{ background: isDark ? '#111' : '#f9fafb' }}>
+                                                    {getFileIcon(item.name)}
+                                                </div>
+                                            )}
+
+                                            <div className="w-full text-center">
+                                                <p className="font-medium text-sm truncate w-full" style={{ color: theme.text }} title={item.name}>{item.name}</p>
+                                                <p className="text-[10px]" style={{ color: theme.textSecondary }}>
+                                                    {new Date(item.lastModifiedDateTime).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
                                     ) : (
-                                        <div className="w-full h-32 flex items-center justify-center rounded-lg" style={{ background: isDark ? '#111' : '#f9fafb' }}>
-                                            {getFileIcon(item.name)}
-                                        </div>
+                                        // LIST VIEW
+                                        <>
+                                            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
+                                                {item.folder ? (
+                                                    <Folder className="w-8 h-8 text-blue-500 fill-blue-500/20" />
+                                                ) : (
+                                                    getFileIcon(item.name)
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
+                                                <p className="text-xs" style={{ color: theme.textSecondary }}>
+                                                    Editado: {new Date(item.lastModifiedDateTime).toLocaleDateString()} por {item.lastModifiedBy?.user?.displayName || 'Desconocido'}
+                                                </p>
+                                            </div>
+                                        </>
                                     )}
-
-                                    <div className="w-full text-center">
-                                        <p className="font-medium text-sm truncate w-full" style={{ color: theme.text }} title={item.name}>{item.name}</p>
-                                        <p className="text-[10px]" style={{ color: theme.textSecondary }}>
-                                            {new Date(item.lastModifiedDateTime).toLocaleDateString()}
-                                        </p>
-                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 )}
             </div>
