@@ -37,7 +37,7 @@ const OneDriveContainer = () => {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                         <Building2 className="text-blue-600" />
-                        {selectedSite ? selectedSite.displayName : 'Hub Corporativo'}
+                        {selectedSite ? selectedSite.displayName : 'Explorador de archivos'}
                     </h2>
                     <p className="text-gray-500 dark:text-gray-400">
                         {selectedSite ? 'Explorando documentos del grupo' : 'Accede a los archivos de tus grupos de trabajo.'}

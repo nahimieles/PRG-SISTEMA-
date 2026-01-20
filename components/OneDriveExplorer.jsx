@@ -209,7 +209,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             >
                 <p className="text-lg mb-4" style={{ color: theme.textSecondary }}>Conecta tu cuenta para ver tus archivos</p>
                 <button
-                    onClick={() => instance.loginRedirect(loginRequest)}
+                    onClick={() => instance.loginPopup(loginRequest).catch(e => console.log(e))}
                     className="bg-[#2A5C82] text-white px-6 py-2 rounded-lg hover:bg-[#1e4a6d] transition-colors"
                 >
                     Conectar OneDrive
@@ -302,7 +302,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                             .map((item) => (
                                 <div
                                     key={item.id}
-                                    className={`group relative p-3 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
+                                    className={`group relative p-3 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
                                     style={{
                                         background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
                                         borderColor: theme.border

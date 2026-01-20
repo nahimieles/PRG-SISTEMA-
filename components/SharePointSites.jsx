@@ -5,7 +5,7 @@ import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFollowedSites, getSiteDefaultDrive } from "@/lib/onedriveService";
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
-import { Loader2, Users, ArrowRight, Search } from 'lucide-react';
+import { Loader2, Users, ArrowRight, Search, RefreshCw } from 'lucide-react';
 
 
 // Helper to normalize strings
@@ -162,7 +162,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                     Necesitamos conectar con tu cuenta de Microsoft para mostrar los grupos de SharePoint.
                 </p>
                 <button
-                    onClick={() => instance.loginRedirect(loginRequest)}
+                    onClick={() => instance.loginPopup(loginRequest).catch(e => console.log(e))}
                     className="px-6 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2"
                     style={{ background: '#2A5C82' }}
                 >
@@ -230,6 +230,16 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                         />
                         <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                     </div>
+                    <button
+                        onClick={loadSites}
+                        disabled={loading}
+                        className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
+                        style={{ borderColor: theme.border, color: theme.text }}
+                        title="Sincronizar grupos"
+                    >
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        Sincronizar
+                    </button>
                 </div>
 
                 {/* Folder Grid View */}
@@ -240,7 +250,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                             <div
                                 key={site.id}
                                 onClick={() => handleCardClick(site)}
-                                className="group relative p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-blue-300/50 cursor-pointer flex flex-col items-center gap-3 animate-fade-in-up"
+                                className="group relative p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-blue-300/50 cursor-pointer flex flex-col items-center gap-3 animate-fade-in-up"
                                 style={{ background: theme.surface, borderColor: theme.border }}
                             >
                                 <div className="relative">
