@@ -25,10 +25,10 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (accounts.length > 0) {
+        if (accounts.length > 0 && role) {
             loadSites();
         }
-    }, [accounts]);
+    }, [accounts, role, currentUser]);
 
     const loadSites = async () => {
         setLoading(true);
