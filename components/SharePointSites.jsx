@@ -159,6 +159,18 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     };
 
     if (accounts.length === 0) {
+        const handleLogin = async () => {
+            try {
+                const loginResponse = await instance.loginPopup(loginRequest);
+                if (loginResponse) {
+                    console.log("Login successful, account:", loginResponse.account?.username);
+                    // Token acquired, the useEffect will trigger loadSites
+                }
+            } catch (error) {
+                console.error("Login failed:", error);
+            }
+        };
+
         return (
             <div className="flex flex-col items-center justify-center p-10 h-64 text-center rounded-xl border border-dashed"
                 style={{ borderColor: theme.border, background: theme.surface }}>
@@ -168,7 +180,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                     Necesitamos conectar con tu cuenta de Microsoft para mostrar los grupos de SharePoint.
                 </p>
                 <button
-                    onClick={() => instance.loginPopup(loginRequest).catch(e => console.log(e))}
+                    onClick={handleLogin}
                     className="px-6 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2"
                     style={{ background: '#2A5C82' }}
                 >

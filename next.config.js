@@ -1,7 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Using default Vercel deployment (not static export)
-  // This allows dynamic features like client-side data fetching
+  // Headers for MSAL popup authentication to work correctly
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig
