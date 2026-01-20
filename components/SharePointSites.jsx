@@ -41,7 +41,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         setLoading(true);
         try {
             const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenRedirect(request));
+            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenPopup(request));
 
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();

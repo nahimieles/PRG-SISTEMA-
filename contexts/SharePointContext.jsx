@@ -28,7 +28,7 @@ export const SharePointProvider = ({ children }) => {
         setError(null);
         try {
             const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request);
+            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenPopup(request));
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
             setSites(fetchedSites);
