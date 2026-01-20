@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles, searchFiles } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search } from 'lucide-react';
+import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl } from "@/lib/onedriveService";
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X } from 'lucide-react';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -121,11 +121,8 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                     return normalize(file.name).includes(workerName) || workerName.includes(normalize(file.name));
                 });
                 setFiles(filtered);
-
-                // If only one folder remains and it matches the worker, enter it.
-                if (filtered.length === 1 && filtered[0].folder) {
-                    navigateToFolder(filtered[0].id, filtered[0].name);
-                }
+                // REMOVED: Auto-navigation that caused the bug for workers
+                // The folder was appearing and disappearing because it auto-navigated
 
             } else {
                 setFiles(result);
@@ -234,7 +231,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         {folderHistory.length === 0 ? `Archivos: ${siteName}` : folderHistory[folderHistory.length - 1].name}
                     </h2>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                     <div className="relative">
                         <input
                             type="text"
@@ -251,8 +248,17 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         <Search className="absolute left-2 top-2 text-gray-400" size={16} />
                     </div>
                     <button
+                        onClick={() => loadFiles(currentFolder)}
+                        disabled={loading}
+                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer disabled:opacity-50"
+                        style={{ borderColor: theme.border }}
+                        title="Sincronizar"
+                    >
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} style={{ color: theme.text }} />
+                    </button>
+                    <button
                         onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition"
+                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
                         style={{ borderColor: theme.border }}
                         title={viewMode === 'grid' ? "Ver como lista" : "Ver como cuadrícula"}
                     >
@@ -379,13 +385,24 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                     Modificado por: <strong>{previewFile.lastModifiedBy?.user?.displayName || 'Desconocido'}</strong> el {new Date(previewFile.lastModifiedDateTime).toLocaleString()}
                                 </p>
                             </div>
-                            <button onClick={closePreview} className="p-2 hover:opacity-70 rounded-full transition">
-                                <ArrowLeft size={24} style={{ color: theme.text }} />
+                            <button onClick={closePreview} className="p-2 hover:opacity-70 rounded-full transition cursor-pointer">
+                                <X size={24} style={{ color: theme.text }} />
                             </button>
                         </div>
 
-                        <div className="flex-1 p-8 flex flex-col items-center justify-center gap-8 overflow-y-auto" style={{ background: isDark ? '#111' : '#f3f4f6' }}>
-                            {previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
+                        <div className="flex-1 p-4 flex flex-col items-center justify-center gap-6 overflow-y-auto" style={{ background: isDark ? '#111' : '#f3f4f6' }}>
+                            {/* Office Online Embed Preview */}
+                            {(previewFile.name.endsWith('.docx') || previewFile.name.endsWith('.xlsx') || previewFile.name.endsWith('.pptx') || previewFile.name.endsWith('.doc') || previewFile.name.endsWith('.xls') || previewFile.name.endsWith('.ppt')) ? (
+                                <iframe
+                                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFile['@microsoft.graph.downloadUrl'] || previewFile.webUrl)}`}
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    className="rounded-lg shadow-xl flex-1 min-h-[400px]"
+                                    title={previewFile.name}
+                                    loading="lazy"
+                                />
+                            ) : previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
                                 <img
                                     src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium.url}
                                     alt={previewFile.name}
@@ -397,24 +414,35 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                 </div>
                             )}
 
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 flex-wrap justify-center">
                                 <a
                                     href={previewFile.webUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-8 py-4 rounded-xl font-bold text-lg hover:opacity-90 transition shadow-xl"
+                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-xl cursor-pointer"
                                 >
-                                    <FileIcon size={24} />
-                                    Abrir Documento
+                                    <FileIcon size={20} />
+                                    Abrir en Office
                                 </a>
-                                {role === 'admin' && (
-                                    <button className="flex items-center gap-2 bg-red-100 text-red-700 px-6 py-4 rounded-xl font-semibold hover:bg-red-200 transition">
-                                        Eliminar (Admin)
-                                    </button>
-                                )}
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm(`¿Eliminar "${previewFile.name}"? Esta acción no se puede deshacer.`)) return;
+                                        try {
+                                            await deleteItem(previewFile.id, driveId);
+                                            closePreview();
+                                            loadFiles(currentFolder);
+                                        } catch (e) {
+                                            alert('Error al eliminar el archivo');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 bg-red-100 text-red-700 px-6 py-3 rounded-xl font-semibold hover:bg-red-200 transition cursor-pointer"
+                                >
+                                    <Trash2 size={20} />
+                                    Eliminar
+                                </button>
                             </div>
-                            <p className="text-sm text-gray-500 text-center max-w-lg">
-                                Tip: Para abrir directamente en la App de Escritorio, asegúrate de tener la sesión iniciada en Office.
+                            <p className="text-xs text-gray-500 text-center max-w-lg">
+                                Tip: Para editar, abre en Office. Los cambios se guardarán automáticamente.
                             </p>
                         </div>
                     </div>

@@ -55,11 +55,12 @@ export default function LoginForm({
           style={{ background: theme.surface }}
         >
           <div className="text-center mb-6">
-            <div
-              className="rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 text-white"
-              style={{ background: theme.primary }}
-            >
-              <UserCheck className="w-10 h-10" />
+            <div className="flex items-center justify-center mx-auto mb-4">
+              <img
+                src="/Sin título-1-08.png"
+                alt="Logo PRG"
+                className="w-32 h-32 object-contain"
+              />
             </div>
             <h2 className="text-3xl font-bold" style={{ color: theme.text }}>
               {title}

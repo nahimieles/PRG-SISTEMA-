@@ -79,7 +79,7 @@ export default function Sidebar({
                 <img
                     src="/Sin título-1-08.png"
                     alt="Logo PRG"
-                    className="w-16 h-16 object-contain"
+                    className="w-28 h-28 object-contain"
                 />
             </div>
 
@@ -150,7 +150,7 @@ export default function Sidebar({
                     <img
                         src="/Sin título-1-08.png"
                         alt="Logo PRG"
-                        className="w-10 h-10 object-contain"
+                        className="w-12 h-12 object-contain"
                     />
                 </div>
                 <button
