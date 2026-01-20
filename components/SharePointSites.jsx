@@ -41,7 +41,9 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
         setLoading(true);
         try {
             const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenPopup(request));
+            const response = await instance.acquireTokenSilent(request).catch(async () => {
+                await instance.acquireTokenRedirect(request);
+            });
 
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
@@ -159,13 +161,9 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     };
 
     if (accounts.length === 0) {
-        const handleLogin = async () => {
+        const handleLogin = async () => { // Simplified handler for redirect
             try {
-                const loginResponse = await instance.loginPopup(loginRequest);
-                if (loginResponse) {
-                    console.log("Login successful, account:", loginResponse.account?.username);
-                    // Token acquired, the useEffect will trigger loadSites
-                }
+                await instance.loginRedirect(loginRequest);
             } catch (error) {
                 console.error("Login failed:", error);
             }
