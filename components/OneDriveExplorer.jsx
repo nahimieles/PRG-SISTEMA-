@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload } from 'lucide-react';
+import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile } from "@/lib/onedriveService";
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical } from 'lucide-react';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -27,6 +27,8 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeMenu, setActiveMenu] = useState(null);
+    const fileInputRef = React.useRef(null);
 
     // Deep Search Implementation
     useEffect(() => {
@@ -138,58 +140,70 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     };
 
     const navigateToFolder = (folderId, folderName) => {
-        setSearchTerm(''); // Reset search on navigation
+        setSearchTerm(''); // Reset search
+        setFiles([]); // CRITICAL: Clear files to avoid "searching" ghost effect
         setFolderHistory(prev => {
-            // Avoid duplicate entries if auto-open triggers
             if (prev.length > 0 && prev[prev.length - 1].id === folderId) return prev;
             return [...prev, { id: currentFolder, name: folderName || "Atrás" }];
         });
         setCurrentFolder(folderId);
-        updateFilesForFolder(folderId);
+        loadFiles(folderId);
     };
 
-    // Separate fetcher to avoid confusion with the initial load logic
-    const updateFilesForFolder = async (folderId) => {
-        // Instant load from cache if available
-        if (folderCache[folderId]) {
-            setFiles(folderCache[folderId]);
-            return;
-        }
+    const refreshFolder = (folderId) => {
+        setFolderCache(prev => {
+            const newC = { ...prev };
+            delete newC[folderId];
+            return newC;
+        });
+        loadFiles(folderId);
+    };
 
+    const handleFileUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
         setLoading(true);
-        setError(null);
         try {
-            const result = await getFiles(folderId, driveId);
-            setOriginalFiles(result);
-            setFiles(result); // No filtering inside subfolders usually
-
-            // Update Cache
-            setFolderCache(prev => ({ ...prev, [folderId]: result }));
-        } catch (err) {
-            setError("Error al cargar carpeta.");
+            await uploadFile(currentFolder, file, driveId);
+            refreshFolder(currentFolder);
+        } catch (error) {
+            alert("Error al subir archivo");
         } finally {
-            setLoading(false);
+            e.target.value = null;
+        }
+    };
+
+    const handleRename = async (item) => {
+        const newName = prompt("Nuevo nombre:", item.name);
+        if (!newName || !newName.trim() || newName === item.name) return;
+        try {
+            await renameItem(item.id, newName.trim(), driveId);
+            refreshFolder(currentFolder);
+        } catch (error) {
+            alert("Error al renombrar");
+        }
+    };
+
+    const handleDelete = async (item) => {
+        if (!confirm(`¿Eliminar "${item.name}"?`)) return;
+        try {
+            await deleteItem(item.id, driveId);
+            refreshFolder(currentFolder);
+        } catch (error) {
+            alert("Error al eliminar");
         }
     };
 
     const navigateUp = () => {
         if (folderHistory.length === 0) return;
         const previous = folderHistory[folderHistory.length - 1];
-        const newHistory = folderHistory.slice(0, -1);
-        setFolderHistory(newHistory);
+        setFolderHistory(prev => prev.slice(0, -1));
         setCurrentFolder(previous.id);
-        // CRITICAL: Use loadFiles for root to re-apply worker filtering
-        // Use updateFilesForFolder for subfolders (no filtering needed)
+
         if (previous.id === 'root') {
-            // Clear cache for root to force re-filtering
-            setFolderCache(prev => {
-                const newCache = { ...prev };
-                delete newCache['root'];
-                return newCache;
-            });
-            loadFiles('root');
+            refreshFolder('root'); // Force refresh root to ensure filtering
         } else {
-            updateFilesForFolder(previous.id);
+            loadFiles(previous.id);
         }
     };
 
@@ -232,6 +246,9 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             className="rounded-xl shadow-lg overflow-hidden border"
             style={{ background: theme.surface, borderColor: theme.border }}
         >
+            {/* Overlay for closing menu */}
+            {activeMenu && <div className="fixed inset-0 z-30" onClick={() => setActiveMenu(null)} />}
+
             <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
                 <div className="flex items-center gap-2">
                     {folderHistory.length > 0 && (
@@ -259,8 +276,17 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         />
                         <Search className="absolute left-2 top-2 text-gray-400" size={16} />
                     </div>
+
+                    {/* Hidden File Input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
+
                     <button
-                        onClick={() => loadFiles(currentFolder)}
+                        onClick={() => refreshFolder(currentFolder)}
                         disabled={loading}
                         className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer disabled:opacity-50"
                         style={{ borderColor: theme.border }}
@@ -268,13 +294,23 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} style={{ color: theme.text }} />
                     </button>
+
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                        style={{ borderColor: theme.border }}
+                        title="Subir Archivo"
+                    >
+                        <Upload size={16} style={{ color: theme.text }} />
+                    </button>
+
                     <button
                         onClick={async () => {
                             const name = prompt('Nombre de la nueva carpeta:');
                             if (!name || !name.trim()) return;
                             try {
                                 await createFolder(currentFolder, name.trim(), driveId);
-                                loadFiles(currentFolder);
+                                refreshFolder(currentFolder);
                             } catch (e) {
                                 alert('Error al crear la carpeta');
                             }
@@ -339,6 +375,26 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                     }}
                                     onClick={() => item.folder ? navigateToFolder(item.id, item.name) : openPreview(item)}
                                 >
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveMenu(activeMenu === item.id ? null : item.id);
+                                        }}
+                                        className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 z-10 transition-colors"
+                                    >
+                                        <MoreVertical size={18} color={theme.text} />
+                                    </button>
+
+                                    {activeMenu === item.id && (
+                                        <div className="absolute right-2 top-8 w-40 bg-white dark:bg-[#1f2937] shadow-xl rounded-lg z-20 border border-gray-200 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
+                                            <button onClick={() => { setActiveMenu(null); handleRename(item); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                                                <Edit2 size={14} /> Renombrar
+                                            </button>
+                                            <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2 text-sm">
+                                                <Trash2 size={14} /> Eliminar
+                                            </button>
+                                        </div>
+                                    )}
                                     {viewMode === 'grid' ? (
                                         // GRID VIEW
                                         <div className="flex flex-col items-center gap-3 p-2">
