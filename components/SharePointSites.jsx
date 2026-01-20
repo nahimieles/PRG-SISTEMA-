@@ -6,6 +6,7 @@ import { initializeGraphClient, getFollowedSites, getSiteDefaultDrive } from "@/
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import { Loader2, Users, ArrowRight, Search, RefreshCw } from 'lucide-react';
+import { useSharePointData } from "@/contexts/SharePointContext";
 
 
 // Helper to normalize strings
@@ -18,23 +19,28 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
+    // Use preloaded data from context
+    const { sites: preloadedSites, loading: preloading, loadSites: preloadSites, isInitialized } = useSharePointData();
+
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [groupSelection, setGroupSelection] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Use preloaded sites if available, otherwise load manually
     useEffect(() => {
-        if (accounts.length > 0 && role) {
+        if (isInitialized && preloadedSites.length > 0) {
+            setSites(processSites(preloadedSites));
+        } else if (accounts.length > 0 && role && !isInitialized) {
             loadSites();
         }
-    }, [accounts, role, currentUser]);
+    }, [accounts, role, currentUser, isInitialized, preloadedSites]);
 
     const loadSites = async () => {
         setLoading(true);
         try {
             const request = { ...loginRequest, account: accounts[0] };
-            // Ensure token has Sites.Read.All
             const response = await instance.acquireTokenSilent(request).catch(() => instance.acquireTokenRedirect(request));
 
             initializeGraphClient(response.accessToken);

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { msalConfig } from "@/lib/authConfig";
+import { SharePointProvider } from "@/contexts/SharePointContext";
 
 // Initialize MSAL outside component to avoid re-initialization on re-renders
 const msalInstance = typeof window !== "undefined" ? new PublicClientApplication(msalConfig) : null;
@@ -10,8 +11,11 @@ const msalInstance = typeof window !== "undefined" ? new PublicClientApplication
 export default function MsalWrapper({ children }) {
     const [isMsalInitialized, setIsMsalInitialized] = useState(false);
 
+    const initializedRef = React.useRef(false);
+
     useEffect(() => {
-        if (!msalInstance) return;
+        if (!msalInstance || initializedRef.current) return;
+        initializedRef.current = true;
 
         const initializeMsal = async () => {
             try {
@@ -31,6 +35,7 @@ export default function MsalWrapper({ children }) {
                 setIsMsalInitialized(true);
             } catch (error) {
                 console.error("MSAL Initialization Error:", error);
+                setIsMsalInitialized(true); // Allow app to load even on error
             }
         };
 
@@ -46,7 +51,9 @@ export default function MsalWrapper({ children }) {
 
     return (
         <MsalProvider instance={msalInstance}>
-            {children}
+            <SharePointProvider>
+                {children}
+            </SharePointProvider>
         </MsalProvider>
     );
 }
