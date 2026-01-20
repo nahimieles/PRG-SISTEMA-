@@ -178,7 +178,8 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         const newHistory = folderHistory.slice(0, -1);
         setFolderHistory(newHistory);
         setCurrentFolder(previous.id);
-        loadFiles(previous.id);
+        // Use updateFilesForFolder instead of loadFiles to avoid re-filtering
+        updateFilesForFolder(previous.id);
     };
 
     const getFileIcon = (fileName) => {
@@ -257,6 +258,23 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} style={{ color: theme.text }} />
                     </button>
                     <button
+                        onClick={async () => {
+                            const name = prompt('Nombre de la nueva carpeta:');
+                            if (!name || !name.trim()) return;
+                            try {
+                                await createFolder(currentFolder, name.trim(), driveId);
+                                loadFiles(currentFolder);
+                            } catch (e) {
+                                alert('Error al crear la carpeta');
+                            }
+                        }}
+                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                        style={{ borderColor: theme.border }}
+                        title="Nueva carpeta"
+                    >
+                        <FolderPlus size={16} style={{ color: theme.text }} />
+                    </button>
+                    <button
                         onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
                         className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
                         style={{ borderColor: theme.border }}
@@ -268,11 +286,6 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         )}
                     </button>
-                    {role === 'admin' ? (
-                        <span className="text-xs px-2 py-1 rounded-full font-bold flex items-center" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Modo Admin</span>
-                    ) : (
-                        <span className="text-xs px-2 py-1 rounded-full flex items-center" style={{ background: isDark ? '#333' : '#eee', color: theme.textSecondary }}>Lectura Segura</span>
-                    )}
                 </div>
             </div>
 
@@ -391,28 +404,24 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         </div>
 
                         <div className="flex-1 p-4 flex flex-col items-center justify-center gap-6 overflow-y-auto" style={{ background: isDark ? '#111' : '#f3f4f6' }}>
-                            {/* Office Online Embed Preview */}
-                            {(previewFile.name.endsWith('.docx') || previewFile.name.endsWith('.xlsx') || previewFile.name.endsWith('.pptx') || previewFile.name.endsWith('.doc') || previewFile.name.endsWith('.xls') || previewFile.name.endsWith('.ppt')) ? (
-                                <iframe
-                                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewFile['@microsoft.graph.downloadUrl'] || previewFile.webUrl)}`}
-                                    width="100%"
-                                    height="100%"
-                                    frameBorder="0"
-                                    className="rounded-lg shadow-xl flex-1 min-h-[400px]"
-                                    title={previewFile.name}
-                                    loading="lazy"
-                                />
-                            ) : previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
+                            {/* Show thumbnail or file icon */}
+                            {previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
                                 <img
-                                    src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium.url}
+                                    src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium?.url || previewFile.thumbnails[0].small?.url}
                                     alt={previewFile.name}
-                                    className="max-h-[60vh] w-auto shadow-2xl rounded-lg object-contain"
+                                    className="max-h-[50vh] w-auto shadow-2xl rounded-lg object-contain"
                                 />
                             ) : (
-                                <div className="w-48 h-48 flex items-center justify-center rounded-full shadow-lg" style={{ background: theme.surface }}>
-                                    {getFileIcon(previewFile.name)}
+                                <div className="w-32 h-32 flex items-center justify-center rounded-2xl shadow-lg" style={{ background: theme.surface }}>
+                                    <div className="scale-[3]">
+                                        {getFileIcon(previewFile.name)}
+                                    </div>
                                 </div>
                             )}
+
+                            <p className="text-sm text-center" style={{ color: theme.textSecondary }}>
+                                Haz clic en "Abrir en Office" para ver y editar el documento completo.
+                            </p>
 
                             <div className="flex gap-4 flex-wrap justify-center">
                                 <a

@@ -74,12 +74,13 @@ export default function Sidebar({
 
     const SidebarContent = () => (
         <>
-            {/* Logo */}
-            <div className="p-4 mb-4 flex justify-center">
+            {/* Logo - cropped to remove extra whitespace */}
+            <div className="p-2 mb-2 flex justify-center overflow-hidden" style={{ height: '80px' }}>
                 <img
                     src="/Sin título-1-08.png"
                     alt="Logo PRG"
-                    className="w-28 h-28 object-contain"
+                    className="h-24 w-auto object-cover object-top"
+                    style={{ marginTop: '-8px' }}
                 />
             </div>
 
@@ -150,7 +151,7 @@ export default function Sidebar({
                     <img
                         src="/Sin título-1-08.png"
                         alt="Logo PRG"
-                        className="w-12 h-12 object-contain"
+                        className="w-14 h-10 object-cover object-top"
                     />
                 </div>
                 <button
