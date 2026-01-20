@@ -43,10 +43,9 @@ export default function MsalWrapper({ children }) {
     }, []);
 
     if (!msalInstance || !isMsalInitialized) {
-        // Return children immediately to not block the UI, or a loading spinner if preferred.
-        // In this dashboard layout, blocking might look weird, so we render children.
-        // Auth-dependent components will handle their "loading" state locally.
-        return <>{children}</>;
+        // Return null or loader to block UI until initialized.
+        // This prevents the app from rendering inside the popup while processing token.
+        return null;
     }
 
     return (
