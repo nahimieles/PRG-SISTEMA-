@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X } from 'lucide-react';
+import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem } from "@/lib/onedriveService";
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload } from 'lucide-react';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -178,8 +178,19 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         const newHistory = folderHistory.slice(0, -1);
         setFolderHistory(newHistory);
         setCurrentFolder(previous.id);
-        // Use updateFilesForFolder instead of loadFiles to avoid re-filtering
-        updateFilesForFolder(previous.id);
+        // CRITICAL: Use loadFiles for root to re-apply worker filtering
+        // Use updateFilesForFolder for subfolders (no filtering needed)
+        if (previous.id === 'root') {
+            // Clear cache for root to force re-filtering
+            setFolderCache(prev => {
+                const newCache = { ...prev };
+                delete newCache['root'];
+                return newCache;
+            });
+            loadFiles('root');
+        } else {
+            updateFilesForFolder(previous.id);
+        }
     };
 
     const getFileIcon = (fileName) => {
@@ -423,30 +434,51 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                 Haz clic en "Abrir en Office" para ver y editar el documento completo.
                             </p>
 
-                            <div className="flex gap-4 flex-wrap justify-center">
+                            <div className="flex gap-3 flex-wrap justify-center">
                                 <a
                                     href={previewFile.webUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition shadow-xl cursor-pointer"
+                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-5 py-2.5 rounded-xl font-bold hover:opacity-90 transition shadow-xl cursor-pointer"
                                 >
-                                    <FileIcon size={20} />
+                                    <FileIcon size={18} />
                                     Abrir en Office
                                 </a>
+                                <button
+                                    onClick={async () => {
+                                        const newName = prompt('Nuevo nombre:', previewFile.name);
+                                        if (!newName || !newName.trim() || newName === previewFile.name) return;
+                                        try {
+                                            await renameItem(previewFile.id, newName.trim(), driveId);
+                                            closePreview();
+                                            // Clear cache and reload
+                                            setFolderCache({});
+                                            loadFiles(currentFolder);
+                                        } catch (e) {
+                                            alert('Error al renombrar');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 bg-amber-100 text-amber-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-amber-200 transition cursor-pointer"
+                                >
+                                    <Edit2 size={18} />
+                                    Renombrar
+                                </button>
                                 <button
                                     onClick={async () => {
                                         if (!confirm(`¿Eliminar "${previewFile.name}"? Esta acción no se puede deshacer.`)) return;
                                         try {
                                             await deleteItem(previewFile.id, driveId);
                                             closePreview();
+                                            // Clear cache and reload
+                                            setFolderCache({});
                                             loadFiles(currentFolder);
                                         } catch (e) {
-                                            alert('Error al eliminar el archivo');
+                                            alert('Error al eliminar');
                                         }
                                     }}
-                                    className="flex items-center gap-2 bg-red-100 text-red-700 px-6 py-3 rounded-xl font-semibold hover:bg-red-200 transition cursor-pointer"
+                                    className="flex items-center gap-2 bg-red-100 text-red-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-red-200 transition cursor-pointer"
                                 >
-                                    <Trash2 size={20} />
+                                    <Trash2 size={18} />
                                     Eliminar
                                 </button>
                             </div>
