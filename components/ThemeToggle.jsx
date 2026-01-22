@@ -4,11 +4,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Moon, Sun } from 'lucide-react';
 
 export default function ThemeToggle() {
-  const { isDark, setIsDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <button
-      onClick={() => setIsDark(!isDark)}
+      onClick={toggleTheme}
       className="p-2 rounded-lg transition-colors"
       style={{
         background: isDark ? '#2d3748' : '#e9ecef',

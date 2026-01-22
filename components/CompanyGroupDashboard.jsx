@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Home, Target, TrendingUp, BarChart3, PieChart, CreditCard, Calculator, DollarSign, Activity, FileText } from 'lucide-react';
+import { Home, Target, TrendingUp, BarChart3, PieChart, CreditCard, Calculator, DollarSign, Activity } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 
@@ -44,6 +45,7 @@ const DashboardCard = ({ icon: Icon, label, color, onClick }) => {
 export default function CompanyGroupDashboard() {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
+    const router = useRouter();
 
     const cards = [
         { id: 'patrimonio', label: 'Patrimonio', icon: Home, color: '#3b82f6' }, // Blue
@@ -73,7 +75,7 @@ export default function CompanyGroupDashboard() {
                     <DashboardCard
                         key={card.id}
                         {...card}
-                        onClick={() => alert(`Navegando a módulo: ${card.label}`)}
+                        onClick={() => router.push(`/grupos/${card.id}`)}
                     />
                 ))}
             </div>

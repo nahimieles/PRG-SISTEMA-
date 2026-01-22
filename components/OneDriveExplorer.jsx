@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical } from 'lucide-react';
+import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem } from "@/lib/onedriveService";
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste } from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
 
 import { useTheme } from "@/contexts/ThemeContext";
@@ -29,6 +29,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [searchTerm, setSearchTerm] = useState('');
     const [activeMenu, setActiveMenu] = useState(null);
+    const [clipboard, setClipboard] = useState(null); // { item, action: 'cut' }
     const fileInputRef = React.useRef(null);
 
     // Deep Search Implementation
@@ -225,6 +226,42 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         }
     };
 
+    const handleCut = (item) => {
+        setClipboard({ item, action: 'cut', sourceFolder: currentFolder });
+        setActiveMenu(null);
+    };
+
+    const handlePaste = async () => {
+        if (!clipboard || !clipboard.item) return;
+
+        if (clipboard.sourceFolder === currentFolder) {
+            alert("El archivo ya está en esta carpeta.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await moveItem(clipboard.item.id, currentFolder, driveId);
+
+            // Log Action
+            await logAuditAction({
+                action_type: 'MOVE',
+                file_name: clipboard.item.name,
+                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                worker_name: currentUser?.full_name || 'Desconocido',
+                metadata: { driveId, from: clipboard.sourceFolder, to: currentFolder }
+            });
+
+            setClipboard(null);
+            refreshFolder(currentFolder);
+        } catch (error) {
+            console.error(error);
+            alert("Error al mover el elemento. Verifica permisos.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const navigateUp = () => {
         if (folderHistory.length === 0) return;
         const previous = folderHistory[folderHistory.length - 1];
@@ -335,6 +372,18 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         <Upload size={16} style={{ color: theme.text }} />
                     </button>
 
+                    {clipboard && (
+                        <button
+                            onClick={handlePaste}
+                            className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer flex items-center gap-2 px-3 animate-pulse"
+                            style={{ borderColor: theme.border, background: theme.primary, color: 'white' }}
+                            title={`Pegar ${clipboard.item.name}`}
+                        >
+                            <ClipboardPaste size={16} />
+                            <span className="text-xs font-bold">Pegar</span>
+                        </button>
+                    )}
+
                     <button
                         onClick={async () => {
                             const name = prompt('Nombre de la nueva carpeta:');
@@ -433,6 +482,9 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                             </button>
                                             <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2 text-sm">
                                                 <Trash2 size={14} /> Eliminar
+                                            </button>
+                                            <button onClick={() => handleCut(item)} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 border-t border-gray-100 dark:border-gray-700">
+                                                <Scissors size={14} /> Cortar (Mover)
                                             </button>
                                         </div>
                                     )}
