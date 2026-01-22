@@ -4,6 +4,7 @@ import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile } from "@/lib/onedriveService";
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical } from 'lucide-react';
+import { logAuditAction } from '@/lib/audit';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -165,6 +166,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         setLoading(true);
         try {
             await uploadFile(currentFolder, file, driveId);
+
+            // Log Action
+            await logAuditAction({
+                action_type: 'UPLOAD',
+                file_name: file.name,
+                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                worker_name: currentUser?.full_name || 'Desconocido',
+                metadata: { size: file.size, driveId }
+            });
+
             refreshFolder(currentFolder);
         } catch (error) {
             alert("Error al subir archivo");
@@ -178,6 +189,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         if (!newName || !newName.trim() || newName === item.name) return;
         try {
             await renameItem(item.id, newName.trim(), driveId);
+
+            // Log Action
+            await logAuditAction({
+                action_type: 'RENAME',
+                file_name: item.name,
+                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                worker_name: currentUser?.full_name || 'Desconocido',
+                metadata: { from: item.name, to: newName, driveId }
+            });
+
             refreshFolder(currentFolder);
         } catch (error) {
             alert("Error al renombrar");
@@ -188,6 +209,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;
         try {
             await deleteItem(item.id, driveId);
+
+            // Log Action
+            await logAuditAction({
+                action_type: 'DELETE',
+                file_name: item.name,
+                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                worker_name: currentUser?.full_name || 'Desconocido',
+                metadata: { driveId }
+            });
+
             refreshFolder(currentFolder);
         } catch (error) {
             alert("Error al eliminar");
@@ -310,6 +341,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                             if (!name || !name.trim()) return;
                             try {
                                 await createFolder(currentFolder, name.trim(), driveId);
+
+                                // Log Action
+                                await logAuditAction({
+                                    action_type: 'CREATE_FOLDER',
+                                    file_name: name.trim(),
+                                    file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                                    worker_name: currentUser?.full_name || 'Desconocido',
+                                    metadata: { driveId }
+                                });
+
                                 refreshFolder(currentFolder);
                             } catch (e) {
                                 alert('Error al crear la carpeta');
