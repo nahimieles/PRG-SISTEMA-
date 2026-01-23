@@ -17,7 +17,9 @@ import SharePointSites from "./SharePointSites";
 
 
 const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role }) => {
-    // ... hooks
+    const { instance, accounts } = useMsal(); // Restored
+    const { isDark } = useTheme(); // Restored
+    const theme = isDark ? darkTheme : lightTheme; // Restored
 
     // Navigation: { id, name, type, resourceId, driveId }
     // If propDriveId is provided (legacy mode), we start with it. Otherwise 'root' has no driveId.
