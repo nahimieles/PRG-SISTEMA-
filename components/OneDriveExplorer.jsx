@@ -52,8 +52,10 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     // Load Content
     useEffect(() => {
-        loadContent();
-    }, [currentPath, searchTerm]); // Trigger on path change (effectiveDriveId changes with path)
+        if (currentUser) {
+            loadContent();
+        }
+    }, [currentPath, searchTerm, currentUser, role]); // Trigger on path change (effectiveDriveId changes with path)
 
     const loadContent = async () => {
         setLoading(true);
@@ -173,6 +175,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     };
 
     const handleCreateGroup = async (name) => {
+        if (role === 'worker') return alert("No tienes permisos para crear grupos.");
         try {
             await createGroup({
                 name,
@@ -188,6 +191,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     };
 
     const handleCreateSPFolder = async (name) => {
+        if (role === 'worker') return alert("No tienes permisos para crear carpetas.");
         if (!effectiveDriveId) return;
         try {
             const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
@@ -385,6 +389,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
 
     const handleDelete = async (item) => {
+        if (role === 'worker') return alert("No tienes permisos para eliminar.");
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;
         try {
             if (item.type === 'group') {
@@ -404,6 +409,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     };
 
     const handleRename = async (item) => {
+        if (role === 'worker') return alert("No tienes permisos para renombrar.");
         const newName = prompt("Nuevo nombre:", item.name);
         if (!newName || !newName.trim()) return;
         try {
@@ -411,6 +417,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 await updateGroup(item.id, { name: newName });
             } else {
                 await renameItem(item.id, newName, driveId);
+                await logAuditAction({
+                    action_type: 'RENAME',
+                    file_name: item.name,
+                    file_path: newName, // New name
+                    worker_name: currentUser?.full_name,
+                    metadata: { driveId, oldName: item.name }
+                });
             }
             loadContent();
         } catch (e) { alert("Error al renombrar"); }
@@ -418,7 +431,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     // Placeholder for Cut/Paste if needed, or remove if unused in new logic for simplicity first
     const handleCut = (item) => {
-        if (item.type === 'group') return alert("No se puede mover grupos aún.");
+        if (role === 'worker') return alert("No tienes permisos para mover elementos.");
+        // if (item.type === 'group') return alert("No se puede mover grupos aún."); // REMOVED CONSTRAINT
         setClipboard({ item, action: 'cut', sourceFolder: getCurrentSPTarget() });
         setActiveMenu(null);
     };
@@ -459,6 +473,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 const destId = getCurrentSPTarget();
                 if (!destId) throw new Error("Destino inválido para archivo.");
                 await moveItem(clipboard.item.id, destId, driveId);
+                await logAuditAction({
+                    action_type: 'MOVE',
+                    file_name: clipboard.item.name,
+                    file_path: 'Moved to ' + destId,
+                    worker_name: currentUser?.full_name,
+                    metadata: { driveId, source: clipboard.sourceFolder, dest: destId }
+                });
             }
 
             setClipboard(null);
@@ -579,6 +600,17 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} style={{ color: theme.text }} />
                     </button>
 
+                    {/* NEW: Paste Button */}
+                    {clipboard && (
+                        <button
+                            onClick={handlePaste}
+                            className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                            title={`Pegar ${clipboard.action === 'cut' ? 'cortado' : 'copiado'}`}
+                        >
+                            <ClipboardPaste size={16} />
+                        </button>
+                    )}
+
                     {/* NEW: Upload (Only if SP context) */}
                     {getCurrentSPTarget() && (
                         <>
@@ -675,19 +707,18 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                         {items
                             .map((item) => {
                                 // Determine Icon
-                                const isGroup = item.type === 'group';
+                                const isGroup = item.type === 'group' || item.type === 'site';
                                 const Icon = isGroup ? (LucideIcons[item.icon] || Folder) : (item.type === 'folder' ? Folder : getFileIcon(item.name)?.type || FileIcon);
-                                const itemColor = isGroup ? (item.color || '#3b82f6') : (item.type === 'folder' ? '#fbbf24' : '#6b7280'); // Groups blue, folders yellow
+                                const itemColor = isGroup ? (item.color || '#0078d4') : (item.type === 'folder' ? '#fbbf24' : '#6b7280');
+
+                                const getInitials = (n) => n.split(' ').map(c => c[0]).slice(0, 2).join('').toUpperCase();
 
                                 return (
                                     <div
                                         key={item.id}
-                                        className={`group relative rounded-xl border transition-all duration-300 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden
-                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px]' : 'p-0 aspect-[4/3]'}`}
-                                        style={{
-                                            background: isDark ? (isGroup ? '#1e293b' : '#111827') : (isGroup ? '#f8fafc' : '#ffffff'),
-                                            borderColor: theme.border
-                                        }}
+                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden bg-white dark:bg-gray-800 border dark:border-gray-700
+                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'rounded-none shadow-sm h-48'}`}
+                                        style={{ borderColor: theme.border }}
                                         onClick={() => handleNavigate(item)}
                                     >
                                         {/* Menu Trigger */}
@@ -697,7 +728,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                 setActiveMenu(activeMenu === item.id ? null : item.id);
                                             }}
                                             className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                            style={{ background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)' }}
                                         >
                                             <MoreVertical size={16} color={theme.text} />
                                         </button>
@@ -711,7 +741,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                 <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2">
                                                     <Trash2 size={14} /> Eliminar
                                                 </button>
-                                                {item.type !== 'group' && (
+                                                {item.type !== 'group' && item.type !== 'site' && (
                                                     <button onClick={() => handleCut(item)} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700">
                                                         <Scissors size={14} /> Cortar
                                                     </button>
@@ -721,63 +751,65 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                                         {viewMode === 'grid' ? (
                                             // GRID VIEW
-                                            <>
-                                                {/* Thumbnail / Icon Area */}
-                                                <div
-                                                    className="flex-1 w-full relative overflow-hidden flex items-center justify-center p-4 bg-gradient-to-br"
-                                                    style={{
-                                                        background: isGroup && item.image_url
-                                                            ? `url(${item.image_url}) center/cover`
-                                                            : (isGroup ? `linear-gradient(135deg, ${itemColor}10, ${itemColor}30)` : 'transparent')
-                                                    }}
-                                                >
-                                                    {isGroup && item.image_url && <div className="absolute inset-0 bg-black/30" />}
+                                            isGroup ? (
+                                                // SHAREPOINT CARD STYLE
+                                                <div className="flex flex-col h-full w-full">
+                                                    {/* Header Color Strip / Initials */}
+                                                    <div className="p-4 flex justify-between items-start">
+                                                        <div
+                                                            className="w-10 h-10 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none"
+                                                            style={{ backgroundColor: itemColor }}
+                                                        >
+                                                            {getInitials(item.name)}
+                                                        </div>
+                                                        <LucideIcons.Star size={16} className="text-gray-300 dark:text-gray-600 group-hover:block hidden" />
+                                                    </div>
 
-                                                    {!item.image_url && (
-                                                        <div className="transition-transform duration-300 group-hover:scale-110 shadow-sm rounded-xl p-2 bg-white dark:bg-gray-800/50 backdrop-blur-sm">
-                                                            {isGroup ? <Icon size={40} color={itemColor} /> :
-                                                                (item.type === 'folder' ? <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> : <div className="scale-125">{getFileIcon(item.name)}</div>)
-                                                            }
-                                                        </div>
-                                                    )}
+                                                    {/* Content */}
+                                                    <div className="px-4 pb-2 flex-1 flex flex-col">
+                                                        <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight line-clamp-2" title={item.name}>
+                                                            {item.name}
+                                                        </h3>
+                                                        <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide">Grupo</p>
+                                                    </div>
 
-                                                    {/* Group Badge */}
-                                                    {isGroup && (
-                                                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/40 text-white backdrop-blur-md">
-                                                            Grupo
+                                                    {/* Footer Activity */}
+                                                    <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 mt-auto flex items-center gap-2 text-[11px] text-gray-500">
+                                                        <div className="p-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                                                            <LucideIcons.TrendingUp size={12} />
                                                         </div>
-                                                    )}
-                                                    {item.resource_id && isGroup && (
-                                                        <div className="absolute top-2 left-2 p-1 rounded-full bg-blue-500 text-white shadow" title="Vinculado a SharePoint">
-                                                            <LucideIcons.Cloud size={10} />
-                                                        </div>
-                                                    )}
+                                                        <span className="truncate">Inicio es popular</span>
+                                                    </div>
                                                 </div>
-
-                                                {/* Footer Area */}
-                                                <div className="h-10 px-3 flex items-center justify-between border-t w-full bg-white dark:bg-[#1a1a1a]" style={{ borderColor: theme.border }}>
-                                                    <p className="text-xs font-medium truncate w-[90%]" style={{ color: theme.text }}>{item.name}</p>
+                                            ) : (
+                                                // FILE / FOLDER STYLE (kept simple)
+                                                <div className="flex flex-col items-center justify-center p-4 h-full relative group/icon">
+                                                    <div className="mb-3 transition-transform duration-200 group-hover/icon:scale-110">
+                                                        {item.type === 'folder' ?
+                                                            <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> :
+                                                            <div className="scale-125">{getFileIcon(item.name)}</div>
+                                                        }
+                                                    </div>
+                                                    <p className="text-xs text-center font-medium text-gray-700 dark:text-gray-300 px-2 w-full truncate">
+                                                        {item.name}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400 mt-1">
+                                                        {new Date(item.lastModifiedDateTime).toLocaleDateString()}
+                                                    </p>
                                                 </div>
-                                            </>
+                                            )
                                         ) : (
                                             // LIST VIEW
                                             <>
-                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                                                    {isGroup ? <Icon size={20} color={itemColor} /> :
-                                                        (item.type === 'folder' ? <Folder size={20} className="text-yellow-400" /> : getFileIcon(item.name))}
+                                                <div className="w-10 h-10 rounded text-white flex items-center justify-center font-bold" style={{ backgroundColor: isGroup ? itemColor : (item.type === 'folder' ? '#fbbf24' : 'transparent') }}>
+                                                    {isGroup ? getInitials(item.name) : (item.type === 'folder' ? <Folder size={20} className="text-white" /> : <div className="scale-75">{getFileIcon(item.name)}</div>)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
                                                     <p className="text-[10px] opacity-60 m-0 p-0 line-clamp-1" style={{ color: theme.textSecondary }}>
-                                                        {isGroup ? (item.description || 'Grupo Personalizado') :
-                                                            `Modificado: ${new Date(item.lastModifiedDateTime).toLocaleDateString()}`}
+                                                        {isGroup ? 'Grupo de Trabajo' : `Modificado: ${new Date(item.lastModifiedDateTime).toLocaleDateString()}`}
                                                     </p>
                                                 </div>
-                                                {isGroup && (
-                                                    <span className="px-2 py-1 rounded text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium">
-                                                        GRUPO
-                                                    </span>
-                                                )}
                                             </>
                                         )}
                                     </div>
