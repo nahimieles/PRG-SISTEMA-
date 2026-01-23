@@ -1,17 +1,20 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem } from "@/lib/onedriveService";
-import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste } from 'lucide-react';
+import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission } from "@/lib/groups";
+import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste, Plus, Image as ImageIcon, Settings } from 'lucide-react'; // Added icons
+import * as LucideIcons from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
+import { toast } from 'sonner'; // Assuming sonner is available or use alias
 
 // Helper to normalize strings for comparison (remove accents, case insensitive)
 const normalize = (str) => {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
 };
 
 const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
@@ -19,52 +22,28 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
-    const [files, setFiles] = useState([]);
-    const [originalFiles, setOriginalFiles] = useState([]); // Store all files for filtering
-    const [currentFolder, setCurrentFolder] = useState("root");
-    const [folderHistory, setFolderHistory] = useState([]);
+    // Unified State
+    const [items, setItems] = useState([]); // Mixed groups and files
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+    // Navigation State: Stack of objects { id, name, type: 'group' | 'folder' | 'root', resourceId? }
+    const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'Inicio', type: 'root', resourceId: null }]);
+    const currentPath = breadcrumbs[breadcrumbs.length - 1];
+
+    const [viewMode, setViewMode] = useState('grid');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeMenu, setActiveMenu] = useState(null);
-    const [clipboard, setClipboard] = useState(null); // { item, action: 'cut' }
-    const fileInputRef = React.useRef(null);
+    const [clipboard, setClipboard] = useState(null);
+    const fileInputRef = useRef(null);
 
-    // Deep Search Implementation
-    useEffect(() => {
-        const timer = setTimeout(async () => {
-            if (searchTerm.trim().length > 0) {
-                setLoading(true);
-                try {
-                    // Search in current drive, from current folder (or root if deep search desired from root)
-                    // User wants "deep search". Usually searching from ROOT of the drive is best.
-                    // But maybe from current folder? 
-                    // Let's search from ROOT of the drive to be finding things "inside groups".
-                    const results = await searchFiles(searchTerm, driveId, "root");
-                    setFiles(results);
-                } catch (e) {
-                    setError("Error en la búsqueda");
-                } finally {
-                    setLoading(false);
-                }
-            } else if (searchTerm === '' && files !== originalFiles) {
-                // Restore current folder view
-                if (folderCache[currentFolder]) {
-                    setFiles(folderCache[currentFolder]);
-                } else {
-                    loadFiles(currentFolder);
-                }
-            }
-        }, 500); // 500ms debounce
+    // Group Creation/Edit State
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const [editingGroup, setEditingGroup] = useState(null);
 
-        return () => clearTimeout(timer);
-    }, [searchTerm, driveId]);
-
-    // Cache System: { folderId: { data: [], timestamp: number } }
-    const [folderCache, setFolderCache] = useState({});
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    // Cache
+    const [cache, setCache] = useState({});
+    const CACHE_DURATION = 5 * 60 * 1000;
 
     // Load viewMode
     useEffect(() => {
@@ -77,211 +56,215 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         localStorage.setItem('onedrive_view_mode', viewMode);
     }, [viewMode]);
 
+    // Initial Auth
     useEffect(() => {
         if (accounts.length > 0 && driveId) {
-            const request = {
-                ...loginRequest,
-                account: accounts[0],
-            };
-
+            const request = { ...loginRequest, account: accounts[0] };
             instance.acquireTokenSilent(request).then((response) => {
                 initializeGraphClient(response.accessToken);
-                loadFiles("root");
             }).catch((e) => {
                 instance.acquireTokenRedirect(request);
             });
         }
-    }, [accounts, instance, driveId, currentUser]);
+    }, [accounts, instance, driveId]);
 
-    const loadFiles = async (folderId) => {
-        if (!driveId) return;
-
-        // Check Cache Validity
-        if (folderCache[folderId]) {
-            const { data, timestamp } = folderCache[folderId];
-            const isFresh = (Date.now() - timestamp) < CACHE_DURATION;
-
-            if (isFresh) {
-                console.log(`[Cache Hit] Serving ${folderId} from cache.`);
-                setFiles(data);
-                setLoading(false);
-                return;
-            }
+    // Load Content when Path Changes
+    useEffect(() => {
+        if (driveId) {
+            loadContent();
         }
+    }, [currentPath, driveId, searchTerm]);
 
+    const loadContent = async () => {
         setLoading(true);
         setError(null);
+
         try {
-            const result = await getFiles(folderId, driveId);
-            setOriginalFiles(result);
+            let mixedContent = [];
 
-            // Filter by Worker Name if needed
-            const isRestricted = role !== 'admin' && normalize(siteName).includes('prg') && folderId === 'root';
+            if (searchTerm.trim().length > 0) {
+                const fileResults = await searchFiles(searchTerm, driveId, "root");
+                mixedContent = fileResults.map(f => ({ ...f, type: f.folder ? 'folder' : 'file' }));
+            } else {
+                const { id, type, resourceId } = currentPath;
 
-            if (isRestricted) {
-                // FAIL-SAFE: If user data is missing, show nothing (wait for update)
-                const workerName = currentUser && currentUser.full_name ? normalize(currentUser.full_name) : null;
-
-                if (!workerName) {
-                    setFiles([]);
-                    setLoading(false);
-                    return;
+                // 1. Fetch Groups
+                let groups = [];
+                if (type === 'root' || type === 'group') {
+                    const parentId = type === 'root' ? null : id;
+                    groups = await getGroupsByParent(parentId);
                 }
 
-                const filtered = result.filter(file => {
-                    if (!file.folder) return false;
-                    return normalize(file.name).includes(workerName) || workerName.includes(normalize(file.name));
-                });
-                setFiles(filtered);
-                // REMOVED: Auto-navigation that caused the bug for workers
-                // The folder was appearing and disappearing because it auto-navigated
+                // 2. Fetch Files
+                let files = [];
+                const targetFolderId = resourceId || (type === 'folder' ? id : null);
 
-            } else {
-                setFiles(result);
-                // Update Cache with Timestamp
-                setFolderCache(prev => ({ ...prev, [folderId]: { data: result, timestamp: Date.now() } }));
+                // If at ROOT, check if we should fetch root files (Unified View)
+                // For now, if at 'root' and we have groups, maybe we DON'T show files unless explicitly asked, 
+                // but user said "Groups INSIDE the view of files...". So we merge.
+                if (type === 'root') {
+                    try {
+                        files = await getFiles('root', driveId);
+                    } catch (e) { console.warn("Could not fetch root files", e); }
+                } else if (targetFolderId) {
+                    files = await getFiles(targetFolderId, driveId);
+                }
+
+                // 3. Merge & Format
+                const formattedGroups = groups.map(g => ({
+                    id: g.id,
+                    name: g.name,
+                    type: 'group',
+                    icon: g.icon,
+                    color: g.color || '#3b82f6',
+                    description: g.description,
+                    image_url: g.image_url,
+                    resource_id: g.resource_id,
+                    permissions: g.permissions,
+                    lastModifiedDateTime: g.updated_at
+                }));
+
+                const formattedFiles = files.filter(f => !['Forms', 'Site Assets', 'Style Library'].includes(f.name)).map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    type: f.folder ? 'folder' : 'file',
+                    webUrl: f.webUrl,
+                    lastModifiedDateTime: f.lastModifiedDateTime,
+                    item: f // Keep original ref
+                }));
+
+                mixedContent = [...formattedGroups, ...formattedFiles];
             }
 
+            setItems(mixedContent);
+
         } catch (err) {
-            setError("No se pudieron cargar los archivos. Verifica tu conexión.");
+            console.error(err);
+            setError("Error cargando contenido.");
         } finally {
             setLoading(false);
         }
     };
 
-    const navigateToFolder = (folderId, folderName) => {
-        setSearchTerm(''); // Reset search
-        setFiles([]); // CRITICAL: Clear files to avoid "searching" ghost effect
-        setFolderHistory(prev => {
-            if (prev.length > 0 && prev[prev.length - 1].id === folderId) return prev;
-            return [...prev, { id: currentFolder, name: folderName || "Atrás" }];
-        });
-        setCurrentFolder(folderId);
-        loadFiles(folderId);
+    const handleNavigate = (item) => {
+        setSearchTerm('');
+        if (item.type === 'group') {
+            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name, type: 'group', resourceId: item.resource_id }]);
+        } else if (item.folder || item.type === 'folder') {
+            // Handle both unified 'folder' type and raw 'folder' property from search
+            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name, type: 'folder', resourceId: null }]);
+        } else {
+            openPreview(item.item || item);
+        }
     };
 
-    const refreshFolder = (folderId) => {
-        setFolderCache(prev => {
-            const newC = { ...prev };
-            delete newC[folderId];
-            return newC;
-        });
-        loadFiles(folderId);
+    const navigateUp = () => {
+        if (breadcrumbs.length <= 1) return;
+        setBreadcrumbs(prev => prev.slice(0, -1));
+    };
+
+    // Actions Context Helpers
+    const getCurrentSPTarget = () => {
+        if (currentPath.type === 'folder') return currentPath.id;
+        if (currentPath.resourceId) return currentPath.resourceId;
+        if (currentPath.type === 'root') return 'root';
+        return null;
+    };
+
+    const handleCreateGroup = async (name) => {
+        if (currentPath.type !== 'root' && currentPath.type !== 'group') return alert("Solo puedes crear grupos dentro de otros grupos o en el inicio.");
+        try {
+            await createGroup({
+                name,
+                parent_id: currentPath.type === 'root' ? null : currentPath.id,
+                type: 'group',
+                permissions: ['admin', 'manager']
+            });
+            loadContent();
+        } catch (e) { alert('Error al crear grupo'); }
+    };
+
+    const handleCreateSPFolder = async (name) => {
+        const targetId = getCurrentSPTarget();
+        if (!targetId) return alert("Esta ubicación no es una carpeta de SharePoint.");
+        try {
+            await createFolder(targetId, name, driveId);
+            loadContent();
+        } catch (e) { alert('Error al crear carpeta'); }
     };
 
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        const targetId = getCurrentSPTarget();
+        if (!targetId) return alert("Ubicación no válida para subir archivos.");
+
         setLoading(true);
         try {
-            await uploadFile(currentFolder, file, driveId);
-
-            // Log Action
+            await uploadFile(targetId, file, driveId);
             await logAuditAction({
                 action_type: 'UPLOAD',
                 file_name: file.name,
-                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                file_path: breadcrumbs.map(b => b.name).join('/'),
                 worker_name: currentUser?.full_name || 'Desconocido',
                 metadata: { size: file.size, driveId }
             });
-
-            refreshFolder(currentFolder);
-        } catch (error) {
-            alert("Error al subir archivo");
-        } finally {
-            e.target.value = null;
-        }
-    };
-
-    const handleRename = async (item) => {
-        const newName = prompt("Nuevo nombre:", item.name);
-        if (!newName || !newName.trim() || newName === item.name) return;
-        try {
-            await renameItem(item.id, newName.trim(), driveId);
-
-            // Log Action
-            await logAuditAction({
-                action_type: 'RENAME',
-                file_name: item.name,
-                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
-                worker_name: currentUser?.full_name || 'Desconocido',
-                metadata: { from: item.name, to: newName, driveId }
-            });
-
-            refreshFolder(currentFolder);
-        } catch (error) {
-            alert("Error al renombrar");
-        }
+            loadContent();
+        } catch (e) { alert("Error al subir"); }
+        finally { if (fileInputRef.current) fileInputRef.current.value = ''; }
     };
 
     const handleDelete = async (item) => {
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;
         try {
-            await deleteItem(item.id, driveId);
-
-            // Log Action
-            console.log("Logging DELETE for:", item.name);
-            await logAuditAction({
-                action_type: 'DELETE',
-                file_name: item.name,
-                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
-                worker_name: currentUser?.full_name || 'Desconocido',
-                metadata: { driveId }
-            });
-
-            refreshFolder(currentFolder);
-        } catch (error) {
-            alert("Error al eliminar");
-        }
+            if (item.type === 'group') {
+                await deleteGroup(item.id);
+            } else {
+                await deleteItem(item.id, driveId);
+                await logAuditAction({
+                    action_type: 'DELETE',
+                    file_name: item.name,
+                    file_path: item.name,
+                    worker_name: currentUser?.full_name,
+                    metadata: { driveId }
+                });
+            }
+            loadContent();
+        } catch (e) { alert("Error al eliminar"); }
     };
 
+    const handleRename = async (item) => {
+        const newName = prompt("Nuevo nombre:", item.name);
+        if (!newName || !newName.trim()) return;
+        try {
+            if (item.type === 'group') {
+                await updateGroup(item.id, { name: newName });
+            } else {
+                await renameItem(item.id, newName, driveId);
+            }
+            loadContent();
+        } catch (e) { alert("Error al renombrar"); }
+    };
+
+    // Placeholder for Cut/Paste if needed, or remove if unused in new logic for simplicity first
     const handleCut = (item) => {
-        setClipboard({ item, action: 'cut', sourceFolder: currentFolder });
+        if (item.type === 'group') return alert("No se puede mover grupos aún.");
+        setClipboard({ item, action: 'cut', sourceFolder: getCurrentSPTarget() });
         setActiveMenu(null);
     };
 
     const handlePaste = async () => {
-        if (!clipboard || !clipboard.item) return;
-
-        if (clipboard.sourceFolder === currentFolder) {
-            alert("El archivo ya está en esta carpeta.");
-            return;
-        }
-
+        // simplified paste logic for SP only
+        if (!clipboard) return;
+        const targetId = getCurrentSPTarget();
+        if (!targetId) return alert("Destino no válido.");
         setLoading(true);
         try {
-            await moveItem(clipboard.item.id, currentFolder, driveId);
-
-            // Log Action
-            await logAuditAction({
-                action_type: 'MOVE',
-                file_name: clipboard.item.name,
-                file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
-                worker_name: currentUser?.full_name || 'Desconocido',
-                metadata: { driveId, from: clipboard.sourceFolder, to: currentFolder }
-            });
-
+            await moveItem(clipboard.item.id, targetId, driveId);
             setClipboard(null);
-            refreshFolder(currentFolder);
-        } catch (error) {
-            console.error(error);
-            alert("Error al mover el elemento. Verifica permisos.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const navigateUp = () => {
-        if (folderHistory.length === 0) return;
-        const previous = folderHistory[folderHistory.length - 1];
-        setFolderHistory(prev => prev.slice(0, -1));
-        setCurrentFolder(previous.id);
-
-        if (previous.id === 'root') {
-            refreshFolder('root'); // Force refresh root to ensure filtering
-        } else {
-            loadFiles(previous.id);
-        }
+            loadContent();
+        } catch (e) { alert("Error al mover"); }
+        finally { setLoading(false); }
     };
 
     const getFileIcon = (fileName) => {
@@ -326,27 +309,51 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             {/* Overlay for closing menu */}
             {activeMenu && <div className="fixed inset-0 z-30" onClick={() => setActiveMenu(null)} />}
 
-            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
-                <div className="flex items-center gap-2">
-                    {folderHistory.length > 0 && (
+            {/* Header / Toolbar */}
+            <div className="p-4 border-b flex items-center justify-between flex-wrap gap-4" style={{ borderColor: theme.border }}>
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {breadcrumbs.length > 1 && (
                         <button onClick={navigateUp} className="p-1 hover:opacity-70 rounded-full transition cursor-pointer">
                             <ArrowLeft size={20} style={{ color: theme.text }} />
                         </button>
                     )}
-                    <h2 className="font-semibold" style={{ color: theme.text }}>
-                        {folderHistory.length === 0 ? `Archivos: ${siteName}` : folderHistory[folderHistory.length - 1].name}
-                    </h2>
+                    <div className="flex items-center gap-1 text-sm font-semibold truncate" style={{ color: theme.text }}>
+                        {breadcrumbs.length > 3 ? (
+                            <>
+                                <span className="opacity-50">...</span>
+                                <span className="opacity-50">/</span>
+                                <span>{breadcrumbs[breadcrumbs.length - 2].name}</span>
+                                <span className="opacity-50">/</span>
+                            </>
+                        ) : breadcrumbs.slice(0, -1).map((crumb, i) => (
+                            <React.Fragment key={crumb.id}>
+                                <span
+                                    className="opacity-50 hover:opacity-100 cursor-pointer hover:underline"
+                                    onClick={() => {
+                                        // Navigate to this crumb
+                                        const idx = breadcrumbs.findIndex(b => b.id === crumb.id);
+                                        setBreadcrumbs(breadcrumbs.slice(0, idx + 1));
+                                    }}
+                                >
+                                    {crumb.name}
+                                </span>
+                                <span className="opacity-50">/</span>
+                            </React.Fragment>
+                        ))}
+                        <span className="text-blue-500">{currentPath.name}</span>
+                    </div>
                 </div>
-                <div className="flex gap-2 items-center">
-                    <div className="relative">
+
+                <div className="flex gap-2 items-center ml-auto">
+                    <div className="relative hidden md:block">
                         <input
                             type="text"
-                            placeholder="Buscar archivo..."
+                            placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-8 pr-4 py-1 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="pl-8 pr-4 py-1.5 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500 w-48 transition-all focus:w-64"
                             style={{
-                                background: isDark ? 'rgba(255,255,255,0.1)' : 'white',
+                                background: isDark ? 'rgba(255,255,255,0.05)' : 'white',
                                 color: theme.text,
                                 borderColor: theme.border
                             }}
@@ -354,82 +361,80 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                         <Search className="absolute left-2 top-2 text-gray-400" size={16} />
                     </div>
 
-                    {/* Hidden File Input */}
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileUpload}
-                        className="hidden"
-                    />
+                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
 
+                    {/* Action Buttons */}
                     <button
-                        onClick={() => refreshFolder(currentFolder)}
+                        onClick={() => loadContent()}
                         disabled={loading}
-                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer disabled:opacity-50"
+                        className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer disabled:opacity-50"
                         style={{ borderColor: theme.border }}
-                        title="Sincronizar"
+                        title="Actualizar"
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} style={{ color: theme.text }} />
                     </button>
 
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
-                        style={{ borderColor: theme.border }}
-                        title="Subir Archivo"
-                    >
-                        <Upload size={16} style={{ color: theme.text }} />
-                    </button>
+                    {/* NEW: Upload (Only if SP context) */}
+                    {getCurrentSPTarget() && (
+                        <>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                className="hidden"
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                                style={{ borderColor: theme.border }}
+                                title="Subir Archivo"
+                            >
+                                <Upload size={16} style={{ color: theme.text }} />
+                            </button>
+                        </>
+                    )}
 
-                    {clipboard && (
+                    {/* NEW: Create Group (Only valid contexts) */}
+                    {(currentPath.type === 'root' || currentPath.type === 'group') && (
                         <button
-                            onClick={handlePaste}
-                            className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer flex items-center gap-2 px-3 animate-pulse"
-                            style={{ borderColor: theme.border, background: theme.primary, color: 'white' }}
-                            title={`Pegar ${clipboard.item.name}`}
+                            onClick={() => {
+                                // Simple Prompt for now, full modal later if needed
+                                const name = prompt("Nombre del Grupo:");
+                                if (name && name.trim()) handleCreateGroup(name.trim());
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                            title="Nuevo Grupo"
                         >
-                            <ClipboardPaste size={16} />
-                            <span className="text-xs font-bold">Pegar</span>
+                            <Plus size={16} />
+                            <span className="text-xs font-bold hidden sm:inline">Grupo</span>
+                        </button>
+                    )}
+
+                    {/* NEW: Create Folder (Only if SP context) */}
+                    {getCurrentSPTarget() && (
+                        <button
+                            onClick={async () => {
+                                const name = prompt('Nombre de la carpeta:');
+                                if (name && name.trim()) handleCreateSPFolder(name.trim());
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                            style={{ borderColor: theme.border }}
+                            title="Nueva Carpeta SharePoint"
+                        >
+                            <FolderPlus size={16} style={{ color: theme.text }} />
+                            <span className="text-xs font-bold hidden sm:inline">Carpeta</span>
                         </button>
                     )}
 
                     <button
-                        onClick={async () => {
-                            const name = prompt('Nombre de la nueva carpeta:');
-                            if (!name || !name.trim()) return;
-                            try {
-                                await createFolder(currentFolder, name.trim(), driveId);
-
-                                // Log Action
-                                await logAuditAction({
-                                    action_type: 'CREATE_FOLDER',
-                                    file_name: name.trim(),
-                                    file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
-                                    worker_name: currentUser?.full_name || 'Desconocido',
-                                    metadata: { driveId }
-                                });
-
-                                refreshFolder(currentFolder);
-                            } catch (e) {
-                                alert('Error al crear la carpeta');
-                            }
-                        }}
-                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
-                        style={{ borderColor: theme.border }}
-                        title="Nueva carpeta"
-                    >
-                        <FolderPlus size={16} style={{ color: theme.text }} />
-                    </button>
-                    <button
                         onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-                        className="p-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                        className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
                         style={{ borderColor: theme.border }}
-                        title={viewMode === 'grid' ? "Ver como lista" : "Ver como cuadrícula"}
                     >
                         {viewMode === 'grid' ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                            <div className="flex gap-0.5"><div className="w-1 h-1 bg-current rounded-full"></div><div className="w-1 h-1 bg-current rounded-full"></div><div className="w-1 h-1 bg-current rounded-full"></div></div>
                         ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <div className="flex flex-col gap-0.5"><div className="w-3 h-0.5 bg-current rounded-full"></div><div className="w-3 h-0.5 bg-current rounded-full"></div></div>
                         )}
                     </button>
                 </div>
@@ -437,113 +442,142 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
             <div className="p-4 min-h-[300px]">
                 {loading ? (
-                    <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4" : "flex flex-col gap-2"}>
+                        {[1, 2, 3, 4, 5].map((i) => (
                             <div
                                 key={i}
-                                className={`rounded-xl border animate-pulse p-3 ${viewMode === 'list' ? 'flex items-center gap-4 h-16' : 'h-48 flex flex-col items-center justify-center gap-4'}`}
+                                className={`rounded-xl border animate-pulse p-3 ${viewMode === 'list' ? 'flex items-center gap-4 h-16' : 'h-40 flex flex-col items-center justify-center gap-4'}`}
                                 style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderColor: 'transparent' }}
                             >
-                                <div className={`bg-gray-300 dark:bg-gray-700 rounded-lg ${viewMode === 'list' ? 'w-10 h-10' : 'w-24 h-24'}`}></div>
+                                <div className={`bg-gray-300 dark:bg-gray-700 rounded-lg ${viewMode === 'list' ? 'w-10 h-10' : 'w-16 h-16'}`}></div>
                                 <div className="space-y-2 w-full px-2">
                                     <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
-                                    {viewMode === 'grid' && <div className="h-2 bg-gray-300 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>}
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : error ? (
-                    <div className="text-red-500 text-center p-4">{error}</div>
-                ) : files.length === 0 ? (
-                    <div className="text-center p-8" style={{ color: theme.textSecondary }}>
-                        {role !== 'admin' && siteName === 'PRG AUDITORES'
-                            ? "No encontramos tu carpeta personal en este grupo."
-                            : "Carpeta vacía"}
+                    <div className="text-red-500 text-center p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">{error}</div>
+                ) : items.length === 0 ? (
+                    <div className="text-center p-12 flex flex-col items-center gap-4" style={{ color: theme.textSecondary }}>
+                        <div className="p-4 rounded-full bg-gray-100 dark:bg-gray-800">
+                            <Folder size={48} className="opacity-20" />
+                        </div>
+                        <p>Carpeta vacía</p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" : "flex flex-col gap-2"}>
-                        {files
-                            .filter(f => normalize(f.name).includes(normalize(searchTerm)))
-                            .map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`group relative p-3 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-lg cursor-pointer ${item.folder ? 'folder-card' : 'file-card'} ${viewMode === 'list' ? 'flex items-center gap-4' : ''}`}
-                                    style={{
-                                        background: isDark ? (item.folder ? '#1e3a8a' : '#1f2937') : (item.folder ? '#eff6ff' : '#ffffff'),
-                                        borderColor: theme.border
-                                    }}
-                                    onClick={() => item.folder ? navigateToFolder(item.id, item.name) : openPreview(item)}
-                                >
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveMenu(activeMenu === item.id ? null : item.id);
+                    <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" : "flex flex-col gap-2"}>
+                        {items
+                            .map((item) => {
+                                // Determine Icon
+                                const isGroup = item.type === 'group';
+                                const Icon = isGroup ? (LucideIcons[item.icon] || Folder) : (item.type === 'folder' ? Folder : getFileIcon(item.name)?.type || FileIcon);
+                                const itemColor = isGroup ? (item.color || '#3b82f6') : (item.type === 'folder' ? '#fbbf24' : '#6b7280'); // Groups blue, folders yellow
+
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className={`group relative rounded-xl border transition-all duration-300 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden
+                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px]' : 'p-0 aspect-[4/3]'}`}
+                                        style={{
+                                            background: isDark ? (isGroup ? '#1e293b' : '#111827') : (isGroup ? '#f8fafc' : '#ffffff'),
+                                            borderColor: theme.border
                                         }}
-                                        className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 z-10 transition-colors"
+                                        onClick={() => handleNavigate(item)}
                                     >
-                                        <MoreVertical size={18} color={theme.text} />
-                                    </button>
+                                        {/* Menu Trigger */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveMenu(activeMenu === item.id ? null : item.id);
+                                            }}
+                                            className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            style={{ background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)' }}
+                                        >
+                                            <MoreVertical size={16} color={theme.text} />
+                                        </button>
 
-                                    {activeMenu === item.id && (
-                                        <div className="absolute right-2 top-8 w-40 bg-white dark:bg-[#1f2937] shadow-xl rounded-lg z-20 border border-gray-200 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
-                                            <button onClick={() => { setActiveMenu(null); handleRename(item); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                                                <Edit2 size={14} /> Renombrar
-                                            </button>
-                                            <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2 text-sm">
-                                                <Trash2 size={14} /> Eliminar
-                                            </button>
-                                            <button onClick={() => handleCut(item)} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 border-t border-gray-100 dark:border-gray-700">
-                                                <Scissors size={14} /> Cortar (Mover)
-                                            </button>
-                                        </div>
-                                    )}
-                                    {viewMode === 'grid' ? (
-                                        // GRID VIEW
-                                        <div className="flex flex-col items-center gap-3 p-2">
-                                            {item.folder ? (
-                                                <Folder className="w-12 h-12 text-blue-500 fill-blue-500/20" />
-                                            ) : item.thumbnails && item.thumbnails.length > 0 ? (
-                                                <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
-                                                    <img
-                                                        src={item.thumbnails[0].medium.url}
-                                                        alt={item.name}
-                                                        className="w-full h-full object-cover"
-                                                        loading="lazy"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="w-full h-32 flex items-center justify-center rounded-lg" style={{ background: isDark ? '#111' : '#f9fafb' }}>
-                                                    {getFileIcon(item.name)}
-                                                </div>
-                                            )}
-
-                                            <div className="w-full text-center">
-                                                <p className="font-medium text-sm truncate w-full" style={{ color: theme.text }} title={item.name}>{item.name}</p>
-                                                <p className="text-[10px]" style={{ color: theme.textSecondary }}>
-                                                    {new Date(item.lastModifiedDateTime).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        // LIST VIEW
-                                        <>
-                                            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
-                                                {item.folder ? (
-                                                    <Folder className="w-8 h-8 text-blue-500 fill-blue-500/20" />
-                                                ) : (
-                                                    getFileIcon(item.name)
+                                        {/* Context Menu Dropdown */}
+                                        {activeMenu === item.id && (
+                                            <div className="absolute right-2 top-8 w-40 bg-white dark:bg-[#1f2937] shadow-xl rounded-lg z-20 border border-gray-200 dark:border-gray-700 overflow-hidden text-sm" onClick={e => e.stopPropagation()}>
+                                                <button onClick={() => { setActiveMenu(null); handleRename(item); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                                                    <Edit2 size={14} /> Renombrar
+                                                </button>
+                                                <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2">
+                                                    <Trash2 size={14} /> Eliminar
+                                                </button>
+                                                {item.type !== 'group' && (
+                                                    <button onClick={() => handleCut(item)} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700">
+                                                        <Scissors size={14} /> Cortar
+                                                    </button>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
-                                                <p className="text-xs" style={{ color: theme.textSecondary }}>
-                                                    Editado: {new Date(item.lastModifiedDateTime).toLocaleDateString()} por {item.lastModifiedBy?.user?.displayName || 'Desconocido'}
-                                                </p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
+                                        )}
+
+                                        {viewMode === 'grid' ? (
+                                            // GRID VIEW
+                                            <>
+                                                {/* Thumbnail / Icon Area */}
+                                                <div
+                                                    className="flex-1 w-full relative overflow-hidden flex items-center justify-center p-4 bg-gradient-to-br"
+                                                    style={{
+                                                        background: isGroup && item.image_url
+                                                            ? `url(${item.image_url}) center/cover`
+                                                            : (isGroup ? `linear-gradient(135deg, ${itemColor}10, ${itemColor}30)` : 'transparent')
+                                                    }}
+                                                >
+                                                    {isGroup && item.image_url && <div className="absolute inset-0 bg-black/30" />}
+
+                                                    {!item.image_url && (
+                                                        <div className="transition-transform duration-300 group-hover:scale-110 shadow-sm rounded-xl p-2 bg-white dark:bg-gray-800/50 backdrop-blur-sm">
+                                                            {isGroup ? <Icon size={40} color={itemColor} /> :
+                                                                (item.type === 'folder' ? <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> : <div className="scale-125">{getFileIcon(item.name)}</div>)
+                                                            }
+                                                        </div>
+                                                    )}
+
+                                                    {/* Group Badge */}
+                                                    {isGroup && (
+                                                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/40 text-white backdrop-blur-md">
+                                                            Grupo
+                                                        </div>
+                                                    )}
+                                                    {item.resource_id && isGroup && (
+                                                        <div className="absolute top-2 left-2 p-1 rounded-full bg-blue-500 text-white shadow" title="Vinculado a SharePoint">
+                                                            <LucideIcons.Cloud size={10} />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Footer Area */}
+                                                <div className="h-10 px-3 flex items-center justify-between border-t w-full bg-white dark:bg-[#1a1a1a]" style={{ borderColor: theme.border }}>
+                                                    <p className="text-xs font-medium truncate w-[90%]" style={{ color: theme.text }}>{item.name}</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            // LIST VIEW
+                                            <>
+                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                                                    {isGroup ? <Icon size={20} color={itemColor} /> :
+                                                        (item.type === 'folder' ? <Folder size={20} className="text-yellow-400" /> : getFileIcon(item.name))}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
+                                                    <p className="text-[10px] opacity-60 m-0 p-0 line-clamp-1" style={{ color: theme.textSecondary }}>
+                                                        {isGroup ? (item.description || 'Grupo Personalizado') :
+                                                            `Modificado: ${new Date(item.lastModifiedDateTime).toLocaleDateString()}`}
+                                                    </p>
+                                                </div>
+                                                {isGroup && (
+                                                    <span className="px-2 py-1 rounded text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium">
+                                                        GRUPO
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )
+                            })}
                     </div>
                 )}
             </div>
