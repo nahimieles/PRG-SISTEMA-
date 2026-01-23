@@ -35,14 +35,16 @@ export default function GroupManager() {
     const [selectedGroup, setSelectedGroup] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
-    const [searchTerm, setSearchTerm] = useState('');
+    const [workers, setWorkers] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
         name: '',
+        description: '',
         type: 'group', // group, folder, link
         icon: 'Folder',
         color: '#3498db',
+        image_url: '',
         parent_id: null,
         resource_id: '',
         permissions: ['admin', 'manager']
@@ -52,7 +54,14 @@ export default function GroupManager() {
 
     useEffect(() => {
         loadGroups();
+        loadWorkers();
     }, []);
+
+    const loadWorkers = async () => {
+        const { getAllWorkers } = await import('@/lib/auth');
+        const data = await getAllWorkers();
+        setWorkers(data || []);
+    };
 
     const loadGroups = async () => {
         setLoading(true);
@@ -92,9 +101,11 @@ export default function GroupManager() {
         setModalMode('create');
         setFormData({
             name: '',
+            description: '',
             type: 'group',
             icon: 'Folder',
             color: '#3498db',
+            image_url: '',
             parent_id: parentId,
             resource_id: '',
             permissions: ['admin', 'manager']
@@ -107,9 +118,11 @@ export default function GroupManager() {
         setSelectedGroup(group);
         setFormData({
             name: group.name,
+            description: group.description || '',
             type: group.type,
             icon: group.icon || 'Folder',
             color: group.color || '#3498db',
+            image_url: group.image_url || '',
             parent_id: group.parent_id,
             resource_id: group.resource_id || '',
             permissions: group.permissions || ['admin', 'manager']
@@ -141,6 +154,22 @@ export default function GroupManager() {
             alert('Error guardando: ' + error.message);
         }
     };
+
+    const togglePermission = (value) => {
+        const perms = new Set(formData.permissions);
+        if (perms.has(value)) {
+            perms.delete(value);
+        } else {
+            perms.add(value);
+        }
+        setFormData({ ...formData, permissions: Array.from(perms) });
+    };
+
+    const setPublicPermission = (isPublic) => {
+        let newPerms = ['admin', 'manager']; // Always keep admins
+        if (isPublic) newPerms.push('all');
+        setFormData({ ...formData, permissions: newPerms });
+    }
 
     const toggleExpand = (id) => {
         const newSet = new Set(expandedGroups);
@@ -306,9 +335,9 @@ export default function GroupManager() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in"
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in my-8"
                         style={{ background: theme.surface, color: theme.text }}
                     >
                         <div className="flex justify-between items-center p-6 border-b border-gray-100">
@@ -321,7 +350,7 @@ export default function GroupManager() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto scrollbar-thin">
 
                             {/* Name Input */}
                             <div className="space-y-2">
@@ -336,6 +365,21 @@ export default function GroupManager() {
                                     className="w-full p-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                                     style={{ background: isDark ? '#00000020' : '#f8fafc', borderColor: theme.border }}
                                     placeholder="Ej. Finanzas 2026"
+                                />
+                            </div>
+
+                            {/* Description Input */}
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
+                                    <LucideIcons.FileText size={14} /> Descripción
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.description}
+                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full p-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                    style={{ background: isDark ? '#00000020' : '#f8fafc', borderColor: theme.border }}
+                                    placeholder="Breve descripción del grupo"
                                 />
                             </div>
 
@@ -374,6 +418,21 @@ export default function GroupManager() {
                                 </div>
                             </div>
 
+                            {/* Image URL Input */}
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
+                                    <LucideIcons.Image size={14} /> URL de Imagen (Banner)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.image_url}
+                                    onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                                    className="w-full p-3 rounded-xl border focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                                    style={{ background: isDark ? '#00000020' : '#f8fafc', borderColor: theme.border }}
+                                    placeholder="https://example.com/image.jpg"
+                                />
+                            </div>
+
                             {/* Icon Input */}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
@@ -400,6 +459,46 @@ export default function GroupManager() {
                                 </div>
                                 <div className="text-[10px] opacity-50 pl-1">
                                     Usa nombres de la librería <a href="https://lucide.dev/icons" target="_blank" rel="noreferrer" className="underline hover:text-blue-500">Lucide Icons</a>.
+                                </div>
+                            </div>
+
+                            {/* Permissions Section */}
+                            <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
+                                    <LucideIcons.Shield size={14} /> Permisos y Visibilidad
+                                </label>
+
+                                <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-gray-700 space-y-3">
+                                    {/* Public/Private Toggle */}
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.permissions.includes('all')}
+                                            onChange={(e) => setPublicPermission(e.target.checked)}
+                                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm font-medium">Público (Visible para todos)</span>
+                                    </div>
+
+                                    {!formData.permissions.includes('all') && (
+                                        <div className="space-y-2 pl-1 pt-2">
+                                            <p className="text-xs font-bold opacity-50 block mb-1">ACCESO INDIVIDUAL:</p>
+                                            <div className="max-h-40 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+                                                {workers.map(worker => (
+                                                    <label key={worker.id} className="flex items-center gap-2 text-sm p-1 hover:bg-black/5 rounded cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData.permissions.includes(worker.id)}
+                                                            onChange={() => togglePermission(worker.id)}
+                                                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                                        />
+                                                        <span>{worker.full_name || worker.username}</span>
+                                                    </label>
+                                                ))}
+                                                {workers.length === 0 && <span className="text-xs opacity-50 italic">Cargando funcionarios...</span>}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
