@@ -107,7 +107,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     try {
                         files = await getFiles(targetFolderId, effectiveDriveId);
                     } catch (e) {
-                        // ignore
+                        console.error("Error fetching files:", e);
+                        setError("Error cargando archivos: " + e.message);
                     }
                 }
 
@@ -255,6 +256,9 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 setLoading(true);
                 try {
                     const dId = await getSiteDefaultDrive(item.id);
+
+                    if (!dId) throw new Error("No Drive ID found for this site");
+
                     setBreadcrumbs(prev => [...prev, {
                         id: item.id,
                         name: item.name,
@@ -262,8 +266,12 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                         resourceId: dId,
                         driveId: dId
                     }]);
-                } catch (e) { alert("Error accediendo al sitio"); }
-                finally { setLoading(false); }
+                } catch (e) {
+                    console.error("Error resolving site:", e);
+                    alert("Error accediendo al sitio: " + e.message);
+                } finally {
+                    setLoading(false);
+                }
             };
             resolveSite();
         } else if (item.type === 'group') {
