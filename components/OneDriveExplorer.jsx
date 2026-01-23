@@ -29,6 +29,16 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     // Derived driveId from current path (or props if locked)
     const effectiveDriveId = currentPath.driveId || propDriveId;
 
+    // State definitions
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState('grid');
+    const [activeMenu, setActiveMenu] = useState(null);
+    const [clipboard, setClipboard] = useState(null);
+    const fileInputRef = useRef(null);
+
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     // ... (useEffect for auth remains)
