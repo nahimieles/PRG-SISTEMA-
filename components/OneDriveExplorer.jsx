@@ -133,6 +133,57 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
+    // Navigation Helpers
+    const navigateUp = () => {
+        if (breadcrumbs.length > 1) {
+            setBreadcrumbs(prev => prev.slice(0, prev.length - 1));
+        }
+    };
+
+    const handleCreateGroup = async (name) => {
+        try {
+            await createGroup({
+                name,
+                parent_id: currentPath.type === 'root' ? null : currentPath.id,
+                icon: 'Folder',
+                type: 'group'
+            }); // Simple default
+            loadContent();
+        } catch (e) {
+            console.error(e);
+            alert("Error creando grupo");
+        }
+    };
+
+    const handleCreateSPFolder = async (name) => {
+        if (!effectiveDriveId) return;
+        try {
+            const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
+            await createFolder(name, parentId, effectiveDriveId);
+            loadContent();
+        } catch (e) {
+            alert("Error creando carpeta en SharePoint");
+        }
+    };
+
+    const handleFileUpload = async (e) => {
+        if (!e.target.files?.length) return;
+        if (!effectiveDriveId) return;
+
+        setLoading(true);
+        try {
+            const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
+            await uploadFile(e.target.files[0], parentId, effectiveDriveId);
+            loadContent();
+        } catch (e) {
+            console.error(e);
+            alert("Error subiendo archivo");
+        } finally {
+            setLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     const handleNavigate = (item) => {
         setSearchTerm('');
         if (item.type === 'group') {
