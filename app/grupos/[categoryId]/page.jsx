@@ -2,8 +2,8 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
-import { lightTheme, darkTheme } from '../../lib/colors';
+import { useTheme } from '@/contexts/ThemeContext';
+import { lightTheme, darkTheme } from '@/lib/colors';
 
 // Helper to get title from ID
 const getTitle = (id) => {

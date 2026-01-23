@@ -1,9 +1,9 @@
 'use client';
 
-import CompanyGroupDashboard from '../../components/CompanyGroupDashboard';
-import Sidebar from '../../components/Sidebar';
-import { useTheme } from '../../contexts/ThemeContext';
-import { lightTheme, darkTheme } from '../../lib/colors';
+import CompanyGroupDashboard from '@/components/CompanyGroupDashboard';
+import Sidebar from '@/components/Sidebar';
+import { useTheme } from '@/contexts/ThemeContext';
+import { lightTheme, darkTheme } from '@/lib/colors';
 import { useState } from 'react';
 import { Users, LayoutDashboard, Settings } from 'lucide-react';
 
