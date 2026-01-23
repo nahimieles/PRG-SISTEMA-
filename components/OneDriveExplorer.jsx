@@ -220,6 +220,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
             await deleteItem(item.id, driveId);
 
             // Log Action
+            console.log("Logging DELETE for:", item.name);
             await logAuditAction({
                 action_type: 'DELETE',
                 file_name: item.name,
@@ -596,6 +597,16 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                                     href={previewFile.webUrl}
                                     target="_blank"
                                     rel="noreferrer"
+                                    onClick={() => {
+                                        // Log "Edit/Open" Intent
+                                        logAuditAction({
+                                            action_type: 'OPEN_EDIT', // Custom type for tracking "edits" (proxy)
+                                            file_name: previewFile.name,
+                                            file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
+                                            worker_name: currentUser?.full_name || 'Desconocido',
+                                            metadata: { driveId, url: previewFile.webUrl }
+                                        });
+                                    }}
                                     className="flex items-center gap-2 bg-[#2A5C82] text-white px-5 py-2.5 rounded-xl font-bold hover:opacity-90 transition shadow-xl cursor-pointer"
                                 >
                                     <FileIcon size={18} />
