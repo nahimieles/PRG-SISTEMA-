@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import {
     Folder,
     Link as LinkIcon,
@@ -20,9 +20,9 @@ import {
     Palette,
     Layers
 } from 'lucide-react';
-import { getGroups, createGroup, updateGroup, deleteGroup, moveGroup } from '../lib/groups';
-import { useTheme } from '../contexts/ThemeContext';
-import { lightTheme, darkTheme } from '../lib/colors';
+import { getGroups, createGroup, updateGroup, deleteGroup, moveGroup } from '@/lib/groups';
+import { useTheme } from '@/contexts/ThemeContext';
+import { lightTheme, darkTheme } from '@/lib/colors';
 import * as LucideIcons from 'lucide-react';
 
 export default function GroupManager() {
