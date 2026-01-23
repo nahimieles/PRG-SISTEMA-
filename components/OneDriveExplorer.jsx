@@ -80,12 +80,19 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 // The user said "Groups containing SharePoint Groups".
                 // So yes, we can mix.
 
-                // Fetch groups where parent_id = currentPath.id (if it's a group) or null (if root)
+                // A. Fetch Groups (Virtual Children)
                 let groups = [];
                 // Only fetch groups if we are NOT inside a physical SharePoint folder (type='folder')
-                if (type === 'root' || type === 'group') {
+                const isSharePointSiteId = (str) => str && str.includes(',');
+
+                if (type === 'root' || (type === 'group' && !isSharePointSiteId(id))) {
                     const parentId = type === 'root' ? null : id;
-                    groups = await getGroupsByParent(parentId);
+                    try {
+                        groups = await getGroupsByParent(parentId);
+                    } catch (e) {
+                        console.error("Error loading groups:", e);
+                        // Don't block everything if groups fail, but log it
+                    }
                 }
 
                 // B. Fetch Sharepoint Sites (Root Only - Visibility for Moving)
@@ -102,7 +109,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 // C. Fetch Files (SharePoint)
                 let files = [];
                 if (effectiveDriveId) {
-                    // ... (fetch logic)
                     const targetFolderId = (type === 'folder') ? id : 'root';
                     try {
                         files = await getFiles(targetFolderId, effectiveDriveId);
@@ -113,6 +119,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 }
 
                 // D. Merge
+                // ... (mapping logic) ...
+
                 const formattedGroups = groups.map(g => ({
                     id: g.id,
                     name: g.name,
@@ -126,7 +134,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     lastModifiedDateTime: g.updated_at
                 }));
 
-                // Map Sites to "Group-like" items but with type 'site'
                 const formattedSites = spSites.map(s => ({
                     id: s.id,
                     name: s.displayName,
