@@ -32,8 +32,11 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
     useEffect(() => {
         if (isInitialized && preloadedSites.length > 0) {
             setSites(processSites(preloadedSites));
-        } else if (accounts.length > 0 && role && !isInitialized) {
-            loadSites();
+        } else if (accounts.length > 0 && role) {
+            // If not initialized OR initialized but empty, try loading locally to be safe
+            if (!isInitialized || preloadedSites.length === 0) {
+                loadSites();
+            }
         }
     }, [accounts, role, currentUser, isInitialized, preloadedSites]);
 
@@ -102,7 +105,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
             }
 
             // 4. PRG AUDITORES: Main Site (Allow for everyone)
-            if (name.includes('prg auditores')) {
+            if (name.includes('prg')) {
                 processed.push(site);
                 return;
             }
