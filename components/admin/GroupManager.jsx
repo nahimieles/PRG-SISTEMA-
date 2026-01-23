@@ -36,6 +36,7 @@ export default function GroupManager() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
     const [workers, setWorkers] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Form State
     const [formData, setFormData] = useState({
