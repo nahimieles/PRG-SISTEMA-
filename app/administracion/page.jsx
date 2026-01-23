@@ -27,14 +27,33 @@ export default function AdminPage() {
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-    { id: 'archivos', label: 'Archivos', icon: FileText },
-    { id: 'grupos', label: 'Gestor de Grupos', icon: LayoutGrid, onClick: () => router.push('/admin/groups') }
+    { id: 'archivos', label: 'Archivos', icon: FileText }
 
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboards');
   const [loading, setLoading] = useState(false);
+
+  // Initialize activeTab from URL hash or default to 'dashboards'
+  const [activeTab, setActiveTab] = useState('dashboards');
+
+  useEffect(() => {
+    // Check hash on mount
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['dashboards', 'reportes', 'funcionarios', 'archivos', 'empresas'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    }
+  }, []);
+
+  // Update hash when tab changes
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    if (typeof window !== 'undefined') {
+      window.location.hash = tabId;
+    }
+  };
   const [message, setMessage] = useState('');
 
   // Estado para actividades
@@ -513,7 +532,7 @@ export default function AdminPage() {
       <Sidebar
         items={sidebarItems}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         userName={adminName}
         onLogout={handleLogout}
         showBackButton={false}

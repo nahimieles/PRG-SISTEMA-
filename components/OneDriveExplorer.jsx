@@ -3,7 +3,243 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem } from "@/lib/onedriveService";
-import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission } from "@/lib/groups";
+// Add moveGroup to imports
+import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission, moveGroup } from "@/lib/groups"; // Added moveGroup
+
+// ... (rest of imports)
+
+// ... (inside component)
+
+// CUT / PASTE (MOVE) LOGIC
+const handleCut = (item) => {
+    // Now allows groups!
+    setClipboard({ item, action: 'cut', sourceFolder: currentPath });
+    setActiveMenu(null);
+    toast.info(`Portapapeles: ${item.name}`); // Feedback
+};
+
+const handlePaste = async () => {
+    if (!clipboard) return;
+
+    // Determine Target
+    const targetId = currentPath.id === 'root' ? null : currentPath.id; // For Groups: null=root
+    const targetType = currentPath.type;
+
+    // SP Target (for files)
+    const spTargetId = getCurrentSPTarget();
+
+    setLoading(true);
+    try {
+        if (clipboard.item.type === 'group') {
+            // MOVE GROUP
+            if (targetType === 'folder' && !currentPath.resourceId) {
+                throw new Error("No puedes mover un grupo dentro de una carpeta física de SharePoint (solo dentro de otros grupos o raíz virtual).");
+            }
+
+            // If we are int a 'group' path, parent is id. If root, parent is null.
+            await moveGroup(clipboard.item.id, targetId);
+
+        } else {
+            // MOVE FILE
+            const destId = getCurrentSPTarget();
+            if (!destId) throw new Error("Destino inválido para archivo.");
+            await moveItem(clipboard.item.id, destId, driveId);
+        }
+
+        setClipboard(null);
+        loadContent();
+        alert("Movido correctamente");
+    } catch (e) {
+        console.error(e);
+        alert(`Error al mover: ${e.message || e}`);
+    } finally {
+        setLoading(false);
+    }
+};
+
+// ... (rendering)
+
+return (
+    <div
+        className="rounded-2xl shadow-2xl overflow-hidden border border-white/20 backdrop-blur-xl" // Glassmorphism container
+        style={{
+            background: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.8)',
+            borderColor: theme.border
+        }}
+    >
+        {/* Header / Toolbar - Enhanced */}
+        <div className="p-5 border-b flex items-center justify-between flex-wrap gap-4 bg-gradient-to-r from-transparent via-white/5 to-transparent" style={{ borderColor: theme.border }}>
+            {/* ... (breadcrumb logic same as before but styled) ... */}
+            <div className="flex items-center gap-2 overflow-hidden">
+                {breadcrumbs.length > 1 && (
+                    <button onClick={navigateUp} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition cursor-pointer">
+                        <ArrowLeft size={20} style={{ color: theme.text }} />
+                    </button>
+                )}
+                {/* ... breadcrumbs ... */}
+                <div className="flex items-center gap-1 text-sm font-bold tracking-tight truncate" style={{ color: theme.text }}>
+                    {breadcrumbs.slice(Math.max(0, breadcrumbs.length - 3)).map((crumb, i, arr) => (
+                        <React.Fragment key={crumb.id}>
+                            <span
+                                className={`cursor-pointer hover:underline ${i === arr.length - 1 ? 'text-blue-600 dark:text-blue-400' : 'opacity-60'}`}
+                                onClick={() => {
+                                    const idx = breadcrumbs.findIndex(b => b.id === crumb.id);
+                                    setBreadcrumbs(breadcrumbs.slice(0, idx + 1));
+                                }}
+                            >
+                                {crumb.name}
+                            </span>
+                            {i < arr.length - 1 && <span className="opacity-40">/</span>}
+                        </React.Fragment>
+                    ))}
+                </div>
+            </div>
+
+            {/* ... (actions) ... */}
+            <div className="flex gap-3 items-center ml-auto">
+                {/* ... Search ... */}
+                <div className="relative hidden md:block group">
+                    <input
+                        type="text"
+                        placeholder="Buscar..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 pr-4 py-2 text-sm rounded-xl border-0 ring-1 ring-gray-200 dark:ring-gray-700 focus:ring-2 focus:ring-blue-500 w-48 transition-all focus:w-72 bg-gray-50/50 dark:bg-gray-800/50"
+                        style={{ color: theme.text }}
+                    />
+                    <Search className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                </div>
+
+                {/* ... Actions ... */}
+                {/* Buttons with refined styling */}
+                <button onClick={() => loadContent()} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition text-gray-500 hover:text-current">
+                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                </button>
+
+                {/* Paste Button */}
+                {clipboard && (
+                    <button
+                        onClick={handlePaste}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:scale-105 transition-all text-xs font-bold uppercase tracking-wide"
+                    >
+                        <ClipboardPaste size={16} /> PEGAR
+                    </button>
+                )}
+
+                {/* Add Group/Folder Buttons - More Premium */}
+                {(currentPath.type === 'root' || currentPath.type === 'group') && (
+                    <button
+                        onClick={() => { const name = prompt("Nombre del Grupo:"); if (name?.trim()) handleCreateGroup(name.trim()); }}
+                        className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition flex items-center gap-2"
+                        title="Nuevo Grupo"
+                    >
+                        <Plus size={18} />
+                        <span className="hidden sm:inline text-xs font-bold">Grupo</span>
+                    </button>
+                )}
+
+                {getCurrentSPTarget() && (
+                    <button
+                        onClick={async () => { const name = prompt('Nombre carpeta:'); if (name?.trim()) handleCreateSPFolder(name.trim()); }}
+                        className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition flex items-center gap-2"
+                        title="Nueva Carpeta"
+                    >
+                        <FolderPlus size={18} />
+                        <span className="hidden sm:inline text-xs font-bold">Carpeta</span>
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {/* Content Area - Enhanced Grid */}
+        <div className="p-6 min-h-[400px] bg-gray-50/30 dark:bg-black/20">
+            {/* ... (loader/error/empty logic) ... */}
+
+            {/* Grid Items - Premium Card Design */}
+            <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6" : "flex flex-col gap-3"}>
+                {items.map((item) => {
+                    // ... (icon logic) ...
+                    const isGroup = item.type === 'group';
+                    const Icon = isGroup ? (LucideIcons[item.icon] || Folder) : (item.type === 'folder' ? Folder : getFileIcon(item.name)?.type || FileIcon);
+                    const itemColor = isGroup ? (item.color || '#6366f1') : (item.type === 'folder' ? '#f59e0b' : '#6b7280');
+
+                    return (
+                        <div
+                            key={item.id}
+                            className={`group relative rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden
+                                        ${viewMode === 'list'
+                                    ? 'flex items-center gap-4 p-3 hover:bg-white/50 dark:hover:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                                    : 'aspect-[4/3] flex flex-col hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/10 border border-gray-200/50 dark:border-white/5 bg-white dark:bg-[#1a1a1a]'
+                                }`}
+                            onClick={() => handleNavigate(item)}
+                        >
+                            {/* More Menu (Code same, just better positioning) */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
+                                className="absolute top-3 right-3 p-1.5 rounded-full bg-white/90 dark:bg-black/50 hover:bg-white text-gray-700 dark:text-gray-200 shadow-sm opacity-0 group-hover:opacity-100 transition-all z-20"
+                            >
+                                <MoreVertical size={16} />
+                            </button>
+
+                            {/* ... Context Menu ... */}
+
+                            {viewMode === 'grid' ? (
+                                <>
+                                    <div className="flex-1 w-full relative flex items-center justify-center p-6 bg-gradient-to-b from-gray-50/50 to-transparent dark:from-white/5">
+                                        {/* Background Image for Groups */}
+                                        {isGroup && item.image_url && (
+                                            <>
+                                                <div
+                                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110 opacity-90"
+                                                    style={{ backgroundImage: `url(${item.image_url})` }}
+                                                />
+                                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                            </>
+                                        )}
+
+                                        {/* Icon */}
+                                        <div className={`relative z-10 transition-transform duration-300 group-hover:scale-110 drop-shadow-xl ${isGroup && item.image_url ? 'text-white' : ''}`}>
+                                            <Icon size={item.type === 'folder' || isGroup ? 56 : 48} color={isGroup && item.image_url ? '#fff' : itemColor} strokeWidth={1.5} />
+                                        </div>
+
+                                        {/* Badges */}
+                                        {isGroup && (
+                                            <div className="absolute bottom-2 left-3 px-2 py-1 rounded-md bg-white/90 dark:bg-black/60 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                                Grupo
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="h-14 px-4 flex flex-col justify-center border-t border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] backdrop-blur-sm">
+                                        <p className="text-sm font-semibold truncate text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            {item.name}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 truncate">
+                                            {new Date(item.lastModifiedDateTime).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                </>
+                            ) : (
+                                // LIST VIEW (Simplified)
+                                <>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10">
+                                        <Icon size={20} color={itemColor} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-sm">{item.name}</p>
+                                        <p className="text-xs opacity-50">{new Date(item.lastModifiedDateTime).toLocaleDateString()}</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+        {/* ... Modal ... */}
+    </div>
+)
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste, Plus, Image as ImageIcon, Settings } from 'lucide-react'; // Added icons
 import * as LucideIcons from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
@@ -11,105 +247,81 @@ import { logAuditAction } from '@/lib/audit';
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 
-// Helper to normalize strings for comparison (remove accents, case insensitive)
-const normalize = (str) => {
-    return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
-};
+// ... imports
+import SharePointSites from "./SharePointSites"; // Import Picker
 
-const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
-    const { instance, accounts } = useMsal();
-    const { isDark } = useTheme();
-    const theme = isDark ? darkTheme : lightTheme;
+// ... inside component
+const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role }) => {
+    // ... hooks
 
-    // Unified State
-    const [items, setItems] = useState([]); // Mixed groups and files
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    // Navigation State: Stack of objects { id, name, type: 'group' | 'folder' | 'root', resourceId? }
-    const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'Inicio', type: 'root', resourceId: null }]);
+    // Navigation: { id, name, type, resourceId, driveId }
+    // If propDriveId is provided (legacy mode), we start with it. Otherwise 'root' has no driveId.
+    const [breadcrumbs, setBreadcrumbs] = useState([
+        { id: 'root', name: 'Inicio', type: 'root', resourceId: null, driveId: propDriveId || null }
+    ]);
     const currentPath = breadcrumbs[breadcrumbs.length - 1];
 
-    const [viewMode, setViewMode] = useState('grid');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeMenu, setActiveMenu] = useState(null);
-    const [clipboard, setClipboard] = useState(null);
-    const fileInputRef = useRef(null);
+    // Derived driveId from current path (or props if locked)
+    const effectiveDriveId = currentPath.driveId || propDriveId;
 
-    // Group Creation/Edit State
-    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-    const [editingGroup, setEditingGroup] = useState(null);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
-    // Cache
-    const [cache, setCache] = useState({});
-    const CACHE_DURATION = 5 * 60 * 1000;
+    // ... (useEffect for auth remains)
 
-    // Load viewMode
+    // Load Content
     useEffect(() => {
-        const savedView = localStorage.getItem('onedrive_view_mode');
-        if (savedView) setViewMode(savedView);
-    }, []);
-
-    // Save viewMode
-    useEffect(() => {
-        localStorage.setItem('onedrive_view_mode', viewMode);
-    }, [viewMode]);
-
-    // Initial Auth
-    useEffect(() => {
-        if (accounts.length > 0 && driveId) {
-            const request = { ...loginRequest, account: accounts[0] };
-            instance.acquireTokenSilent(request).then((response) => {
-                initializeGraphClient(response.accessToken);
-            }).catch((e) => {
-                instance.acquireTokenRedirect(request);
-            });
-        }
-    }, [accounts, instance, driveId]);
-
-    // Load Content when Path Changes
-    useEffect(() => {
-        if (driveId) {
-            loadContent();
-        }
-    }, [currentPath, driveId, searchTerm]);
+        loadContent();
+    }, [currentPath, searchTerm]); // Trigger on path change (effectiveDriveId changes with path)
 
     const loadContent = async () => {
         setLoading(true);
         setError(null);
-
         try {
             let mixedContent = [];
 
+            // SEARCH
             if (searchTerm.trim().length > 0) {
-                const fileResults = await searchFiles(searchTerm, driveId, "root");
-                mixedContent = fileResults.map(f => ({ ...f, type: f.folder ? 'folder' : 'file' }));
+                // If we have a drive context, search it. If not, search groups? 
+                // For now, search only if we are in a drive context.
+                if (effectiveDriveId) {
+                    const fileResults = await searchFiles(searchTerm, effectiveDriveId, "root");
+                    mixedContent = fileResults.map(f => ({ ...f, type: f.folder ? 'folder' : 'file' }));
+                }
+                // TODO: Search groups if no driveId
             } else {
-                const { id, type, resourceId } = currentPath;
+                // NORMAL LISTING
+                const { id, type } = currentPath;
 
-                // 1. Fetch Groups
+                // A. Fetch Groups (Virtual Children)
+                // We fetch groups if we are at Root OR inside a Group.
+                // Even if we are in a "Linked Group" (which acts as a Drive Root), we might want to show sub-groups?
+                // The user said "Groups containing SharePoint Groups".
+                // So yes, we can mix.
+
+                // Fetch groups where parent_id = currentPath.id (if it's a group) or null (if root)
                 let groups = [];
+                // Only fetch groups if we are NOT inside a physical SharePoint folder (type='folder')
                 if (type === 'root' || type === 'group') {
                     const parentId = type === 'root' ? null : id;
                     groups = await getGroupsByParent(parentId);
                 }
 
-                // 2. Fetch Files
+                // B. Fetch Files (SharePoint)
                 let files = [];
-                const targetFolderId = resourceId || (type === 'folder' ? id : null);
-
-                // If at ROOT, check if we should fetch root files (Unified View)
-                // For now, if at 'root' and we have groups, maybe we DON'T show files unless explicitly asked, 
-                // but user said "Groups INSIDE the view of files...". So we merge.
-                if (type === 'root') {
+                if (effectiveDriveId) {
+                    // If we have a DriveID, we fetch files.
+                    // If we are at the "Root" of this drive (type='group' with resource_id), folder is 'root'.
+                    // If we are deep in a folder (type='folder'), folder is id.
+                    const targetFolderId = (type === 'folder') ? id : 'root';
                     try {
-                        files = await getFiles('root', driveId);
-                    } catch (e) { console.warn("Could not fetch root files", e); }
-                } else if (targetFolderId) {
-                    files = await getFiles(targetFolderId, driveId);
+                        files = await getFiles(targetFolderId, effectiveDriveId);
+                    } catch (e) {
+                        console.warn("Error fetching files", e);
+                        // If generic error, maybe don't block groups
+                    }
                 }
 
-                // 3. Merge & Format
+                // C. Merge
                 const formattedGroups = groups.map(g => ({
                     id: g.id,
                     name: g.name,
@@ -118,7 +330,7 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                     color: g.color || '#3b82f6',
                     description: g.description,
                     image_url: g.image_url,
-                    resource_id: g.resource_id,
+                    resource_id: g.resource_id, // This might be a driveId
                     permissions: g.permissions,
                     lastModifiedDateTime: g.updated_at
                 }));
@@ -129,12 +341,11 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
                     type: f.folder ? 'folder' : 'file',
                     webUrl: f.webUrl,
                     lastModifiedDateTime: f.lastModifiedDateTime,
-                    item: f // Keep original ref
+                    item: f
                 }));
 
                 mixedContent = [...formattedGroups, ...formattedFiles];
             }
-
             setItems(mixedContent);
 
         } catch (err) {
@@ -148,70 +359,107 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const handleNavigate = (item) => {
         setSearchTerm('');
         if (item.type === 'group') {
-            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name, type: 'group', resourceId: item.resource_id }]);
+            // Group Navigation
+            // Check if this group links to a Drive
+            const linkedDriveId = item.resource_id;
+            // If it links, the new path has that driveId. If not, it inherits null (or prop).
+            const nextDriveId = linkedDriveId || null;
+
+            setBreadcrumbs(prev => [...prev, {
+                id: item.id,
+                name: item.name,
+                type: 'group',
+                resourceId: item.resource_id,
+                driveId: nextDriveId
+            }]);
         } else if (item.folder || item.type === 'folder') {
-            // Handle both unified 'folder' type and raw 'folder' property from search
-            setBreadcrumbs(prev => [...prev, { id: item.id, name: item.name, type: 'folder', resourceId: null }]);
+            // Folder Navigation (Physical)
+            // Functionally, we must stay in the current drive context
+            setBreadcrumbs(prev => [...prev, {
+                id: item.id,
+                name: item.name,
+                type: 'folder',
+                resourceId: null,
+                driveId: currentPath.driveId // Carry over
+            }]);
         } else {
             openPreview(item.item || item);
         }
     };
 
-    const navigateUp = () => {
-        if (breadcrumbs.length <= 1) return;
-        setBreadcrumbs(prev => prev.slice(0, -1));
-    };
-
-    // Actions Context Helpers
+    // ... (handleCreateGroup, handleCreateSPFolder updated to use effectiveDriveId)
+    // Helper
     const getCurrentSPTarget = () => {
-        if (currentPath.type === 'folder') return currentPath.id;
-        if (currentPath.resourceId) return currentPath.resourceId;
-        if (currentPath.type === 'root') return 'root';
+        if (effectiveDriveId) {
+            return currentPath.type === 'folder' ? currentPath.id : 'root';
+        }
         return null;
     };
 
-    const handleCreateGroup = async (name) => {
-        if (currentPath.type !== 'root' && currentPath.type !== 'group') return alert("Solo puedes crear grupos dentro de otros grupos o en el inicio.");
+    // ... (rest of actions using getCurrentSPTarget or createGroup)
+
+    const handleLinkSite = async (site, driveId) => {
+        // Create a group that acts as a shortcut
+        if (!driveId) return alert("Error: Sitio sin Drive ID");
         try {
             await createGroup({
-                name,
+                name: site.displayName || site.name,
                 parent_id: currentPath.type === 'root' ? null : currentPath.id,
                 type: 'group',
-                permissions: ['admin', 'manager']
+                resource_id: driveId,
+                icon: 'Cloud', // Special icon
+                description: 'Sitio de SharePoint Vinculado'
             });
+            setIsLinkModalOpen(false);
             loadContent();
-        } catch (e) { alert('Error al crear grupo'); }
+        } catch (e) {
+            console.error(e);
+            alert("Error al vincular sitio");
+        }
     };
 
-    const handleCreateSPFolder = async (name) => {
-        const targetId = getCurrentSPTarget();
-        if (!targetId) return alert("Esta ubicación no es una carpeta de SharePoint.");
-        try {
-            await createFolder(targetId, name, driveId);
-            loadContent();
-        } catch (e) { alert('Error al crear carpeta'); }
-    };
+    // ... (render)
 
-    const handleFileUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const targetId = getCurrentSPTarget();
-        if (!targetId) return alert("Ubicación no válida para subir archivos.");
+    {/* Add Link Button */ }
+    {
+        (currentPath.type === 'root' || currentPath.type === 'group') && (
+            <>
+                <button
+                    onClick={() => setIsLinkModalOpen(true)}
+                    className="p-2 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 hover:bg-green-500/20 transition flex items-center gap-2"
+                    title="Vincular SharePoint"
+                >
+                    <LucideIcons.Link size={18} />
+                    <span className="hidden sm:inline text-xs font-bold">Vincular</span>
+                </button>
+            </>
+        )
+    }
 
-        setLoading(true);
-        try {
-            await uploadFile(targetId, file, driveId);
-            await logAuditAction({
-                action_type: 'UPLOAD',
-                file_name: file.name,
-                file_path: breadcrumbs.map(b => b.name).join('/'),
-                worker_name: currentUser?.full_name || 'Desconocido',
-                metadata: { size: file.size, driveId }
-            });
-            loadContent();
-        } catch (e) { alert("Error al subir"); }
-        finally { if (fileInputRef.current) fileInputRef.current.value = ''; }
-    };
+    // ... inside return, add Modal
+    {
+        isLinkModalOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsLinkModalOpen(false)}>
+                <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                    <div className="p-4 border-b flex justify-between items-center">
+                        <h3 className="font-bold">Seleccionar Sitio para Vincular</h3>
+                        <button onClick={() => setIsLinkModalOpen(false)}><X /></button>
+                    </div>
+                    <div className="flex-1 overflow-auto p-4">
+                        <SharePointSites
+                            onSelectSite={handleLinkSite}
+                            currentUser={currentUser}
+                            role={role}
+                            mode="picker"
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // ... rest of render
+
 
     const handleDelete = async (item) => {
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;

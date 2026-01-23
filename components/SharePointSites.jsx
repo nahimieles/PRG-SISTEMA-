@@ -14,7 +14,7 @@ const normalize = (str) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-const SharePointSites = ({ onSelectSite, role, currentUser }) => {
+const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => {
     const { instance, accounts } = useMsal();
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -255,6 +255,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser }) => {
                         className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
                         style={{ borderColor: theme.border, color: theme.text }}
                         title="Sincronizar grupos"
+                        style={{ display: mode === 'picker' ? 'none' : 'flex' }}
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                         Sincronizar

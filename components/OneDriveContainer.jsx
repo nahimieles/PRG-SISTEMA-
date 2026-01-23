@@ -55,22 +55,14 @@ const OneDriveContainer = () => {
 
 
 
-            {/* Contenido Principal */}
-            <section>
-                {!selectedSite ? (
-                    <SharePointSites
-                        onSelectSite={handleSiteSelect}
-                        role={currentRole}
-                        currentUser={currentUser}
-                    />
-                ) : (
-                    <OneDriveExplorer
-                        driveId={selectedDriveId}
-                        siteName={selectedSite.displayName}
-                        currentUser={currentUser}
-                        role={currentRole}
-                    />
-                )}
+            {/* Contenido Principal - Unified Explorer */}
+            <section className="h-full">
+                <OneDriveExplorer
+                    driveId={null} // Unified Mode starts at virtual root
+                    siteName={'Archivos'}
+                    currentUser={currentUser}
+                    role={currentRole}
+                />
             </section>
         </div>
     );
