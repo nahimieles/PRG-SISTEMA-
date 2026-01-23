@@ -27,8 +27,9 @@ export default function AdminPage() {
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-    { id: 'archivos', label: 'Archivos Cloud', icon: FileText }
-    // { id: 'empresas', label: 'Empresas', icon: Building2 }, // Deprecated
+    { id: 'archivos', label: 'Archivos Cloud', icon: FileText },
+    { id: 'grupos', label: 'Gestor de Grupos', icon: LayoutGrid, onClick: () => router.push('/admin/groups') }
+
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);

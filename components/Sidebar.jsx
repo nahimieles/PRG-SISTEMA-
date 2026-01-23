@@ -56,7 +56,11 @@ export default function Sidebar({
             <button
                 key={item.id || index}
                 onClick={() => {
-                    onTabChange(item.id);
+                    if (item.onClick) {
+                        item.onClick();
+                    } else {
+                        onTabChange(item.id);
+                    }
                     setIsMobileMenuOpen(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer group"
