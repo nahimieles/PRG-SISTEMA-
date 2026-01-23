@@ -713,11 +713,14 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                                 const getInitials = (n) => n.split(' ').map(c => c[0]).slice(0, 2).join('').toUpperCase();
 
+                                // Only show "Card Style" if at Root AND it's a group/site
+                                const showAsCard = isGroup && currentPath.type === 'root';
+
                                 return (
                                     <div
                                         key={item.id}
                                         className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden bg-white dark:bg-gray-800 border dark:border-gray-700
-                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'rounded-none shadow-sm h-48'}`}
+                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}`}
                                         style={{ borderColor: theme.border }}
                                         onClick={() => handleNavigate(item)}
                                     >
@@ -751,8 +754,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                                         {viewMode === 'grid' ? (
                                             // GRID VIEW
-                                            isGroup ? (
-                                                // SHAREPOINT CARD STYLE
+                                            showAsCard ? (
+                                                // SHAREPOINT CARD STYLE (Only at Root)
                                                 <div className="flex flex-col h-full w-full">
                                                     {/* Header Color Strip / Initials */}
                                                     <div className="p-4 flex justify-between items-start">
@@ -766,35 +769,28 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                     </div>
 
                                                     {/* Content */}
-                                                    <div className="px-4 pb-2 flex-1 flex flex-col">
+                                                    <div className="px-4 pb-4 flex-1 flex flex-col justify-end">
                                                         <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight line-clamp-2" title={item.name}>
                                                             {item.name}
                                                         </h3>
                                                         <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide">Grupo</p>
                                                     </div>
-
-                                                    {/* Footer Activity */}
-                                                    <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 mt-auto flex items-center gap-2 text-[11px] text-gray-500">
-                                                        <div className="p-1 rounded-full bg-gray-100 dark:bg-gray-800">
-                                                            <LucideIcons.TrendingUp size={12} />
-                                                        </div>
-                                                        <span className="truncate">Inicio es popular</span>
-                                                    </div>
                                                 </div>
                                             ) : (
-                                                // FILE / FOLDER STYLE (kept simple)
+                                                // FILE / FOLDER / GROUP (internal navigation)
                                                 <div className="flex flex-col items-center justify-center p-4 h-full relative group/icon">
                                                     <div className="mb-3 transition-transform duration-200 group-hover/icon:scale-110">
                                                         {item.type === 'folder' ?
                                                             <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> :
-                                                            <div className="scale-125">{getFileIcon(item.name)}</div>
+                                                            isGroup ? <Icon size={40} color={itemColor} /> :
+                                                                <div className="scale-125">{getFileIcon(item.name)}</div>
                                                         }
                                                     </div>
                                                     <p className="text-xs text-center font-medium text-gray-700 dark:text-gray-300 px-2 w-full truncate">
                                                         {item.name}
                                                     </p>
                                                     <p className="text-[10px] text-gray-400 mt-1">
-                                                        {new Date(item.lastModifiedDateTime).toLocaleDateString()}
+                                                        {isGroup ? 'Grupo' : new Date(item.lastModifiedDateTime).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                             )
