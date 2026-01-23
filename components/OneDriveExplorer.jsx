@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem } from "@/lib/onedriveService";
+import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem, getFollowedSites, getSiteDefaultDrive } from "@/lib/onedriveService";
 // Add moveGroup to imports
 import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission, moveGroup } from "@/lib/groups"; // Added moveGroup
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste, Plus, Image as ImageIcon, Settings } from 'lucide-react';
@@ -11,6 +11,11 @@ import { logAuditAction } from '@/lib/audit';
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import SharePointSites from "./SharePointSites";
+
+// Helper to normalize strings
+const normalize = (str) => {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
 
 
 // ... (rest of imports)
@@ -83,22 +88,30 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     groups = await getGroupsByParent(parentId);
                 }
 
-                // B. Fetch Files (SharePoint)
+                // B. Fetch Sharepoint Sites (Root Only - Visibility for Moving)
+                let spSites = [];
+                if (type === 'root') {
+                    try {
+                        const rawSites = await getFollowedSites();
+                        spSites = processSitesForExplorer(rawSites);
+                    } catch (e) {
+                        console.warn("Error fetching sites", e);
+                    }
+                }
+
+                // C. Fetch Files (SharePoint)
                 let files = [];
                 if (effectiveDriveId) {
-                    // If we have a DriveID, we fetch files.
-                    // If we are at the "Root" of this drive (type='group' with resource_id), folder is 'root'.
-                    // If we are deep in a folder (type='folder'), folder is id.
+                    // ... (fetch logic)
                     const targetFolderId = (type === 'folder') ? id : 'root';
                     try {
                         files = await getFiles(targetFolderId, effectiveDriveId);
                     } catch (e) {
-                        console.warn("Error fetching files", e);
-                        // If generic error, maybe don't block groups
+                        // ignore
                     }
                 }
 
-                // C. Merge
+                // D. Merge
                 const formattedGroups = groups.map(g => ({
                     id: g.id,
                     name: g.name,
@@ -107,9 +120,20 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     color: g.color || '#3b82f6',
                     description: g.description,
                     image_url: g.image_url,
-                    resource_id: g.resource_id, // This might be a driveId
+                    resource_id: g.resource_id,
                     permissions: g.permissions,
                     lastModifiedDateTime: g.updated_at
+                }));
+
+                // Map Sites to "Group-like" items but with type 'site'
+                const formattedSites = spSites.map(s => ({
+                    id: s.id,
+                    name: s.displayName,
+                    type: 'site',
+                    icon: 'Globe',
+                    color: '#059669', // Emerald
+                    description: s.description || 'Sitio de SharePoint',
+                    lastModifiedDateTime: new Date().toISOString()
                 }));
 
                 const formattedFiles = files.filter(f => !['Forms', 'Site Assets', 'Style Library'].includes(f.name)).map(f => ({
@@ -121,7 +145,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     item: f
                 }));
 
-                mixedContent = [...formattedGroups, ...formattedFiles];
+                mixedContent = [...formattedGroups, ...formattedSites, ...formattedFiles];
             }
             setItems(mixedContent);
 
@@ -184,9 +208,65 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
+    // Filter Logic (Replicated from SharePointSites)
+    const processSitesForExplorer = (rawSites) => {
+        const processed = [];
+        const seenIds = new Set();
+
+        rawSites.forEach(site => {
+            if (seenIds.has(site.id)) return;
+            seenIds.add(site.id);
+
+            const name = normalize(site.displayName);
+
+            // 1. BLACKLIST
+            if (name.includes('c ltda') || name.includes('cia. ltda')) return;
+
+            // 2. PERMISSIONS
+            const username = currentUser?.username?.toLowerCase() || '';
+            const isAdmin = role === 'admin' || username === 'valeria';
+
+            // Contabilidad
+            if (name.includes('contabilidad')) {
+                if (isAdmin) processed.push(site);
+                return;
+            }
+
+            // Auditoria
+            if (name.includes('auditoria')) {
+                if (isAdmin) processed.push(site);
+                return;
+            }
+
+            // PRG
+            if (name.includes('prg')) {
+                processed.push(site);
+                return;
+            }
+        });
+        return processed;
+    };
+
     const handleNavigate = (item) => {
         setSearchTerm('');
-        if (item.type === 'group') {
+        if (item.type === 'site') {
+            // Navigate into a Raw Site -> Treat as Root of that Drive
+            const resolveSite = async () => {
+                setLoading(true);
+                try {
+                    const dId = await getSiteDefaultDrive(item.id);
+                    setBreadcrumbs(prev => [...prev, {
+                        id: item.id,
+                        name: item.name,
+                        type: 'group', // Switch to 'group' view mode for simplicity
+                        resourceId: dId,
+                        driveId: dId
+                    }]);
+                } catch (e) { alert("Error accediendo al sitio"); }
+                finally { setLoading(false); }
+            };
+            resolveSite();
+        } else if (item.type === 'group') {
             // Group Navigation
             // Check if this group links to a Drive
             const linkedDriveId = item.resource_id;
@@ -329,17 +409,52 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     };
 
     const handlePaste = async () => {
-        // simplified paste logic for SP only
         if (!clipboard) return;
-        const targetId = getCurrentSPTarget();
-        if (!targetId) return alert("Destino no válido.");
+
+        // Determine Target
+        const targetId = currentPath.id === 'root' ? null : currentPath.id; // For Groups: null=root
+        const targetType = currentPath.type;
+
         setLoading(true);
         try {
-            await moveItem(clipboard.item.id, targetId, driveId);
+            if (clipboard.item.type === 'group') {
+                // MOVE GROUP
+                if (targetType === 'folder' && !currentPath.resourceId) {
+                    throw new Error("No puedes mover un grupo dentro de una carpeta física de SharePoint (solo dentro de otros grupos o raíz virtual).");
+                }
+                await moveGroup(clipboard.item.id, targetId);
+
+            } else if (clipboard.item.type === 'site') {
+                // LINK SITE (Move "Raw Site" -> "Group")
+                // 1. Get Drive ID
+                const driveId = await getSiteDefaultDrive(clipboard.item.id);
+                // 2. Create Group Linked
+                await createGroup({
+                    name: clipboard.item.name,
+                    parent_id: targetId,
+                    type: 'group',
+                    resource_id: driveId,
+                    icon: 'Cloud',
+                    description: 'Sitio de SharePoint vinculado'
+                });
+                // We don't "delete" the source site because it's a raw site from Graph, we just created a link.
+
+            } else {
+                // MOVE FILE
+                const destId = getCurrentSPTarget();
+                if (!destId) throw new Error("Destino inválido para archivo.");
+                await moveItem(clipboard.item.id, destId, driveId);
+            }
+
             setClipboard(null);
             loadContent();
-        } catch (e) { alert("Error al mover"); }
-        finally { setLoading(false); }
+            alert("Movido correctamente");
+        } catch (e) {
+            console.error(e);
+            alert(`Error al mover: ${e.message || e}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const getFileIcon = (fileName) => {
