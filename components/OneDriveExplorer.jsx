@@ -10,7 +10,6 @@ import { logAuditAction } from '@/lib/audit';
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
-import { toast } from 'sonner'; // Assuming sonner is available or use alias
 
 // Helper to normalize strings for comparison (remove accents, case insensitive)
 const normalize = (str) => {

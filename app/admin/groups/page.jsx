@@ -16,7 +16,7 @@ export default function GroupsAdminPage() {
         { id: 'dashboards', label: 'Dashboards', icon: PieChart, onClick: () => router.push('/administracion') },
         { id: 'reportes', label: 'Reportes', icon: Calendar, onClick: () => router.push('/administracion') },
         { id: 'funcionarios', label: 'Funcionarios', icon: Users, onClick: () => router.push('/administracion') },
-        { id: 'archivos', label: 'Archivos Cloud', icon: FileText, onClick: () => router.push('/administracion') },
+        { id: 'archivos', label: 'Archivos', icon: FileText, onClick: () => router.push('/administracion') },
         { id: 'grupos', label: 'Gestor de Grupos', icon: LayoutGrid, active: true }
     ];
 

@@ -27,7 +27,7 @@ export default function AdminPage() {
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-    { id: 'archivos', label: 'Archivos Cloud', icon: FileText },
+    { id: 'archivos', label: 'Archivos', icon: FileText },
     { id: 'grupos', label: 'Gestor de Grupos', icon: LayoutGrid, onClick: () => router.push('/admin/groups') }
 
   ];
