@@ -62,7 +62,9 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
         return () => clearTimeout(timer);
     }, [searchTerm, driveId]);
 
-    const [folderCache, setFolderCache] = useState({}); // Cache: { folderId: [files] }
+    // Cache System: { folderId: { data: [], timestamp: number } }
+    const [folderCache, setFolderCache] = useState({});
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
     // Load viewMode
     useEffect(() => {
@@ -94,11 +96,17 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
     const loadFiles = async (folderId) => {
         if (!driveId) return;
 
-        // Check Cache
+        // Check Cache Validity
         if (folderCache[folderId]) {
-            setFiles(folderCache[folderId]);
-            setLoading(false);
-            return;
+            const { data, timestamp } = folderCache[folderId];
+            const isFresh = (Date.now() - timestamp) < CACHE_DURATION;
+
+            if (isFresh) {
+                console.log(`[Cache Hit] Serving ${folderId} from cache.`);
+                setFiles(data);
+                setLoading(false);
+                return;
+            }
         }
 
         setLoading(true);
@@ -130,8 +138,8 @@ const OneDriveExplorer = ({ driveId, siteName = "", currentUser, role }) => {
 
             } else {
                 setFiles(result);
-                // Update Cache
-                setFolderCache(prev => ({ ...prev, [folderId]: result }));
+                // Update Cache with Timestamp
+                setFolderCache(prev => ({ ...prev, [folderId]: { data: result, timestamp: Date.now() } }));
             }
 
         } catch (err) {

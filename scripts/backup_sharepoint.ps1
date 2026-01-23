@@ -1,71 +1,108 @@
 <#
 .SYNOPSIS
-    Script de Respaldo de Archivos de SharePoint / OneDrive
-    Requisito: CLI for Microsoft 365 (https://pnp.github.io/cli-microsoft365/)
+    Smart Backup Tool for SharePoint/OneDrive (Interactive)
     
 .DESCRIPTION
-    Este script permite descargar archivos masivamente de un sitio de SharePoint o del OneDrive personal.
-    Se recomienda usarlo para respaldos periódicos. 
-
-.INSTRUCTIONS
-    1. Instalar CLI for M365: npm install -g @pnp/cli-microsoft365
-    2. Login: m365 login
-    3. Ejecutar script: ./backup_sharepoint.ps1
+    Herramienta interactiva para respaldar sitios de SharePoint.
+    Permite elegir entre respaldo masivo o un sitio específico.
+    
+.PREREQUISITES
+    - CLI for Microsoft 365 (npm i -g @pnp/cli-microsoft365)
+    - Login previo (m365 login)
 #>
 
 $ErrorActionPreference = "Stop"
 
-function Backup-Site {
-    param (
-        [string]$Url,
-        [string]$DestinationPath
-    )
+function Show-Menu {
+    Clear-Host
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "    SISTEMA DE RESPALDO SHAREPOINT v2.0   " -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "1. Respaldar Sitio Específico"
+    Write-Host "2. Respaldar Todos los Sitios (Batch)"
+    Write-Host "3. Ver Estado de Conexión (m365 status)"
+    Write-Host "Q. Salir"
+    Write-Host "==========================================" -ForegroundColor Cyan
+}
 
-    Write-Host "Iniciando respaldo de: $Url" -ForegroundColor Cyan
-    
-    # Crear carpeta destino
-    if (!(Test-Path $DestinationPath)) {
-        New-Item -ItemType Directory -Force -Path $DestinationPath | Out-Null
-    }
+function Convert-Size {
+    param([long]$Bytes)
+    if ($Bytes -gt 1GB) { return "{0:N2} GB" -f ($Bytes / 1GB) }
+    if ($Bytes -gt 1MB) { return "{0:N2} MB" -f ($Bytes / 1MB) }
+    return "{0:N2} KB" -f ($Bytes / 1KB)
+}
 
-    # Nota: CLI for M365 no tiene un comando nativo de "download site". 
-    # Usualmente se usa 'spo file list' y luego 'spo file get'.
-    # Para simplicidad y robustez, este script es un template que el usuario debe configurar
-    # con la herramienta que prefiera, pero aquí proveemos el comando para listar.
-    
-    Write-Host "Listando archivos (esto puede tardar)..." -ForegroundColor Yellow
-    
-    # Ejemplo de comando para listar archivos en la librería por defecto 'Documentos compartidos'
-    # Ajustar según la estructura del sitio.
+function Download-Site {
+    param ([string]$Url)
+
+    $SiteName = $Url.Split("/")[-1]
+    $BackupDir = Join-Path $PWD "Backups"
+    $SiteDir = Join-Path $BackupDir "$SiteName-$(Get-Date -Format 'yyyyMMdd')"
+
+    Write-Host "`n[INFO] Iniciando respaldo de: $SiteName" -ForegroundColor Yellow
+    Write-Host "[INFO] Destino: $SiteDir" -ForegroundColor Gray
+
+    if (!(Test-Path $SiteDir)) { New-Item -ItemType Directory -Force -Path $SiteDir | Out-Null }
+
     try {
-        $files = m365 spo file list --webUrl $Url --folder "Shared Documents" --recursive --output json | ConvertFrom-Json
+        Write-Host " > Buscando Documentos Compartidos..." -NoNewline
+        # List items recursively in "Shared Documents"
+        $filesJson = m365 spo file list --webUrl $Url --folder "Shared Documents" --recursive --output json
+        $files = $filesJson | ConvertFrom-Json
         
+        $count = $files.Count
+        Write-Host " OK ($count archivos encontrados)" -ForegroundColor Green
+
+        $i = 0
         foreach ($file in $files) {
-            $localPath = Join-Path $DestinationPath $file.ServerRelativeUrl
-            $dir = Split-Path $localPath
-            if (!(Test-Path $dir)) {
-                New-Item -ItemType Directory -Force -Path $dir | Out-Null
-            }
-            
-            Write-Host "Descargando: $($file.Name)"
-            # m365 spo file get --webUrl $Url --id $file.UniqueId --asFile --path $localPath
+            $i++
+            $Percent = ($i / $count) * 100
+            $LocalPath = Join-Path $SiteDir $file.ServerRelativeUrl.Substring($file.ServerRelativeUrl.IndexOf("Shared Documents"))
+            $LocalDir = Split-Path $LocalPath
+
+            if (!(Test-Path $LocalDir)) { New-Item -ItemType Directory -Force -Path $LocalDir | Out-Null }
+
+            # Basic Progress Bar
+            Write-Progress -Activity "Descargando $SiteName" -Status "$($file.Name)" -PercentComplete $Percent
+
+            # Download File
+            # Note: CLI for M365 'spo file get' saves to current dir or specified path
+            # Using --asFile to save content
+            m365 spo file get --webUrl $Url --id $file.UniqueId --asFile --path $LocalPath
         }
+        Write-Host "`n[EXITO] Respaldo completado para $SiteName" -ForegroundColor Green
     }
     catch {
-        Write-Host "Error accediendo al sitio. Asegúrate de estar logueado (m365 login) y tener permisos." -ForegroundColor Red
-        Write-Host $_
+        Write-Host "`n[ERROR] Falló el respaldo de $SiteName" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Gray
     }
 }
 
-Write-Host "--- HERRAMIENTA DE RESPALDO V1.0 ---" -ForegroundColor Green
-Write-Host "Este script requiere @pnp/cli-microsoft365 instalado."
+# Main Loop
+do {
+    Show-Menu
+    $choice = Read-Host "Seleccione una opción"
 
-# Configuración
-$BackupRoot = "./Backups_$(Get-Date -Format 'yyyyMMdd')"
-New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
-
-# TODO: Agregar aquí las URLs de los sitios a respaldar
-# Backup-Site -Url "https://tutenant.sharepoint.com/sites/Sitio1" -DestinationPath "$BackupRoot/Sitio1"
-
-Write-Host "Script generado. Por favor edita el archivo para agregar tus URLs de SharePoint." -ForegroundColor Magenta
-Write-Host "Ubicación: $BackupRoot"
+    switch ($choice) {
+        '1' {
+            $url = Read-Host "Ingrese la URL completa del sitio (ej. https://tenant.sharepoint.com/sites/Contabilidad)"
+            if ($url) { Download-Site -Url $url }
+            Pause
+        }
+        '2' {
+            Write-Host "Modo Batch: Asegúrese de editar el script para definir la lista de sitios." -ForegroundColor Yellow
+            # Add your list here
+            $sites = @(
+                "https://tu-tenant.sharepoint.com/sites/Ejemplo1",
+                "https://tu-tenant.sharepoint.com/sites/Ejemplo2"
+            )
+            foreach ($s in $sites) { Download-Site -Url $s }
+            Pause
+        }
+        '3' {
+            m365 status
+            Pause
+        }
+        'Q' { return }
+    }
+} while ($true)
