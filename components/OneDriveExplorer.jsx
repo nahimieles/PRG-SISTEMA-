@@ -396,13 +396,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             if (item.type === 'group') {
                 await deleteGroup(item.id);
             } else {
-                await deleteItem(item.id, driveId);
+                await deleteItem(item.id, effectiveDriveId);
                 await logAuditAction({
                     action_type: 'DELETE',
                     file_name: item.name,
                     file_path: item.name,
                     worker_name: currentUser?.full_name,
-                    metadata: { driveId }
+                    metadata: { driveId: effectiveDriveId }
                 });
             }
             loadContent();
@@ -417,13 +417,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             if (item.type === 'group') {
                 await updateGroup(item.id, { name: newName });
             } else {
-                await renameItem(item.id, newName, driveId);
+                await renameItem(item.id, newName, effectiveDriveId);
                 await logAuditAction({
                     action_type: 'RENAME',
                     file_name: item.name,
                     file_path: newName, // New name
                     worker_name: currentUser?.full_name,
-                    metadata: { driveId, oldName: item.name }
+                    metadata: { driveId: effectiveDriveId, oldName: item.name }
                 });
             }
             loadContent();
@@ -473,13 +473,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 // MOVE FILE
                 const destId = getCurrentSPTarget();
                 if (!destId) throw new Error("Destino inválido para archivo.");
-                await moveItem(clipboard.item.id, destId, driveId);
+                await moveItem(clipboard.item.id, destId, effectiveDriveId);
                 await logAuditAction({
                     action_type: 'MOVE',
                     file_name: clipboard.item.name,
                     file_path: 'Moved to ' + destId,
                     worker_name: currentUser?.full_name,
-                    metadata: { driveId, source: clipboard.sourceFolder, dest: destId }
+                    metadata: { driveId: effectiveDriveId, source: clipboard.sourceFolder, dest: destId }
                 });
             }
 
