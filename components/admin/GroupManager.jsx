@@ -18,7 +18,8 @@ import {
     Search,
     Type,
     Palette,
-    Layers
+    Layers,
+    RefreshCw
 } from 'lucide-react';
 import { getGroups, createGroup, updateGroup, deleteGroup, moveGroup } from '@/lib/groups';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -287,8 +288,24 @@ export default function GroupManager() {
                     >
                         <Plus size={16} /> Nuevo
                     </button>
+                    <button
+                        onClick={loadGroups}
+                        disabled={loading}
+                        className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2 transition-all whitespace-nowrap text-sm font-medium disabled:opacity-50"
+                        title="Refrescar grupos"
+                    >
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        <span className="hidden sm:inline">Refrescar</span>
+                    </button>
                 </div>
             </div>
+
+            {/* Last Updated Timestamp */}
+            {!loading && groups.length > 0 && (
+                <div className="text-xs opacity-60 mb-4">
+                    Última actualización: {new Date().toLocaleTimeString()}
+                </div>
+            )}
 
             <div
                 className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"

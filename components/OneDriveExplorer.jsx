@@ -11,6 +11,7 @@ import { logAuditAction } from '@/lib/audit';
 import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import SharePointSites from "./SharePointSites";
+import FilePreview from "./FilePreview";
 
 // Helper to normalize strings
 const normalize = (str) => {
@@ -816,113 +817,23 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             </div>
 
             {/* Modal de Vista Previa (Sin Blur Pesado) */}
+            {/* File Preview Modal */}
             {previewFile && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    style={{ background: 'rgba(0,0,0,0.85)' }}
-                    onClick={closePreview}
-                >
-                    <div
-                        className="rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden"
-                        style={{ background: theme.surface }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: theme.border }}>
-                            <div>
-                                <h3 className="font-bold text-lg truncate pr-4" style={{ color: theme.text }}>{previewFile.name}</h3>
-                                <p className="text-xs" style={{ color: theme.textSecondary }}>
-                                    Modificado por: <strong>{previewFile.lastModifiedBy?.user?.displayName || 'Desconocido'}</strong> el {new Date(previewFile.lastModifiedDateTime).toLocaleString()}
-                                </p>
-                            </div>
-                            <button onClick={closePreview} className="p-2 hover:opacity-70 rounded-full transition cursor-pointer">
-                                <X size={24} style={{ color: theme.text }} />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 p-4 flex flex-col items-center justify-center gap-6 overflow-y-auto" style={{ background: isDark ? '#111' : '#f3f4f6' }}>
-                            {/* Show thumbnail or file icon */}
-                            {previewFile.thumbnails && previewFile.thumbnails.length > 0 ? (
-                                <img
-                                    src={previewFile.thumbnails[0].large?.url || previewFile.thumbnails[0].medium?.url || previewFile.thumbnails[0].small?.url}
-                                    alt={previewFile.name}
-                                    className="max-h-[50vh] w-auto shadow-2xl rounded-lg object-contain"
-                                />
-                            ) : (
-                                <div className="w-32 h-32 flex items-center justify-center rounded-2xl shadow-lg" style={{ background: theme.surface }}>
-                                    <div className="scale-[3]">
-                                        {getFileIcon(previewFile.name)}
-                                    </div>
-                                </div>
-                            )}
-
-                            <p className="text-sm text-center" style={{ color: theme.textSecondary }}>
-                                Haz clic en "Abrir en Office" para ver y editar el documento completo.
-                            </p>
-
-                            <div className="flex gap-3 flex-wrap justify-center">
-                                <a
-                                    href={previewFile.webUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={() => {
-                                        // Log "Edit/Open" Intent
-                                        logAuditAction({
-                                            action_type: 'OPEN_EDIT', // Custom type for tracking "edits" (proxy)
-                                            file_name: previewFile.name,
-                                            file_path: currentFolder === 'root' ? '/' : folderHistory.map(f => f.name).join('/') + '/',
-                                            worker_name: currentUser?.full_name || 'Desconocido',
-                                            metadata: { driveId, url: previewFile.webUrl }
-                                        });
-                                    }}
-                                    className="flex items-center gap-2 bg-[#2A5C82] text-white px-5 py-2.5 rounded-xl font-bold hover:opacity-90 transition shadow-xl cursor-pointer"
-                                >
-                                    <FileIcon size={18} />
-                                    Abrir en Office
-                                </a>
-                                <button
-                                    onClick={async () => {
-                                        const newName = prompt('Nuevo nombre:', previewFile.name);
-                                        if (!newName || !newName.trim() || newName === previewFile.name) return;
-                                        try {
-                                            await renameItem(previewFile.id, newName.trim(), driveId);
-                                            closePreview();
-                                            // Clear cache and reload
-                                            setFolderCache({});
-                                            loadFiles(currentFolder);
-                                        } catch (e) {
-                                            alert('Error al renombrar');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 bg-amber-100 text-amber-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-amber-200 transition cursor-pointer"
-                                >
-                                    <Edit2 size={18} />
-                                    Renombrar
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (!confirm(`¿Eliminar "${previewFile.name}"? Esta acción no se puede deshacer.`)) return;
-                                        try {
-                                            await deleteItem(previewFile.id, driveId);
-                                            closePreview();
-                                            // Clear cache and reload
-                                            setFolderCache({});
-                                            loadFiles(currentFolder);
-                                        } catch (e) {
-                                            alert('Error al eliminar');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 bg-red-100 text-red-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-red-200 transition cursor-pointer"
-                                >
-                                    <Trash2 size={18} />
-                                    Eliminar
-                                </button>
-                            </div>
-                            <p className="text-xs text-gray-500 text-center max-w-lg">
-                                Tip: Para editar, abre en Office. Los cambios se guardarán automáticamente.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <FilePreview
+                    file={previewFile}
+                    onClose={closePreview}
+                    onDownload={(file) => {
+                        const downloadUrl = file['@microsoft.graph.downloadUrl'] || file.webUrl;
+                        window.open(downloadUrl, '_blank');
+                        logAuditAction({
+                            action_type: 'DOWNLOAD',
+                            file_name: file.name,
+                            file_path: currentPath.name,
+                            worker_name: currentUser?.full_name || 'Desconocido',
+                            metadata: { driveId: effectiveDriveId }
+                        });
+                    }}
+                />
             )}
         </div>
     );
