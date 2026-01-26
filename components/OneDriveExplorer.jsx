@@ -49,6 +49,21 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
+    // Upload State
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadError, setUploadError] = useState(null);
+
+    // Drag & Drop State
+    const [draggedItem, setDraggedItem] = useState(null);
+    const [dragOverItem, setDragOverItem] = useState(null);
+
+    // Undo/Redo State
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+
+    // File Preview State
+    const [previewFile, setPreviewFile] = useState(null);
+
     // ... (useEffect for auth remains)
 
     // Load Content
@@ -222,16 +237,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadError, setUploadError] = useState(null);
-
-    // Drag & Drop State
-    const [draggedItem, setDraggedItem] = useState(null);
-    const [dragOverItem, setDragOverItem] = useState(null);
-
-    // Undo/Redo State
-    const [undoStack, setUndoStack] = useState([]);
-    const [redoStack, setRedoStack] = useState([]);
+    // State declarations moved to top of component for proper initialization order
 
     const handleFileUpload = async (e) => {
         if (!e.target.files?.length) return;
@@ -773,7 +779,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
-    const [previewFile, setPreviewFile] = useState(null);
+    // previewFile state moved to top of component
 
     const openPreview = (file) => {
         setPreviewFile(file);

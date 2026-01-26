@@ -253,9 +253,12 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                         onClick={loadSites}
                         disabled={loading}
                         className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
-                        style={{ borderColor: theme.border, color: theme.text }}
+                        style={{
+                            borderColor: theme.border,
+                            color: theme.text,
+                            display: mode === 'picker' ? 'none' : 'flex'
+                        }}
                         title="Sincronizar grupos"
-                        style={{ display: mode === 'picker' ? 'none' : 'flex' }}
                     >
                         <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                         Sincronizar
