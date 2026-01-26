@@ -9,6 +9,7 @@ import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLe
 import * as LucideIcons from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
 import { useTheme } from "@/contexts/ThemeContext";
+import { useSharePointData } from "@/contexts/SharePointContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import SharePointSites from "./SharePointSites";
 import FilePreview from "./FilePreview";
@@ -23,9 +24,10 @@ const normalize = (str) => {
 
 
 const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role }) => {
-    const { instance, accounts } = useMsal(); // Restored
-    const { isDark } = useTheme(); // Restored
-    const theme = isDark ? darkTheme : lightTheme; // Restored
+    const { instance, accounts } = useMsal();
+    const { isDark } = useTheme();
+    const theme = isDark ? darkTheme : lightTheme;
+    const { getCachedDriveId, cacheDriveId } = useSharePointData();
 
     // Navigation: { id, name, type, resourceId, driveId }
     // If propDriveId is provided (legacy mode), we start with it. Otherwise 'root' has no driveId.
@@ -111,49 +113,45 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 // NORMAL LISTING
                 const { id, type } = currentPath;
 
-                // A. Fetch Groups (Virtual Children)
-                // We fetch groups if we are at Root OR inside a Group.
-                // Even if we are in a "Linked Group" (which acts as a Drive Root), we might want to show sub-groups?
-                // The user said "Groups containing SharePoint Groups".
-                // So yes, we can mix.
-
-                // A. Fetch Groups (Virtual Children)
-                let groups = [];
-                // Only fetch groups if we are NOT inside a physical SharePoint folder (type='folder')
+                // Helper to check if ID is a SharePoint site ID
                 const isSharePointSiteId = (str) => str && str.includes(',');
 
-                if (type === 'root' || (type === 'group' && !isSharePointSiteId(id))) {
-                    const parentId = type === 'root' ? null : id;
-                    try {
-                        groups = await getGroupsByParent(parentId);
-                    } catch (e) {
-                        console.error("Error loading groups:", e);
-                        // Don't block everything if groups fail, but log it
-                    }
-                }
+                // Determine what to fetch
+                const shouldFetchGroups = type === 'root' || (type === 'group' && !isSharePointSiteId(id));
+                const shouldFetchSites = type === 'root';
+                const shouldFetchFiles = !!effectiveDriveId;
 
-                // B. Fetch Sharepoint Sites (Root Only - Visibility for Moving)
-                let spSites = [];
-                if (type === 'root') {
-                    try {
-                        const rawSites = await getFollowedSites();
-                        spSites = processSitesForExplorer(rawSites);
-                    } catch (e) {
-                        console.warn("Error fetching sites", e);
-                    }
-                }
+                // PARALLEL FETCH: Load all data sources simultaneously for better performance
+                const [groupsResult, sitesResult, filesResult] = await Promise.all([
+                    // A. Fetch Groups (Virtual Children)
+                    shouldFetchGroups
+                        ? getGroupsByParent(type === 'root' ? null : id).catch(e => {
+                            console.error("Error loading groups:", e);
+                            return [];
+                        })
+                        : Promise.resolve([]),
 
-                // C. Fetch Files (SharePoint)
-                let files = [];
-                if (effectiveDriveId) {
-                    const targetFolderId = (type === 'folder') ? id : 'root';
-                    try {
-                        files = await getFiles(targetFolderId, effectiveDriveId);
-                    } catch (e) {
-                        console.error("Error fetching files:", e);
-                        setError("Error cargando archivos: " + e.message);
-                    }
-                }
+                    // B. Fetch SharePoint Sites (Root Only)
+                    shouldFetchSites
+                        ? getFollowedSites().catch(e => {
+                            console.warn("Error fetching sites:", e);
+                            return [];
+                        })
+                        : Promise.resolve([]),
+
+                    // C. Fetch Files from SharePoint
+                    shouldFetchFiles
+                        ? getFiles(type === 'folder' ? id : 'root', effectiveDriveId).catch(e => {
+                            console.error("Error fetching files:", e);
+                            setError("Error cargando archivos: " + e.message);
+                            return [];
+                        })
+                        : Promise.resolve([])
+                ]);
+
+                const groups = groupsResult;
+                const spSites = shouldFetchSites ? processSitesForExplorer(sitesResult) : [];
+                const files = filesResult;
 
                 // D. Merge
                 // ... (mapping logic) ...
@@ -337,14 +335,24 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             const resolveSite = async () => {
                 setLoading(true);
                 try {
-                    const dId = await getSiteDefaultDrive(item.id);
+                    // Try cache first for faster navigation
+                    let dId = getCachedDriveId(item.id);
+
+                    if (!dId) {
+                        // Not cached, fetch from API
+                        dId = await getSiteDefaultDrive(item.id);
+                        if (dId) {
+                            // Cache for future use
+                            cacheDriveId(item.id, dId);
+                        }
+                    }
 
                     if (!dId) throw new Error("No Drive ID found for this site");
 
                     setBreadcrumbs(prev => [...prev, {
                         id: item.id,
                         name: item.name,
-                        type: 'group', // Switch to 'group' view mode for simplicity
+                        type: 'group',
                         resourceId: dId,
                         driveId: dId
                     }]);
@@ -790,6 +798,14 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     };
 
     if (accounts.length === 0) {
+        const handleLogin = async () => {
+            try {
+                await instance.loginRedirect(loginRequest);
+            } catch (error) {
+                console.error("Login failed:", error);
+            }
+        };
+
         return (
             <div
                 className="flex flex-col items-center justify-center p-10 rounded-lg border border-dashed"
@@ -797,7 +813,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             >
                 <p className="text-lg mb-4" style={{ color: theme.textSecondary }}>Conecta tu cuenta para ver tus archivos</p>
                 <button
-                    onClick={() => instance.loginPopup(loginRequest).catch(e => console.log(e))}
+                    onClick={handleLogin}
                     className="bg-[#2A5C82] text-white px-6 py-2 rounded-lg hover:bg-[#1e4a6d] transition-colors"
                 >
                     Conectar OneDrive

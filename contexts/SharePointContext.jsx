@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFollowedSites, getSiteDefaultDrive } from "@/lib/onedriveService";
@@ -9,7 +9,7 @@ const SharePointContext = createContext(null);
 export const useSharePointData = () => {
     const context = useContext(SharePointContext);
     if (!context) {
-        return { sites: [], loading: false, error: null, loadSites: () => { } };
+        return { sites: [], loading: false, error: null, loadSites: () => { }, getCachedDriveId: () => null, cacheDriveId: () => { } };
     }
     return context;
 };
@@ -21,6 +21,9 @@ export const SharePointProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const [isInitialized, setIsInitialized] = useState(false);
 
+    // Cache for drive IDs to avoid repeated API calls
+    const driveIdCache = useRef(new Map());
+
     const loadSites = useCallback(async () => {
         if (accounts.length === 0 || loading) return;
 
@@ -29,7 +32,7 @@ export const SharePointProvider = ({ children }) => {
         try {
             const request = { ...loginRequest, account: accounts[0] };
             const response = await instance.acquireTokenSilent(request).catch(async () => {
-                await instance.acquireTokenRedirect(request); // Force full redirect if silent fails
+                await instance.acquireTokenRedirect(request);
             });
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
@@ -43,6 +46,16 @@ export const SharePointProvider = ({ children }) => {
         }
     }, [accounts, instance, loading]);
 
+    // Get cached drive ID or null
+    const getCachedDriveId = useCallback((siteId) => {
+        return driveIdCache.current.get(siteId) || null;
+    }, []);
+
+    // Cache a drive ID for a site
+    const cacheDriveId = useCallback((siteId, driveId) => {
+        driveIdCache.current.set(siteId, driveId);
+    }, []);
+
     // Auto-load when accounts are available
     useEffect(() => {
         if (accounts.length > 0 && !isInitialized && !loading) {
@@ -51,7 +64,15 @@ export const SharePointProvider = ({ children }) => {
     }, [accounts, isInitialized, loading, loadSites]);
 
     return (
-        <SharePointContext.Provider value={{ sites, loading, error, loadSites, isInitialized }}>
+        <SharePointContext.Provider value={{
+            sites,
+            loading,
+            error,
+            loadSites,
+            isInitialized,
+            getCachedDriveId,
+            cacheDriveId
+        }}>
             {children}
         </SharePointContext.Provider>
     );
