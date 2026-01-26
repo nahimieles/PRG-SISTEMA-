@@ -191,26 +191,31 @@ export default function AdminPage() {
 
   const loadAllData = async () => {
     setLoading(true);
-    const recordsData = await getRecords();
-    const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
-    const companiesData = await getCompanies();
+    try {
+      const recordsData = await getRecords();
+      const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
+      const companiesData = await getCompanies();
 
-    console.log('Registros cargados:', recordsData);
-    console.log('Primer registro:', recordsData[0]);
+      console.log('Registros cargados:', recordsData);
+      console.log('Primer registro:', recordsData[0]);
 
-    setRecords(recordsData);
-    if (!workersData.error) setWorkers(workersData.data || []);
-    setCompanies(companiesData);
+      setRecords(recordsData);
+      if (!workersData.error) setWorkers(workersData.data || []);
+      setCompanies(companiesData);
 
-    // Detectar problemas de calidad
-    const issues = await getQualityIssues(recordsData);
-    setQualityIssues(issues);
+      // Detectar problemas de calidad
+      const issues = await getQualityIssues(recordsData);
+      setQualityIssues(issues);
 
-    // Cargar datos de asistencia
-    const attRecords = await getAllAttendanceRecords();
-    setAttendanceRecords(attRecords);
-
-    setLoading(false);
+      // Cargar datos de asistencia
+      const attRecords = await getAllAttendanceRecords();
+      setAttendanceRecords(attRecords);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      setMessage("Error al cargar los datos. Por favor recalga la página.");
+    } finally {
+      setLoading(false);
+    }
   };
 
 
