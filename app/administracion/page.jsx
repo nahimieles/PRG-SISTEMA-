@@ -19,6 +19,7 @@ import AuditLogsTable from '../../components/AuditLogsTable';
 // Dynamic imports for MSAL-dependent components to avoid SSR issues
 const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
 const SmartReportGenerator = dynamic(() => import('../../components/SmartReportGenerator'), { ssr: false });
+const BackupPanel = dynamic(() => import('../../components/BackupPanel'), { ssr: false });
 
 export default function AdminPage() {
   const router = useRouter();
@@ -1293,7 +1294,11 @@ export default function AdminPage() {
 
           {/* TAB: ARCHIVOS ONEDRIVE */}
           {activeTab === 'archivos' && (
-            <div className="animate-fade-in">
+            <div className="animate-fade-in space-y-6">
+              {/* Backup Panel */}
+              <BackupPanel currentUser={{ full_name: adminName }} />
+
+              {/* OneDrive Container */}
               <OneDriveContainer />
             </div>
           )}
