@@ -4,21 +4,47 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image as ImageIcon, File, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
+import { getPreviewUrl } from '@/lib/onedriveService';
 
-const FilePreview = ({ file, onClose, onDownload }) => {
+const FilePreview = ({ file, onClose, onDownload, driveId }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [zoom, setZoom] = useState(100);
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         setLoading(true);
         setError(null);
-        // Simulate loading delay
-        const timer = setTimeout(() => setLoading(false), 500);
+        setPreviewUrl(null);
+
+        const loadPreview = async () => {
+            try {
+                const fileType = getFileType();
+
+                // For Office documents, get preview URL from Microsoft Graph
+                if (['word', 'excel', 'powerpoint', 'pdf'].includes(fileType)) {
+                    const url = await getPreviewUrl(file.id, driveId);
+                    if (url) {
+                        setPreviewUrl(url);
+                    } else {
+                        // Fallback: try to use webUrl for SharePoint viewing
+                        setPreviewUrl(file.webUrl);
+                    }
+                }
+                setLoading(false);
+            } catch (err) {
+                console.error("Error loading preview:", err);
+                setError("No se pudo cargar la vista previa");
+                setLoading(false);
+            }
+        };
+
+        // Small delay then load
+        const timer = setTimeout(loadPreview, 300);
         return () => clearTimeout(timer);
-    }, [file]);
+    }, [file, driveId]);
 
     if (!file) return null;
 
@@ -52,8 +78,13 @@ const FilePreview = ({ file, onClose, onDownload }) => {
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center p-8">
                         <FileText className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                        <p className="text-red-500 mb-2">Error al cargar la vista previa</p>
-                        <p className="text-sm opacity-60">{error}</p>
+                        <p className="text-red-500 mb-4">{error}</p>
+                        <button
+                            onClick={() => window.open(file.webUrl, '_blank')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                        >
+                            Abrir en SharePoint
+                        </button>
                     </div>
                 </div>
             );
@@ -64,7 +95,7 @@ const FilePreview = ({ file, onClose, onDownload }) => {
                 return (
                     <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
                         <img
-                            src={file.webUrl || file['@microsoft.graph.downloadUrl']}
+                            src={file['@microsoft.graph.downloadUrl'] || file.webUrl}
                             alt={file.name}
                             style={{
                                 maxWidth: '100%',
@@ -78,28 +109,18 @@ const FilePreview = ({ file, onClose, onDownload }) => {
                 );
 
             case 'pdf':
-                // Use Microsoft's preview URL or download URL in iframe
-                const pdfUrl = file.webUrl || file['@microsoft.graph.downloadUrl'];
-                return (
-                    <iframe
-                        src={pdfUrl}
-                        className="w-full h-full border-0"
-                        title={file.name}
-                        onError={() => setError('No se pudo cargar el PDF')}
-                    />
-                );
-
             case 'word':
             case 'excel':
             case 'powerpoint':
-                // Use Office Online Viewer
-                const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file['@microsoft.graph.downloadUrl'] || file.webUrl)}`;
+                // Use the preview URL from Microsoft Graph or fallback to webUrl
+                const embedUrl = previewUrl || file.webUrl;
                 return (
                     <iframe
-                        src={officeUrl}
+                        src={embedUrl}
                         className="w-full h-full border-0"
                         title={file.name}
-                        onError={() => setError('No se pudo cargar el documento')}
+                        allow="fullscreen"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     />
                 );
 
@@ -125,12 +146,15 @@ const FilePreview = ({ file, onClose, onDownload }) => {
                     <div className="flex-1 flex items-center justify-center">
                         <div className="text-center p-8">
                             <File className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                            <p style={{ color: theme.textSecondary }} className="mb-2">
+                            <p style={{ color: theme.textSecondary }} className="mb-4">
                                 Vista previa no disponible para este tipo de archivo
                             </p>
-                            <p className="text-sm opacity-60">
-                                Descarga el archivo para verlo
-                            </p>
+                            <button
+                                onClick={() => window.open(file.webUrl, '_blank')}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                            >
+                                Abrir en SharePoint
+                            </button>
                         </div>
                     </div>
                 );
@@ -141,7 +165,7 @@ const FilePreview = ({ file, onClose, onDownload }) => {
         if (onDownload) {
             onDownload(file);
         } else {
-            // Default download behavior
+            // Default download behavior - use download URL if available
             const downloadUrl = file['@microsoft.graph.downloadUrl'] || file.webUrl;
             window.open(downloadUrl, '_blank');
         }

@@ -123,9 +123,9 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                 // PARALLEL FETCH: Load all data sources simultaneously for better performance
                 const [groupsResult, sitesResult, filesResult] = await Promise.all([
-                    // A. Fetch Groups (Virtual Children)
+                    // A. Fetch Groups (Virtual Children) - Pass user/role to avoid session timeout issues
                     shouldFetchGroups
-                        ? getGroupsByParent(type === 'root' ? null : id).catch(e => {
+                        ? getGroupsByParent(type === 'root' ? null : id, { user: currentUser, role }).catch(e => {
                             console.error("Error loading groups:", e);
                             return [];
                         })
@@ -1128,6 +1128,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             {previewFile && (
                 <FilePreview
                     file={previewFile}
+                    driveId={effectiveDriveId}
                     onClose={closePreview}
                     onDownload={(file) => {
                         const downloadUrl = file['@microsoft.graph.downloadUrl'] || file.webUrl;
