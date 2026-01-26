@@ -58,6 +58,25 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     }, [currentPath, searchTerm, currentUser, role]); // Trigger on path change (effectiveDriveId changes with path)
 
+    // Keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Ctrl+Z or Cmd+Z for undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                handleUndo();
+            }
+            // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z for redo
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [undoStack, redoStack]);
+
     const loadContent = async () => {
         setLoading(true);
         setError(null);
@@ -203,20 +222,65 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadError, setUploadError] = useState(null);
+
+    // Drag & Drop State
+    const [draggedItem, setDraggedItem] = useState(null);
+    const [dragOverItem, setDragOverItem] = useState(null);
+
+    // Undo/Redo State
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+
     const handleFileUpload = async (e) => {
         if (!e.target.files?.length) return;
-        if (!effectiveDriveId) return;
+
+        const file = e.target.files[0];
+
+        if (!effectiveDriveId) {
+            alert("No hay un contexto de OneDrive activo. Por favor, navega a un sitio de SharePoint primero.");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
 
         setLoading(true);
+        setUploadProgress(0);
+        setUploadError(null);
+
         try {
             const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
-            await uploadFile(e.target.files[0], parentId, effectiveDriveId);
-            loadContent();
-        } catch (e) {
-            console.error(e);
-            alert("Error subiendo archivo");
+
+            // Upload with progress tracking
+            await uploadFile(
+                file,
+                parentId,
+                effectiveDriveId,
+                (progress) => setUploadProgress(progress)
+            );
+
+            // Log audit action
+            await logAuditAction({
+                action_type: 'UPLOAD',
+                file_name: file.name,
+                file_path: currentPath.name,
+                worker_name: currentUser?.full_name,
+                metadata: {
+                    driveId: effectiveDriveId,
+                    fileSize: file.size,
+                    folder: currentPath.name
+                }
+            });
+
+            await loadContent();
+            alert(`✓ Archivo "${file.name}" subido correctamente`);
+        } catch (error) {
+            console.error(error);
+            setUploadError(error.message);
+            alert(`Error al subir archivo: ${error.message}`);
         } finally {
             setLoading(false);
+            setUploadProgress(0);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
@@ -501,6 +565,214 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         return <FileIcon className="text-gray-500" />;
     };
 
+    // Drag & Drop Handlers
+    const handleDragStart = (e, item) => {
+        if (role === 'worker') {
+            e.preventDefault();
+            return;
+        }
+
+        setDraggedItem(item);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.id);
+
+        // Add visual feedback
+        if (e.target) {
+            e.target.style.opacity = '0.5';
+        }
+    };
+
+    const handleDragEnd = (e) => {
+        if (e.target) {
+            e.target.style.opacity = '1';
+        }
+        setDraggedItem(null);
+        setDragOverItem(null);
+    };
+
+    const handleDragOver = (e, item) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!draggedItem || draggedItem.id === item.id) return;
+
+        // Only allow dropping into folders or groups
+        const canDropHere = item.type === 'folder' || item.type === 'group';
+
+        if (canDropHere) {
+            setDragOverItem(item.id);
+            e.dataTransfer.dropEffect = 'move';
+        } else {
+            e.dataTransfer.dropEffect = 'none';
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setDragOverItem(null);
+    };
+
+    const handleDrop = async (e, targetItem) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!draggedItem || draggedItem.id === targetItem.id) {
+            setDraggedItem(null);
+            setDragOverItem(null);
+            return;
+        }
+
+        setLoading(true);
+        setDragOverItem(null);
+
+        try {
+            // Moving a GROUP
+            if (draggedItem.type === 'group') {
+                if (targetItem.type === 'folder' && !targetItem.resource_id) {
+                    throw new Error("No puedes mover un grupo dentro de una carpeta física de SharePoint");
+                }
+
+                const newParentId = targetItem.type === 'group' ? targetItem.id : null;
+                const originalParentId = currentPath.type === 'root' ? null : currentPath.id;
+
+                await moveGroup(draggedItem.id, newParentId);
+
+                // Track for undo
+                addToUndoStack({
+                    type: 'MOVE_GROUP',
+                    itemId: draggedItem.id,
+                    itemName: draggedItem.name,
+                    originalParentId,
+                    newParentId
+                });
+
+                await logAuditAction({
+                    action_type: 'MOVE',
+                    file_name: draggedItem.name,
+                    file_path: `Grupo movido a ${targetItem.name}`,
+                    worker_name: currentUser?.full_name,
+                    metadata: {
+                        sourceType: 'group',
+                        targetType: targetItem.type,
+                        targetName: targetItem.name
+                    }
+                });
+            }
+            // Moving a FILE or FOLDER
+            else {
+                // Can only move files/folders within SharePoint context
+                if (!effectiveDriveId) {
+                    throw new Error("No hay contexto de SharePoint para mover archivos");
+                }
+
+                // Target must be a folder in the same drive
+                if (targetItem.type !== 'folder') {
+                    throw new Error("Solo puedes mover archivos a carpetas");
+                }
+
+                const originalParentId = currentPath.type === 'folder' ? currentPath.id : 'root';
+
+                await moveItem(draggedItem.id, targetItem.id, effectiveDriveId);
+
+                // Track for undo
+                addToUndoStack({
+                    type: 'MOVE_FILE',
+                    itemId: draggedItem.id,
+                    itemName: draggedItem.name,
+                    originalParentId,
+                    newParentId: targetItem.id,
+                    driveId: effectiveDriveId
+                });
+
+                await logAuditAction({
+                    action_type: 'MOVE',
+                    file_name: draggedItem.name,
+                    file_path: `Movido a ${targetItem.name}`,
+                    worker_name: currentUser?.full_name,
+                    metadata: {
+                        driveId: effectiveDriveId,
+                        sourceFolder: currentPath.name,
+                        targetFolder: targetItem.name
+                    }
+                });
+            }
+
+            await loadContent();
+            setDraggedItem(null);
+        } catch (error) {
+            console.error("Error en drag & drop:", error);
+            alert(`Error al mover: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Undo/Redo Handlers
+    const addToUndoStack = (operation) => {
+        setUndoStack(prev => [...prev, operation]);
+        setRedoStack([]); // Clear redo stack when new operation is performed
+    };
+
+    const handleUndo = async () => {
+        if (undoStack.length === 0) {
+            alert('No hay operaciones para deshacer');
+            return;
+        }
+
+        const operation = undoStack[undoStack.length - 1];
+        setLoading(true);
+
+        try {
+            // Reverse the operation
+            if (operation.type === 'MOVE_GROUP') {
+                await moveGroup(operation.itemId, operation.originalParentId);
+            } else if (operation.type === 'MOVE_FILE') {
+                await moveItem(operation.itemId, operation.originalParentId, operation.driveId);
+            }
+
+            // Move operation from undo to redo stack
+            setUndoStack(prev => prev.slice(0, -1));
+            setRedoStack(prev => [...prev, operation]);
+
+            await loadContent();
+        } catch (error) {
+            console.error('Error en undo:', error);
+            alert(`Error al deshacer: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRedo = async () => {
+        if (redoStack.length === 0) {
+            alert('No hay operaciones para rehacer');
+            return;
+        }
+
+        const operation = redoStack[redoStack.length - 1];
+        setLoading(false);
+
+        try {
+            // Re-apply the operation
+            if (operation.type === 'MOVE_GROUP') {
+                await moveGroup(operation.itemId, operation.newParentId);
+            } else if (operation.type === 'MOVE_FILE') {
+                await moveItem(operation.itemId, operation.newParentId, operation.driveId);
+            }
+
+            // Move operation from redo to undo stack
+            setRedoStack(prev => prev.slice(0, -1));
+            setUndoStack(prev => [...prev, operation]);
+
+            await loadContent();
+        } catch (error) {
+            console.error('Error en redo:', error);
+            alert(`Error al rehacer: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const [previewFile, setPreviewFile] = useState(null);
 
     const openPreview = (file) => {
@@ -717,12 +989,25 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                 // Only show "Card Style" if at Root AND it's a group/site
                                 const showAsCard = isGroup && currentPath.type === 'root';
 
+                                // Determine if this item can be dragged or is a drop target
+                                const isDraggable = role !== 'worker';
+                                const isDropTarget = (item.type === 'folder' || item.type === 'group');
+                                const isDraggedOver = dragOverItem === item.id;
+
                                 return (
                                     <div
                                         key={item.id}
+                                        draggable={isDraggable}
+                                        onDragStart={(e) => handleDragStart(e, item)}
+                                        onDragEnd={handleDragEnd}
+                                        onDragOver={isDropTarget ? (e) => handleDragOver(e, item) : undefined}
+                                        onDragLeave={isDropTarget ? handleDragLeave : undefined}
+                                        onDrop={isDropTarget ? (e) => handleDrop(e, item) : undefined}
                                         className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden bg-white dark:bg-gray-800 border dark:border-gray-700
-                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}`}
-                                        style={{ borderColor: theme.border }}
+                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}
+                                        ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 dark:bg-blue-900/20' : ''}
+                                        ${isDraggable ? 'cursor-move' : ''}`}
+                                        style={{ borderColor: isDraggedOver ? '#3b82f6' : theme.border }}
                                         onClick={() => handleNavigate(item)}
                                     >
                                         {/* Menu Trigger */}
