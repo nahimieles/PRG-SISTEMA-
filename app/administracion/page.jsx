@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,10 +13,12 @@ import StatsCard from '../../components/StatsCard';
 import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
-import OneDriveContainer from '../../components/OneDriveContainer';
-import SmartReportGenerator from '../../components/SmartReportGenerator'; // Added
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
 import AuditLogsTable from '../../components/AuditLogsTable';
+
+// Dynamic imports for MSAL-dependent components to avoid SSR issues
+const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
+const SmartReportGenerator = dynamic(() => import('../../components/SmartReportGenerator'), { ssr: false });
 
 export default function AdminPage() {
   const router = useRouter();

@@ -1,12 +1,14 @@
 "use client";
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { msalConfig } from "@/lib/authConfig";
-import OneDriveExplorer from "@/components/OneDriveExplorer";
-import SmartReportGenerator from "@/components/SmartReportGenerator";
 
-// Initialize MSAL outside component to avoid re-instantiation
+// Dynamic imports for MSAL-dependent components to avoid SSR issues
+const OneDriveExplorer = dynamic(() => import("@/components/OneDriveExplorer"), { ssr: false });
+const SmartReportGenerator = dynamic(() => import("@/components/SmartReportGenerator"), { ssr: false });
+
 // Initialize MSAL outside component to avoid re-instantiation
 // Ensure this only runs in browser environment
 const msalInstance = typeof window !== "undefined" ? new PublicClientApplication(msalConfig) : null;
@@ -56,3 +58,4 @@ export default function OneDrivePage() {
         </MsalProvider>
     );
 }
+
