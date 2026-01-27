@@ -535,6 +535,9 @@ export default function AdminPage() {
   const adminSession = getAdminSession();
   const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
 
+  // Estado para controlar la expansión del sidebar
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
   return (
     <div className="dashboard-layout">
       {/* Sidebar */}
@@ -545,12 +548,17 @@ export default function AdminPage() {
         userName={adminName}
         onLogout={handleLogout}
         showBackButton={false}
+        onHoverChange={setIsSidebarExpanded}
       />
 
-      {/* Contenido Principal */}
+      {/* Contenido Principal con margen dinámico */}
       <main
-        className="dashboard-content min-h-screen transition-colors p-4 lg:p-6 page-transition"
-        style={{ background: theme.background, color: theme.text }}
+        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-6 page-transition"
+        style={{
+          background: theme.background,
+          color: theme.text,
+          marginLeft: isSidebarExpanded ? '256px' : '72px'
+        }}
       >
         <div className="max-w-7xl mx-auto">
 

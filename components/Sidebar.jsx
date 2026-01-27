@@ -163,8 +163,14 @@ export default function Sidebar({
                     width: isExpanded ? '256px' : '72px',
                     boxShadow: '4px 0 24px rgba(0,0,0,0.15)'
                 }}
-                onMouseEnter={() => setIsExpanded(true)}
-                onMouseLeave={() => setIsExpanded(false)}
+                onMouseEnter={() => {
+                    setIsExpanded(true);
+                    if (props.onHoverChange) props.onHoverChange(true);
+                }}
+                onMouseLeave={() => {
+                    setIsExpanded(false);
+                    if (props.onHoverChange) props.onHoverChange(false);
+                }}
             >
                 <SidebarContent expanded={isExpanded} />
 
