@@ -27,8 +27,7 @@ export default function Sidebar({
     onTabChange,
     userName = '',
     onLogout,
-    userName = '',
-    onLogout,
+
     showBackButton = true,
     onHoverChange // Add this
 }) {
