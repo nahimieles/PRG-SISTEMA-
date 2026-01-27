@@ -95,7 +95,7 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                 return (
                     <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
                         <img
-                            src={file['@microsoft.graph.downloadUrl'] || file.webUrl}
+                            src={`${file['@microsoft.graph.downloadUrl'] || file.webUrl}${file['@microsoft.graph.downloadUrl']?.includes('?') ? '&' : '?'}t=${Date.now()}`}
                             alt={file.name}
                             style={{
                                 maxWidth: '100%',
