@@ -57,12 +57,18 @@ const OneDriveContainer = () => {
 
             {/* Contenido Principal - Unified Explorer */}
             <section className="h-full">
-                <OneDriveExplorer
-                    driveId={null} // Unified Mode starts at virtual root
-                    siteName={'Archivos'}
-                    currentUser={currentUser}
-                    role={currentRole}
-                />
+                {currentUser ? (
+                    <OneDriveExplorer
+                        driveId={null} // Unified Mode starts at virtual root
+                        siteName={'Archivos'}
+                        currentUser={currentUser}
+                        role={currentRole}
+                    />
+                ) : (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                )}
             </section>
         </div>
     );

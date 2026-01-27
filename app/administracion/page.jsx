@@ -13,8 +13,11 @@ import StatsCard from '../../components/StatsCard';
 import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import AuditLogsTable from '../../components/AuditLogsTable';
+
+// Dynamic imports for MSAL-dependent components to avoid SSR issues
+import { getAuditLogs } from '../../lib/audit'; // Added import
 
 // Dynamic imports for MSAL-dependent components to avoid SSR issues
 const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
@@ -62,6 +65,7 @@ export default function AdminPage() {
 
   // Estado para actividades
   const [records, setRecords] = useState([]);
+  const [fileLogs, setFileLogs] = useState([]); // State for file logs
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWorker, setSelectedWorker] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -202,11 +206,15 @@ export default function AdminPage() {
       const recordsData = await getRecords();
       const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
       const companiesData = await getCompanies();
+      const fileActivityLogs = await getAuditLogs({ limit: 200 }); // Fetch recent logs for dashboard
 
       console.log('Registros cargados:', recordsData);
-      console.log('Primer registro:', recordsData[0]);
 
       setRecords(recordsData);
+      // We can store file logs in a new state or merge for specific charts
+      // Let's store them for the dashboard widgets
+      setFileLogs(fileActivityLogs);
+
       if (!workersData.error) setWorkers(workersData.data || []);
       setCompanies(companiesData);
 
@@ -219,7 +227,7 @@ export default function AdminPage() {
       setAttendanceRecords(attRecords);
     } catch (error) {
       console.error("Error cargando datos:", error);
-      setMessage("Error al cargar los datos. Por favor recalga la página.");
+      setMessage("Error al cargar los datos. Por favor recarga la página.");
     } finally {
       setLoading(false);
     }
@@ -1140,6 +1148,86 @@ export default function AdminPage() {
                       </div>
                     </div>
 
+                    {/* NUEVO: Estadísticas de Actividad de Archivos (OneDrive) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Top Empresas por Archivos */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <Folder className="w-5 h-5" /> Movimientos por Empresa (OneDrive)
+                        </h3>
+                        {(() => {
+                          // Inline calculation for file stats
+                          const filesByCompany = {};
+                          fileLogs.forEach(log => {
+                            const company = log.company_name || 'Desconocido/Sin Empresa';
+                            filesByCompany[company] = (filesByCompany[company] || 0) + 1;
+                          });
+                          const topFilesCompany = Object.entries(filesByCompany)
+                            .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, count, fullName: name }))
+                            .sort((a, b) => b.count - a.count)
+                            .slice(0, 8);
+
+                          return topFilesCompany.length === 0 ? (
+                            <p style={{ color: theme.textSecondary }}>No hay actividad de archivos</p>
+                          ) : (
+                            <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={topFilesCompany} layout="vertical" margin={{ left: 20, right: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                                <XAxis type="number" stroke={theme.textSecondary} />
+                                <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                                <Tooltip
+                                  contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                                  formatter={(value) => [`${value}`, 'Movimientos']}
+                                />
+                                <Bar dataKey="count" fill="#e67e22" radius={[0, 4, 4, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Top Funcionarios por Archivos */}
+                      <div
+                        className="rounded-xl shadow-lg p-6"
+                        style={{ background: theme.surface }}
+                      >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
+                          <Users className="w-5 h-5" /> Actividad por Funcionario (OneDrive)
+                        </h3>
+                        {(() => {
+                          const filesByWorker = {};
+                          fileLogs.forEach(log => {
+                            const worker = log.worker_name || 'Desconocido';
+                            filesByWorker[worker] = (filesByWorker[worker] || 0) + 1;
+                          });
+                          const topFilesWorker = Object.entries(filesByWorker)
+                            .map(([name, count]) => ({ name, count }))
+                            .sort((a, b) => b.count - a.count)
+                            .slice(0, 8);
+
+                          return topFilesWorker.length === 0 ? (
+                            <p style={{ color: theme.textSecondary }}>No hay actividad de archivos</p>
+                          ) : (
+                            <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={topFilesWorker} layout="vertical" margin={{ left: 20, right: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
+                                <XAxis type="number" stroke={theme.textSecondary} />
+                                <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
+                                <Tooltip
+                                  contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                                  formatter={(value) => [`${value}`, 'Movimientos']}
+                                />
+                                <Bar dataKey="count" fill="#9b59b6" radius={[0, 4, 4, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
                     {/* Distribución y Actividades Recientes */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Distribución por Tipo */}
@@ -1225,140 +1313,143 @@ export default function AdminPage() {
                 );
               })()}
             </div>
-          )}
+          )
+          }
 
           {/* TAB: REPORTES */}
-          {activeTab === 'reportes' && (
-            <div className="animate-fade-in">
-              <div
-                className="rounded-xl shadow-lg p-4 md:p-6 mb-6 overflow-x-auto"
-                style={{ background: theme.surface }}
-              >
-                <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
-                    <input
-                      type="datetime-local"
-                      value={reportFilters.startDate}
-                      onChange={(e) => setReportFilters({ ...reportFilters, startDate: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">Hasta</label>
-                    <input
-                      type="datetime-local"
-                      value={reportFilters.endDate}
-                      onChange={(e) => setReportFilters({ ...reportFilters, endDate: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
-                    <select
-                      value={reportFilters.worker}
-                      onChange={(e) => setReportFilters({ ...reportFilters, worker: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text
-                      }}
-                    >
-                      <option value="">Todos</option>
-                      {workersList.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      onClick={generateReport}
-                      className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold cursor-pointer text-sm md:text-base"
-                      style={{ background: theme.primary }}
-                    >
-                      <Calendar className="w-4 h-4" /> <span className="hidden sm:inline">Generar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {reportData && (
+          {
+            activeTab === 'reportes' && (
+              <div className="animate-fade-in">
                 <div
-                  className="rounded-xl shadow-lg p-6"
+                  className="rounded-xl shadow-lg p-4 md:p-6 mb-6 overflow-x-auto"
                   style={{ background: theme.surface }}
                 >
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">Resultados</h2>
-                    <button
-                      onClick={exportReport}
-                      className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                      style={{ background: '#27ae60' }}
-                    >
-                      <Download className="w-4 h-4" /> Exportar CSV
-                    </button>
-                  </div>
+                  <h2 className="text-lg md:text-xl font-bold mb-4">Generar Reporte</h2>
 
-                  <div className="grid md:grid-cols-3 gap-4 mb-6">
-                    <StatsCard number={reportData.summary.total} label="Actividades" bgColor={theme.primary} />
-                    <StatsCard number={reportData.summary.hours} label="Horas" bgColor={theme.primary} />
-                    <StatsCard number={reportData.summary.workers} label="Funcionarios" bgColor={theme.primary} />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <label className="block font-semibold mb-2 text-sm md:text-base">Desde</label>
+                      <input
+                        type="datetime-local"
+                        value={reportFilters.startDate}
+                        onChange={(e) => setReportFilters({ ...reportFilters, startDate: e.target.value })}
+                        className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
+                        style={{
+                          borderColor: theme.border,
+                          background: isDark ? '#0f1419' : '#fff',
+                          color: theme.text
+                        }}
+                      />
+                    </div>
 
-                  {reportData.records.length === 0 ? (
-                    <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                      No hay actividades en ese período
+                    <div>
+                      <label className="block font-semibold mb-2 text-sm md:text-base">Hasta</label>
+                      <input
+                        type="datetime-local"
+                        value={reportFilters.endDate}
+                        onChange={(e) => setReportFilters({ ...reportFilters, endDate: e.target.value })}
+                        className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none text-sm md:text-base"
+                        style={{
+                          borderColor: theme.border,
+                          background: isDark ? '#0f1419' : '#fff',
+                          color: theme.text
+                        }}
+                      />
                     </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="text-white" style={{ background: theme.primary }}>
-                          <tr>
-                            <th className="px-4 py-3 text-left">Funcionario</th>
-                            <th className="px-4 py-3 text-left">Empresa</th>
-                            <th className="px-4 py-3 text-left">Inicio</th>
-                            <th className="px-4 py-3 text-left">Fin</th>
-                            <th className="px-4 py-3 text-left">Horas</th>
-                            <th className="px-4 py-3 text-left">Descripción</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.records.map(record => (
-                            <tr key={record.id} className="border-b" style={{ borderColor: theme.border }}>
-                              <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
-                              <td className="px-4 py-3">{record.company_name}</td>
-                              <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
-                              <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
-                              <td className="px-4 py-3">
-                                <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ background: theme.primary }}>
-                                  {record.hours_worked}h
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 max-w-xs truncate">{record.description}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+
+                    <div>
+                      <label className="block font-semibold mb-2 text-sm md:text-base">Funcionario</label>
+                      <select
+                        value={reportFilters.worker}
+                        onChange={(e) => setReportFilters({ ...reportFilters, worker: e.target.value })}
+                        className="w-full px-4 py-2 rounded-lg border-2 focus:outline-none cursor-pointer text-sm md:text-base"
+                        style={{
+                          borderColor: theme.border,
+                          background: isDark ? '#0f1419' : '#fff',
+                          color: theme.text
+                        }}
+                      >
+                        <option value="">Todos</option>
+                        {workersList.map(w => <option key={w} value={w}>{w}</option>)}
+                      </select>
                     </div>
-                  )}
+
+                    <div className="flex items-end">
+                      <button
+                        onClick={generateReport}
+                        className="w-full text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center justify-center gap-2 font-semibold cursor-pointer text-sm md:text-base"
+                        style={{ background: theme.primary }}
+                      >
+                        <Calendar className="w-4 h-4" /> <span className="hidden sm:inline">Generar</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
 
-            </div>
-          )}
+                {reportData && (
+                  <div
+                    className="rounded-xl shadow-lg p-6"
+                    style={{ background: theme.surface }}
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold">Resultados</h2>
+                      <button
+                        onClick={exportReport}
+                        className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
+                        style={{ background: '#27ae60' }}
+                      >
+                        <Download className="w-4 h-4" /> Exportar CSV
+                      </button>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4 mb-6">
+                      <StatsCard number={reportData.summary.total} label="Actividades" bgColor={theme.primary} />
+                      <StatsCard number={reportData.summary.hours} label="Horas" bgColor={theme.primary} />
+                      <StatsCard number={reportData.summary.workers} label="Funcionarios" bgColor={theme.primary} />
+                    </div>
+
+                    {reportData.records.length === 0 ? (
+                      <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
+                        No hay actividades en ese período
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="text-white" style={{ background: theme.primary }}>
+                            <tr>
+                              <th className="px-4 py-3 text-left">Funcionario</th>
+                              <th className="px-4 py-3 text-left">Empresa</th>
+                              <th className="px-4 py-3 text-left">Inicio</th>
+                              <th className="px-4 py-3 text-left">Fin</th>
+                              <th className="px-4 py-3 text-left">Horas</th>
+                              <th className="px-4 py-3 text-left">Descripción</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportData.records.map(record => (
+                              <tr key={record.id} className="border-b" style={{ borderColor: theme.border }}>
+                                <td className="px-4 py-3 font-semibold">{record.worker_name}</td>
+                                <td className="px-4 py-3">{record.company_name}</td>
+                                <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
+                                <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
+                                <td className="px-4 py-3">
+                                  <span className="px-2 py-1 rounded text-white text-xs font-semibold" style={{ background: theme.primary }}>
+                                    {record.hours_worked}h
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 max-w-xs truncate">{record.description}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            )
+          }
 
           {/* TAB: ARCHIVOS ONEDRIVE */}
           {/* TAB: ARCHIVOS ONEDRIVE */}
@@ -1372,141 +1463,143 @@ export default function AdminPage() {
               <OneDriveContainer />
             </div>
           </div>
-        </div>
+        </div >
 
         {/* Modal de detalle de registro */}
-        {selectedRecord && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
-            style={{ background: 'rgba(0,0,0,0.7)' }}
-            onClick={() => setSelectedRecord(null)}
-          >
+        {
+          selectedRecord && (
             <div
-              className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
-              style={{ background: theme.surface }}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
+              style={{ background: 'rgba(0,0,0,0.7)' }}
+              onClick={() => setSelectedRecord(null)}
             >
-              {/* Header del modal */}
-              <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-                <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
-                  Detalle de Actividad
-                </h2>
-                <button
-                  onClick={() => setSelectedRecord(null)}
-                  className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
-                  style={{ background: isDark ? '#333' : '#eee' }}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Contenido del modal */}
-              <div className="p-6 space-y-6">
-                {/* Información del registro */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
-                    <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
-                  </div>
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
-                    <p className="text-lg font-bold">{selectedRecord.company_name}</p>
-                  </div>
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
-                    <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
-                  </div>
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
-                    <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
-                  </div>
-                  <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
-                    <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
-                    <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
-                  </div>
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
-                    <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
-                  </div>
+              <div
+                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
+                style={{ background: theme.surface }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header del modal */}
+                <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+                  <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                    Detalle de Actividad
+                  </h2>
+                  <button
+                    onClick={() => setSelectedRecord(null)}
+                    className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
+                    style={{ background: isDark ? '#333' : '#eee' }}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Descripción */}
-                <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                  <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
-                  <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+                {/* Contenido del modal */}
+                <div className="p-6 space-y-6">
+                  {/* Información del registro */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
+                      <p className="text-lg font-bold">{selectedRecord.worker_name}</p>
+                    </div>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
+                      <p className="text-lg font-bold">{selectedRecord.company_name}</p>
+                    </div>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
+                      <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
+                    </div>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
+                      <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
+                    </div>
+                    <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
+                      <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
+                      <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
+                    </div>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
+                      <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
+                    </div>
+                  </div>
+
+                  {/* Descripción */}
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
+                    <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+                  </div>
+
+                  {/* Visor de archivo */}
+                  {selectedRecord.file_url ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
+                        <a
+                          href={selectedRecord.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
+                          style={{ background: theme.primary }}
+                        >
+                          <Download className="w-4 h-4" /> Descargar
+                        </a>
+                      </div>
+                      <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
+                        {/* Visor según tipo de archivo */}
+                        {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                          <img
+                            src={selectedRecord.file_url}
+                            alt="Archivo adjunto"
+                            className="w-full max-h-96 object-contain"
+                          />
+                        ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
+                          <iframe
+                            src={selectedRecord.file_url}
+                            className="w-full h-96"
+                            title="Vista previa PDF"
+                          />
+                        ) : (
+                          /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
+                          <iframe
+                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
+                            className="w-full h-96"
+                            title="Vista previa documento"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                      <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Visor de archivo */}
-                {selectedRecord.file_url ? (
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
-                      <a
-                        href={selectedRecord.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
-                        style={{ background: theme.primary }}
-                      >
-                        <Download className="w-4 h-4" /> Descargar
-                      </a>
-                    </div>
-                    <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
-                      {/* Visor según tipo de archivo */}
-                      {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                        <img
-                          src={selectedRecord.file_url}
-                          alt="Archivo adjunto"
-                          className="w-full max-h-96 object-contain"
-                        />
-                      ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
-                        <iframe
-                          src={selectedRecord.file_url}
-                          className="w-full h-96"
-                          title="Vista previa PDF"
-                        />
-                      ) : (
-                        /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
-                        <iframe
-                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
-                          className="w-full h-96"
-                          title="Vista previa documento"
-                        />
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                    <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer del modal */}
-              <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-                <button
-                  onClick={() => {
-                    handleDeleteRecord(selectedRecord.id);
-                    setSelectedRecord(null);
-                  }}
-                  className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
-                  style={{ background: '#e74c3c' }}
-                >
-                  <Trash2 className="w-4 h-4" /> Eliminar
-                </button>
-                <button
-                  onClick={() => setSelectedRecord(null)}
-                  className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
-                  style={{ background: theme.primary, color: 'white' }}
-                >
-                  Cerrar
-                </button>
+                {/* Footer del modal */}
+                <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+                  <button
+                    onClick={() => {
+                      handleDeleteRecord(selectedRecord.id);
+                      setSelectedRecord(null);
+                    }}
+                    className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
+                    style={{ background: '#e74c3c' }}
+                  >
+                    <Trash2 className="w-4 h-4" /> Eliminar
+                  </button>
+                  <button
+                    onClick={() => setSelectedRecord(null)}
+                    className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
+                    style={{ background: theme.primary, color: 'white' }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
-    </div>
+          )
+        }
+      </main >
+    </div >
   );
 }
 

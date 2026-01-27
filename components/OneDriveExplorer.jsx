@@ -1073,7 +1073,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                         onDragOver={isDropTarget ? (e) => handleDragOver(e, item) : undefined}
                                         onDragLeave={isDropTarget ? handleDragLeave : undefined}
                                         onDrop={isDropTarget ? (e) => handleDrop(e, item) : undefined}
-                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col overflow-hidden bg-white dark:bg-gray-800 border dark:border-gray-700
+                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col bg-white dark:bg-gray-800 border dark:border-gray-700
                                         ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}
                                         ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 dark:bg-blue-900/20' : ''}
                                         ${isDraggable ? 'cursor-move' : ''}`}
