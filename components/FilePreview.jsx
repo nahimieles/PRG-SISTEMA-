@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Download, ExternalLink, FileText, Image as ImageIcon, File, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, Download, ExternalLink, FileText, Image as ImageIcon, File, Loader2, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getPreviewUrl } from '@/lib/onedriveService';
