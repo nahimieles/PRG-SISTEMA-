@@ -502,8 +502,12 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     const handleDelete = async (item) => {
         if (role === 'worker') return alert("No tienes permisos para eliminar.");
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;
+
+        console.log('Deleting item:', item);
+
         try {
             if (item.type === 'group') {
+                console.log('Item is a group, calling deleteGroup with ID:', item.id);
                 await deleteGroup(item.id);
             } else {
                 await deleteItem(item.id, effectiveDriveId);
@@ -516,7 +520,10 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 });
             }
             loadContent();
-        } catch (e) { alert("Error al eliminar"); }
+        } catch (e) {
+            console.error("Error deleting:", e);
+            alert(`Error al eliminar: ${e.message || 'Error desconocido'}`);
+        }
     };
 
     const handleRename = async (item) => {

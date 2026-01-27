@@ -250,6 +250,34 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                             <ExternalLink size={18} style={{ color: theme.text }} />
                         </button>
                         <button
+                            onClick={() => {
+                                setLoading(true);
+                                setError(null);
+                                setPreviewUrl(null);
+                                setTimeout(() => {
+                                    // Trigger reload by resetting state
+                                    const loadPreview = async () => {
+                                        try {
+                                            const fileType = getFileType();
+                                            if (['word', 'excel', 'powerpoint', 'pdf'].includes(fileType)) {
+                                                const url = await getPreviewUrl(file.id, driveId);
+                                                setPreviewUrl(url || file.webUrl);
+                                            }
+                                            setLoading(false);
+                                        } catch (e) {
+                                            console.error(e);
+                                            setLoading(false);
+                                        }
+                                    };
+                                    loadPreview();
+                                }, 100);
+                            }}
+                            className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                            title="Recargar vista previa"
+                        >
+                            <RefreshCw size={18} style={{ color: theme.text }} />
+                        </button>
+                        <button
                             onClick={onClose}
                             className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 transition-colors"
                             title="Cerrar"
