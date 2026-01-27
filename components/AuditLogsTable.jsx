@@ -66,7 +66,7 @@ export default function AuditLogsTable() {
     };
 
     return (
-        <div className="animate-fade-in max-w-4xl mx-auto">
+        <div className="animate-fade-in max-w-4xl mx-auto mb-8">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h3 className="text-xl font-bold" style={{ color: theme.text }}>Actividad Reciente</h3>

@@ -14,7 +14,8 @@ import {
     LogOut,
     Menu,
     X,
-    ChevronLeft
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
@@ -32,6 +33,7 @@ export default function Sidebar({
     const theme = isDark ? darkTheme : lightTheme;
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     // Iconos por defecto según el id del item
     const defaultIcons = {
@@ -41,14 +43,14 @@ export default function Sidebar({
         empresas: Building2,
         dashboards: PieChart,
         reportes: Calendar,
-        dashboard: LayoutDashboard
+        dashboard: LayoutDashboard,
+        archivos: FileText
     };
 
-    const sidebarBg = isDark ? '#0d1117' : '#1e293b';
-    const sidebarItemBg = isDark ? 'rgba(32, 59, 112, 0.4)' : 'rgba(255, 255, 255, 0.1)';
-    const sidebarItemHover = isDark ? 'rgba(32, 59, 112, 0.6)' : 'rgba(255, 255, 255, 0.15)';
+    const sidebarBg = isDark ? '#0d1117' : '#0f172a';
+    const sidebarItemBg = isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)';
 
-    const renderMenuItem = (item, index) => {
+    const renderMenuItem = (item, index, expanded = true) => {
         const Icon = item.icon || defaultIcons[item.id] || FileText;
         const isActive = activeTab === item.id;
 
@@ -63,51 +65,60 @@ export default function Sidebar({
                     }
                     setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer group"
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer group ${expanded ? '' : 'justify-center'}`}
                 style={{
                     background: isActive ? sidebarItemBg : 'transparent',
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
-                    borderLeft: isActive ? '3px solid #d4af37' : '3px solid transparent'
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.6)',
                 }}
+                title={!expanded ? item.label : undefined}
             >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="font-medium text-sm">{item.label}</span>
+                <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}`} />
+                {expanded && (
+                    <span className={`font-medium text-sm transition-colors ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
+                        {item.label}
+                    </span>
+                )}
             </button>
         );
     };
 
-    const SidebarContent = () => (
+    const SidebarContent = ({ expanded = true }) => (
         <>
-            {/* Logo - cropped to remove extra whitespace */}
-            <div className="p-2 mb-2 flex justify-center overflow-hidden" style={{ height: '80px' }}>
-                <img
-                    src="/Sin título-1-08.png"
-                    alt="Logo PRG"
-                    className="h-24 w-auto object-cover object-top"
-                    style={{ marginTop: '-8px' }}
-                />
+            {/* Logo/Brand */}
+            <div className={`flex items-center ${expanded ? 'px-4 py-5' : 'justify-center py-4'}`}>
+                <div className={`flex items-center gap-3 ${expanded ? '' : 'flex-col'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                        <Building2 className="w-6 h-6 text-white" />
+                    </div>
+                    {expanded && (
+                        <div>
+                            <h1 className="text-white font-bold text-lg">PRG</h1>
+                            <p className="text-gray-400 text-xs">Sistema de Gestión</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Navegación */}
-            <nav className="flex-1 px-3 space-y-1">
-                {items.map(renderMenuItem)}
+            <nav className={`flex-1 ${expanded ? 'px-3' : 'px-2'} space-y-1 mt-2`}>
+                {items.map((item, index) => renderMenuItem(item, index, expanded))}
             </nav>
 
             {/* Separador */}
-            <div className="border-t border-gray-700 mx-4 my-4"></div>
+            <div className="border-t border-gray-700/50 mx-4 my-4"></div>
 
             {/* Sección inferior */}
-            <div className="px-3 pb-4 space-y-2">
+            <div className={`${expanded ? 'px-3' : 'px-2'} pb-4 space-y-2`}>
                 {/* Usuario */}
-                {userName && (
-                    <div className="px-4 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                {userName && expanded && (
+                    <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
                         <p className="text-white font-medium text-sm truncate">Hola, {userName}</p>
                     </div>
                 )}
 
                 {/* Tema */}
-                <div className="flex items-center justify-between px-4 py-2">
-                    <span className="text-sm text-gray-400">Tema</span>
+                <div className={`flex items-center ${expanded ? 'justify-between px-4' : 'justify-center'} py-2`}>
+                    {expanded && <span className="text-sm text-gray-400">Tema</span>}
                     <ThemeToggle />
                 </div>
 
@@ -115,10 +126,11 @@ export default function Sidebar({
                 {showBackButton && (
                     <Link
                         href="/"
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-gray-400 hover:text-white hover:bg-gray-700/50"
+                        className={`w-full flex items-center ${expanded ? 'gap-3 px-4' : 'justify-center'} py-3 rounded-xl transition-all cursor-pointer text-gray-400 hover:text-white hover:bg-gray-700/30`}
+                        title={!expanded ? 'Volver al inicio' : undefined}
                     >
                         <ChevronLeft className="w-5 h-5" />
-                        <span className="text-sm">Volver al inicio</span>
+                        {expanded && <span className="text-sm">Volver al inicio</span>}
                     </Link>
                 )}
 
@@ -126,10 +138,11 @@ export default function Sidebar({
                 {onLogout && (
                     <button
                         onClick={onLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        className={`w-full flex items-center ${expanded ? 'gap-3 px-4' : 'justify-center'} py-3 rounded-xl transition-all cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-500/10`}
+                        title={!expanded ? 'Cerrar Sesión' : undefined}
                     >
                         <LogOut className="w-5 h-5" />
-                        <span className="text-sm font-medium">Cerrar Sesión</span>
+                        {expanded && <span className="text-sm font-medium">Cerrar Sesión</span>}
                     </button>
                 )}
             </div>
@@ -138,12 +151,26 @@ export default function Sidebar({
 
     return (
         <>
-            {/* Sidebar Desktop */}
+            {/* Sidebar Desktop - Collapsible on hover */}
             <aside
-                className="hidden lg:flex flex-col fixed left-0 top-0 h-full w-64 z-40"
-                style={{ background: sidebarBg }}
+                className="hidden lg:flex flex-col fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out"
+                style={{
+                    background: sidebarBg,
+                    width: isExpanded ? '256px' : '72px',
+                    boxShadow: '4px 0 24px rgba(0,0,0,0.15)'
+                }}
+                onMouseEnter={() => setIsExpanded(true)}
+                onMouseLeave={() => setIsExpanded(false)}
             >
-                <SidebarContent />
+                <SidebarContent expanded={isExpanded} />
+
+                {/* Expand indicator */}
+                <div
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-6 h-6 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center cursor-pointer hover:bg-gray-600 transition-colors"
+                    style={{ opacity: isExpanded ? 0 : 0.7 }}
+                >
+                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                </div>
             </aside>
 
             {/* Mobile Header */}
@@ -152,11 +179,10 @@ export default function Sidebar({
                 style={{ background: sidebarBg }}
             >
                 <div className="flex items-center gap-3">
-                    <img
-                        src="/Sin título-1-08.png"
-                        alt="Logo PRG"
-                        className="w-14 h-10 object-cover object-top"
-                    />
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-white font-bold">PRG</span>
                 </div>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -169,7 +195,7 @@ export default function Sidebar({
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 z-40 bg-black/50"
+                    className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
@@ -180,7 +206,7 @@ export default function Sidebar({
                     }`}
                 style={{ background: sidebarBg }}
             >
-                <SidebarContent />
+                <SidebarContent expanded={true} />
             </aside>
 
             {/* Spacer for mobile header */}

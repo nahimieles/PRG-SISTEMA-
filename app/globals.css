@@ -284,7 +284,8 @@ tbody tr {
 
 @media (min-width: 1024px) {
   .dashboard-content {
-    margin-left: 256px;
+    margin-left: 72px;
+    /* Collapsed sidebar width */
   }
 }
 
