@@ -127,6 +127,9 @@ export default function AdminPage() {
   // Estado para modal de detalle de registro
   const [selectedRecord, setSelectedRecord] = useState(null);
 
+  // Estado para controlar la expansión del sidebar
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
 
   const handleCloseAlertsWidget = () => {
     setClosingAlerts(true);
@@ -535,8 +538,6 @@ export default function AdminPage() {
   const adminSession = getAdminSession();
   const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
 
-  // Estado para controlar la expansión del sidebar
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   return (
     <div className="dashboard-layout">

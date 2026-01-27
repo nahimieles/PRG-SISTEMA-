@@ -27,7 +27,10 @@ export default function Sidebar({
     onTabChange,
     userName = '',
     onLogout,
-    showBackButton = true
+    userName = '',
+    onLogout,
+    showBackButton = true,
+    onHoverChange // Add this
 }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -165,11 +168,11 @@ export default function Sidebar({
                 }}
                 onMouseEnter={() => {
                     setIsExpanded(true);
-                    if (props.onHoverChange) props.onHoverChange(true);
+                    if (onHoverChange) onHoverChange(true);
                 }}
                 onMouseLeave={() => {
                     setIsExpanded(false);
-                    if (props.onHoverChange) props.onHoverChange(false);
+                    if (onHoverChange) onHoverChange(false);
                 }}
             >
                 <SidebarContent expanded={isExpanded} />
