@@ -8,6 +8,7 @@ import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste, Plus, Image as ImageIcon, Settings } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
+import { initializeChangeDetection } from '@/lib/changeDetectionService';
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSharePointData } from "@/contexts/SharePointContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
@@ -38,6 +39,14 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     // Derived driveId from current path (or props if locked)
     const effectiveDriveId = currentPath.driveId || propDriveId;
+
+    // Auto-start change detection when entering a drive
+    useEffect(() => {
+        if (effectiveDriveId) {
+            console.log('Initializing change detection for drive:', effectiveDriveId);
+            initializeChangeDetection(effectiveDriveId);
+        }
+    }, [effectiveDriveId]);
 
     // State definitions
     const [items, setItems] = useState([]);
