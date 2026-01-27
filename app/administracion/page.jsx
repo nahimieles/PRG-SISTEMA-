@@ -1352,7 +1352,9 @@ export default function AdminPage() {
           )}
 
           {/* TAB: ARCHIVOS ONEDRIVE */}
-          {activeTab === 'archivos' && (
+          {/* TAB: ARCHIVOS ONEDRIVE */}
+          {/* Usamos display style para mantener el componente montado y no perder el progreso del respaldo */}
+          <div style={{ display: activeTab === 'archivos' ? 'block' : 'none' }}>
             <div className="animate-fade-in space-y-6">
               {/* Backup Panel */}
               <BackupPanel currentUser={{ full_name: adminName }} />
@@ -1360,7 +1362,7 @@ export default function AdminPage() {
               {/* OneDrive Container */}
               <OneDriveContainer />
             </div>
-          )}
+          </div>
         </div>
 
         {/* Modal de detalle de registro */}
