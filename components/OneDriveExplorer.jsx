@@ -223,18 +223,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
-    const handleCreateSPFolder = async (name) => {
-        if (role === 'worker') return alert("No tienes permisos para crear carpetas.");
-        if (!effectiveDriveId) return;
-        try {
-            const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
-            await createFolder(name, parentId, effectiveDriveId);
-            loadContent();
-        } catch (e) {
-            alert("Error creando carpeta en SharePoint");
-        }
-    };
-
     // State declarations moved to top of component for proper initialization order
 
     const handleFileUpload = async (e) => {
@@ -466,6 +454,50 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     // ... rest of render
 
+
+    // Handler for creating SharePoint folders
+    const handleCreateSPFolder = async (folderName) => {
+        if (role === 'worker') {
+            alert("No tienes permisos para crear carpetas.");
+            return;
+        }
+
+        if (!folderName || !folderName.trim()) {
+            alert("Por favor ingresa un nombre válido para la carpeta.");
+            return;
+        }
+
+        const spTarget = getCurrentSPTarget();
+        if (!spTarget || !spTarget.driveId) {
+            alert("No se puede crear carpeta aquí. No hay contexto de SharePoint.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Determine parent: if inside a folder use folder id, otherwise use 'root'
+            const parentId = currentPath.type === 'folder' ? currentPath.id : 'root';
+
+            await createFolder(parentId, folderName.trim(), spTarget.driveId);
+
+            // Log the action
+            await logAuditAction({
+                action_type: 'CREATE_FOLDER',
+                file_name: folderName.trim(),
+                file_path: currentPath.name || 'Root',
+                worker_name: currentUser?.full_name,
+                metadata: { driveId: spTarget.driveId, parentId }
+            });
+
+            // Reload content
+            loadContent();
+        } catch (error) {
+            console.error("Error creating folder:", error);
+            alert(`Error al crear la carpeta: ${error.message || 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleDelete = async (item) => {
         if (role === 'worker') return alert("No tienes permisos para eliminar.");

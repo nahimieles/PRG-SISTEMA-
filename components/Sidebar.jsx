@@ -74,7 +74,7 @@ export default function Sidebar({
             >
                 <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}`} />
                 {expanded && (
-                    <span className={`font-medium text-sm transition-colors ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
+                    <span className={`font-medium text-sm transition-all duration-300 ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
                         {item.label}
                     </span>
                 )}
@@ -85,13 +85,17 @@ export default function Sidebar({
     const SidebarContent = ({ expanded = true }) => (
         <>
             {/* Logo/Brand */}
-            <div className={`flex items-center ${expanded ? 'px-4 py-5' : 'justify-center py-4'}`}>
+            <div className={`flex items-center ${expanded ? 'px-4 py-4' : 'justify-center py-4'} transition-all duration-300`}>
                 <div className={`flex items-center gap-3 ${expanded ? '' : 'flex-col'}`}>
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                        <Building2 className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0 transition-transform duration-300 hover:scale-105">
+                        <img
+                            src="/Sin título-1-08.png"
+                            alt="PRG Logo"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                     {expanded && (
-                        <div>
+                        <div className="animate-fade-in">
                             <h1 className="text-white font-bold text-lg">PRG</h1>
                             <p className="text-gray-400 text-xs">Sistema de Gestión</p>
                         </div>
