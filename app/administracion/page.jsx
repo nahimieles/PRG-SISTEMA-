@@ -554,6 +554,65 @@ export default function AdminPage() {
       >
         <div className="max-w-7xl mx-auto">
 
+          {/* Professional Header Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+            {/* Title Section */}
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: theme.text }}>
+                {activeTab === 'dashboards' && 'Panel de Control'}
+                {activeTab === 'reportes' && 'Actividad Reciente'}
+                {activeTab === 'funcionarios' && 'Gestión de Funcionarios'}
+                {activeTab === 'archivos' && 'Archivos y Respaldos'}
+              </h1>
+              <p className="text-sm mt-1" style={{ color: theme.textSecondary }}>
+                {activeTab === 'dashboards' && 'Estadísticas y métricas en tiempo real'}
+                {activeTab === 'reportes' && 'Últimos movimientos y acciones registradas'}
+                {activeTab === 'funcionarios' && 'Administra usuarios y permisos'}
+                {activeTab === 'archivos' && 'Gestiona archivos de SharePoint'}
+              </p>
+            </div>
+
+            {/* Right Section - Search & User */}
+            <div className="flex items-center gap-4">
+              {/* Search Bar */}
+              <div className="relative hidden md:block">
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  className="w-64 px-4 py-2.5 pl-10 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2"
+                  style={{
+                    background: theme.surface,
+                    borderColor: theme.border,
+                    color: theme.text
+                  }}
+                />
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                  style={{ color: theme.textSecondary }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* User Profile */}
+              <div
+                className="flex items-center gap-3 px-4 py-2 rounded-xl"
+                style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+              >
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                  {adminName?.charAt(0)?.toUpperCase() || 'A'}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium" style={{ color: theme.text }}>{adminName}</p>
+                  <p className="text-xs" style={{ color: theme.textSecondary }}>Administrador</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Message */}
           {message && (
             <div className="mb-6 p-4 rounded-lg text-center" style={{
