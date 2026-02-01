@@ -27,6 +27,8 @@ export default function HomePage() {
       // Redirigir según el rol
       if (session.role === 'admin') {
         router.push('/administracion');
+      } else if (session.role === 'company') {
+        router.push('/empresa');
       } else {
         router.push('/trabajadores');
       }
@@ -49,6 +51,8 @@ export default function HomePage() {
       // Redirigir según el rol
       if (result.role === 'admin') {
         router.push('/administracion');
+      } else if (result.role === 'company') {
+        router.push('/empresa');
       } else {
         router.push('/trabajadores');
       }

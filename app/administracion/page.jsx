@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -15,6 +15,7 @@ import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import AuditLogsTable from '../../components/AuditLogsTable';
+import Toast from '../../components/Toast';
 
 // Dynamic imports for MSAL-dependent components to avoid SSR issues
 import { getAuditLogs } from '../../lib/audit'; // Added import
@@ -23,6 +24,9 @@ import { getAuditLogs } from '../../lib/audit'; // Added import
 const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
 const SmartReportGenerator = dynamic(() => import('../../components/SmartReportGenerator'), { ssr: false });
 const BackupPanel = dynamic(() => import('../../components/BackupPanel'), { ssr: false });
+const CourseEditor = dynamic(() => import('../../components/CourseEditor'), { ssr: false });
+const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
+const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
 
 export default function AdminPage() {
   const router = useRouter();
@@ -34,12 +38,15 @@ export default function AdminPage() {
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
-    { id: 'archivos', label: 'Archivos', icon: FileText }
+    { id: 'empresas', label: 'Empresas', icon: Building2 },
+    { id: 'archivos', label: 'Archivos', icon: FileText },
+    { id: 'cursos', label: 'Cursos', icon: MonitorPlay }
 
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
 
   // Initialize activeTab from URL hash or default to 'dashboards'
   const [activeTab, setActiveTab] = useState('dashboards');
@@ -48,7 +55,7 @@ export default function AdminPage() {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'reportes', 'funcionarios', 'archivos', 'empresas'].includes(hash)) {
+      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -61,7 +68,12 @@ export default function AdminPage() {
       window.location.hash = tabId;
     }
   };
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(null); // { text, type }
+
+  const showToast = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 3000);
+  };
 
   // Estado para actividades
   const [records, setRecords] = useState([]);
@@ -129,10 +141,26 @@ export default function AdminPage() {
   const [deleteMode, setDeleteMode] = useState(false);
 
   // Estado para modal de detalle de registro
+  // Estado para modal de detalle de registro
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isViewerMode, setIsViewerMode] = useState(false);
+
 
   // Estado para controlar la expansión del sidebar
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+
+  const openConfirm = (title, action) => {
+    setConfirmModal({
+      show: true,
+      title,
+      onConfirm: async () => {
+        await action();
+        setConfirmModal({ show: false, title: '', onConfirm: null });
+      }
+    });
+  };
 
 
   const handleCloseAlertsWidget = () => {
@@ -144,6 +172,16 @@ export default function AdminPage() {
     setClosingQuality(true);
     setTimeout(() => setShowQualityWidget(false), 400);
   };
+
+  // Auto-dismiss alerts after 5 seconds
+  useEffect(() => {
+    if (showAlertsWidget && workersWithoutReports.length > 0 && !closingAlerts) {
+      const timer = setTimeout(() => {
+        handleCloseAlertsWidget();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showAlertsWidget, workersWithoutReports.length, closingAlerts]);
 
   // Verificar sesión al montar
   useEffect(() => {
@@ -291,11 +329,12 @@ export default function AdminPage() {
     setTimeout(() => setShowUserForm(false), 1500);
   };
 
-  const handleDeleteWorker = async (id) => {
-    if (!confirm('¿Eliminar este usuario y todas sus actividades?')) return;
-    await supabase.from('audit_records').delete().eq('worker_id', id);
-    await supabase.from('workers').delete().eq('id', id);
-    loadAllData();
+  const handleDeleteWorker = (id) => {
+    openConfirm('¿Eliminar este usuario y todas sus actividades?', async () => {
+      await supabase.from('audit_records').delete().eq('worker_id', id);
+      await supabase.from('workers').delete().eq('id', id);
+      loadAllData();
+    });
   };
 
   const handleEditWorker = (worker) => {
@@ -309,17 +348,18 @@ export default function AdminPage() {
     setShowUserForm(true);
   };
 
-  const handleDeleteRecord = async (id) => {
-    if (!confirm('¿Eliminar este registro?')) return;
-    const success = await deleteRecord(id);
-    if (success) {
-      loadAllData();
-      setSelectedRecords(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-    }
+  const handleDeleteRecord = (id) => {
+    openConfirm('¿Eliminar este registro?', async () => {
+      const success = await deleteRecord(id);
+      if (success) {
+        loadAllData();
+        setSelectedRecords(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }
+    });
   };
 
   // Funciones para selección múltiple
@@ -343,18 +383,18 @@ export default function AdminPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedRecords.size === 0) return;
-    if (!confirm(`¿Eliminar ${selectedRecords.size} registros seleccionados?`)) return;
-
-    setLoading(true);
-    for (const id of selectedRecords) {
-      await deleteRecord(id);
-    }
-    setSelectedRecords(new Set());
-    setDeleteMode(false);
-    loadAllData();
-    setLoading(false);
+    openConfirm(`¿Eliminar ${selectedRecords.size} registros seleccionados?`, async () => {
+      setLoading(true);
+      for (const id of selectedRecords) {
+        await deleteRecord(id);
+      }
+      setSelectedRecords(new Set());
+      setDeleteMode(false);
+      loadAllData();
+      setLoading(false);
+    });
   };
 
   const cancelDeleteMode = () => {
@@ -396,19 +436,20 @@ export default function AdminPage() {
 
       if (error) {
         setMessage('Error al actualizar empresa: ' + error.message);
+        showToast('Error al actualizar empresa: ' + error.message, 'error');
         return;
       }
 
-      setMessage('Empresa actualizada correctamente');
+      showToast('Empresa actualizada correctamente');
       setEditingCompanyId(null);
     } else {
       // Crear nueva empresa
       const result = await addCompany(newCompany.name, newCompany.type);
 
       if (result.success) {
-        setMessage('Empresa creada correctamente');
+        showToast('Empresa creada correctamente');
       } else {
-        setMessage('Error al crear empresa');
+        showToast('Error al crear empresa', 'error');
         return;
       }
     }
@@ -418,12 +459,16 @@ export default function AdminPage() {
     setTimeout(() => setShowCompanyForm(false), 1500);
   };
 
-  const handleDeleteCompany = async (id) => {
-    if (!confirm('¿Eliminar esta empresa?')) return;
-    const success = await deleteCompany(id);
-    if (success) {
-      loadAllData();
-    }
+  const handleDeleteCompany = (id) => {
+    openConfirm('¿Eliminar esta empresa?', async () => {
+      const success = await deleteCompany(id);
+      if (success) {
+        loadAllData();
+        showToast('Empresa eliminada correctamente');
+      } else {
+        showToast('Error al eliminar empresa', 'error');
+      }
+    });
   };
 
   const handleEditCompany = (company) => {
@@ -437,7 +482,7 @@ export default function AdminPage() {
 
   const generateReport = () => {
     if (!reportFilters.startDate || !reportFilters.endDate) {
-      alert('Selecciona rango de fechas');
+      showToast('Selecciona rango de fechas', 'error');
       return;
     }
 
@@ -459,13 +504,15 @@ export default function AdminPage() {
         workers: [...new Set(filtered.map(r => r.worker_name))].length
       }
     });
+    showToast('Reporte generado');
   };
 
   const exportReport = () => {
     if (reportData && reportData.records.length > 0) {
       exportToExcel(reportData.records, 'reporte-actividades');
+      showToast('Reporte exportado a Excel');
     } else {
-      alert('No hay datos para exportar');
+      showToast('No hay datos para exportar', 'error');
     }
   };
 
@@ -542,13 +589,20 @@ export default function AdminPage() {
     return null;
   }
 
+  // MODO VISTA ESPECTADOR (FULLSCREEN)
+  if (isViewerMode) {
+    // isViewerMode can be boolean true (generic) or a company ID string
+    const previewCompanyId = typeof isViewerMode === 'string' ? isViewerMode : null;
+    return <CourseViewer adminPreview={true} companyId={previewCompanyId} onBack={() => setIsViewerMode(false)} />;
+  }
+
   // Obtener el nombre del admin
   const adminSession = getAdminSession();
   const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
 
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
       {/* Sidebar */}
       <Sidebar
         items={sidebarItems}
@@ -579,39 +633,128 @@ export default function AdminPage() {
                 {activeTab === 'dashboards' && 'Panel de Control'}
                 {activeTab === 'reportes' && 'Actividad Reciente'}
                 {activeTab === 'funcionarios' && 'Gestión de Funcionarios'}
+                {activeTab === 'empresas' && 'Gestión de Empresas'}
                 {activeTab === 'archivos' && 'Archivos y Respaldos'}
+                {activeTab === 'cursos' && 'Gestión de Cursos'}
               </h1>
               <p className="text-sm mt-1" style={{ color: theme.textSecondary }}>
                 {activeTab === 'dashboards' && 'Estadísticas y métricas en tiempo real'}
                 {activeTab === 'reportes' && 'Últimos movimientos y acciones registradas'}
                 {activeTab === 'funcionarios' && 'Administra usuarios y permisos'}
+                {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
                 {activeTab === 'archivos' && 'Gestiona archivos de SharePoint'}
+                {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
               </p>
             </div>
 
             {/* Right Section - Search & User */}
             <div className="flex items-center gap-4">
-              {/* Search Bar */}
-              <div className="relative hidden md:block">
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  className="w-64 px-4 py-2.5 pl-10 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2"
+              {/* Search Bar Removed as per user request */}
+
+              {/* Notification Center */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotificationPanel(!showNotificationPanel)}
+                  className="relative p-1.5 rounded-xl transition-all duration-200 hover:scale-105"
                   style={{
                     background: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text
+                    border: `1px solid ${theme.border}`,
+                    color: theme.textSecondary
                   }}
-                />
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: theme.textSecondary }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${workersWithoutReports.length > 0 ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20' : ''}`}>
+                    <Bell size={20} />
+                  </div>
+                  {workersWithoutReports.length > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-[#1a1f2e] animate-pulse">
+                      {workersWithoutReports.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown Panel */}
+                {showNotificationPanel && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowNotificationPanel(false)}
+                    />
+
+                    {/* Panel */}
+                    <div
+                      className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl z-50 overflow-hidden toast-enter"
+                      style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                    >
+                      {/* Header */}
+                      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
+                        <div className="flex items-center gap-2">
+                          <Bell size={18} className="text-blue-500" />
+                          <h3 className="font-bold" style={{ color: theme.text }}>Centro de Notificaciones</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowNotificationPanel(false)}
+                          className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+                          style={{ color: theme.textSecondary }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {/* Content */}
+                      <div className="max-h-80 overflow-y-auto">
+                        {workersWithoutReports.length > 0 ? (
+                          <div className="divide-y" style={{ borderColor: theme.border }}>
+                            {workersWithoutReports.map((worker, i) => (
+                              <div
+                                key={i}
+                                className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-3"
+                                onClick={() => {
+                                  setShowNotificationPanel(false);
+                                  handleTabChange('funcionarios');
+                                }}
+                              >
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                                  {worker.name?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate" style={{ color: theme.text }}>{worker.name}</p>
+                                  <p className="text-sm" style={{ color: theme.textSecondary }}>
+                                    Sin reportes hace <span className="font-semibold text-blue-500">{worker.days} días</span>
+                                  </p>
+                                </div>
+                                <AlertCircle size={16} className="text-blue-500 flex-shrink-0" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center">
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
+                              <UserCheck size={32} className="text-green-500" />
+                            </div>
+                            <p className="font-medium" style={{ color: theme.text }}>¡Todo en orden!</p>
+                            <p className="text-sm mt-1" style={{ color: theme.textSecondary }}>No hay notificaciones pendientes</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      {workersWithoutReports.length > 0 && (
+                        <div className="p-3 border-t" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
+                          <button
+                            onClick={() => {
+                              setShowNotificationPanel(false);
+                              handleTabChange('funcionarios');
+                            }}
+                            className="w-full py-2 px-4 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium text-sm hover:opacity-90 transition-opacity"
+                          >
+                            Ver todos los funcionarios
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* User Profile */}
@@ -630,52 +773,51 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Message */}
+          {/* Toast Notification */}
           {message && (
-            <div className="mb-6 p-4 rounded-lg text-center" style={{
-              background: message.includes('correctamente') ? '#d4edda' : '#f8d7da',
-              color: message.includes('correctamente') ? '#155724' : '#721c24'
-            }}>
-              {message}
-            </div>
+            <Toast
+              message={message.text}
+              type={message.type}
+              onClose={() => setMessage(null)}
+            />
           )}
 
 
 
-          {/* WIDGETS COMPACTOS (Notificaciones) */}
-          <div className="flex flex-col gap-2 mb-6">
-
-            {/* ALERTAS COMPACTAS */}
-            {showAlertsWidget && workersWithoutReports.length > 0 && !closingAlerts && (
-              <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-900 p-4 mb-6 rounded shadow-sm flex flex-col gap-2 relative animate-fade-in">
+          {/* TOAST NOTIFICATION - Fixed position top-right */}
+          {showAlertsWidget && workersWithoutReports.length > 0 && (
+            <div
+              className={`fixed top-4 right-4 z-50 max-w-sm ${closingAlerts ? 'toast-exit' : 'toast-enter'}`}
+              style={{ marginRight: isSidebarExpanded ? '0' : '0' }}
+            >
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 backdrop-blur-sm">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{workersWithoutReports.length} Funcionarios sin reportes recientes</p>
+                  <button
+                    onClick={() => {
+                      handleCloseAlertsWidget();
+                      handleTabChange('funcionarios');
+                    }}
+                    className="text-xs text-white/80 hover:text-white underline mt-0.5 transition-colors"
+                  >
+                    Ver detalles
+                  </button>
+                </div>
                 <button
-                  onClick={() => setClosingAlerts(true)}
-                  className="absolute top-2 right-2 text-amber-400 hover:text-amber-600"
+                  onClick={handleCloseAlertsWidget}
+                  className="p-1 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
                 >
                   <X size={16} />
                 </button>
-                <div className="flex items-center gap-2 font-semibold">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                  <span className="text-amber-900">{workersWithoutReports.length} Funcionarios sin reportes recientes</span>
-                  <button onClick={() => setShowAlertDetails(!showAlertDetails)} className="text-sm underline text-amber-700 hover:text-amber-900 ml-auto">
-                    {showAlertDetails ? 'Ocultar detalles' : 'Ver detalles'}
-                  </button>
-                </div>
-
-                {showAlertDetails && (
-                  <div className="mt-2 space-y-2 pl-7">
-                    {workersWithoutReports.map((worker, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm bg-white/50 p-2 rounded">
-                        <span className="text-gray-800 font-medium">{worker.name} ({worker.days} días)</span>
-                        <button className="text-amber-700 hover:text-amber-900 font-medium text-xs border border-amber-200 px-2 py-1 rounded hover:bg-amber-100 transition-colors">
-                          Recordar
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* WIDGETS COMPACTOS (Quality Issues) */}
+          <div className="flex flex-col gap-2 mb-6">
             {/* CALIDAD COMPACTA */}
             {showQualityWidget && qualityIssues.length > 0 && (
               <details className="group">
@@ -710,6 +852,20 @@ export default function AdminPage() {
           {activeTab === 'reportes' && (
             <div className="animate-fade-in">
               <AuditLogsTable />
+            </div>
+          )}
+
+          {/* TAB: CURSOS */}
+          {activeTab === 'cursos' && (
+            <div className="animate-fade-in">
+              <CourseEditor onPreview={(companyId) => setIsViewerMode(companyId || true)} />
+            </div>
+          )}
+
+          {/* TAB: EMPRESAS */}
+          {activeTab === 'empresas' && (
+            <div className="animate-fade-in">
+              <CompanyManager />
             </div>
           )}
 
@@ -852,178 +1008,6 @@ export default function AdminPage() {
                               <button
                                 onClick={() => handleDeleteWorker(worker.id)}
                                 className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                                style={{ background: '#e74c3c' }}
-                              >
-                                <Trash2 className="w-3 h-3 inline" /> Eliminar
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB: EMPRESAS */}
-          {activeTab === 'empresas' && (
-            <div className="animate-fade-in">
-              <div
-                className="rounded-xl shadow-lg p-6 mb-6"
-                style={{ background: theme.surface }}
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">{editingCompanyId ? 'Editar Empresa' : 'Crear Empresa'}</h2>
-                  <button
-                    onClick={() => {
-                      setShowCompanyForm(!showCompanyForm);
-                      if (!showCompanyForm) {
-                        setEditingCompanyId(null);
-                        setNewCompany({ name: '', type: 'auditoria' });
-                      }
-                    }}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-professional"
-                    style={{ background: theme.primary }}
-                  >
-                    <Plus className="w-4 h-4" /> {showCompanyForm ? 'Cancelar' : 'Nueva'}
-                  </button>
-                </div>
-
-                {showCompanyForm && (
-                  <form onSubmit={handleAddCompany} className="grid md:grid-cols-2 gap-4 mt-4">
-                    <input
-                      type="text"
-                      placeholder="Nombre de la empresa"
-                      value={newCompany.name}
-                      onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                      className="input-professional focus:outline-none"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
-                    <select
-                      value={newCompany.type}
-                      onChange={(e) => setNewCompany({ ...newCompany, type: e.target.value })}
-                      className="input-professional focus:outline-none cursor-pointer"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    >
-                      <option value="auditoria">Auditoría</option>
-                      <option value="contabilidad">Contabilidad</option>
-                    </select>
-                    <button
-                      type="submit"
-                      className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
-                      style={{ background: '#27ae60' }}
-                    >
-                      {editingCompanyId ? 'Actualizar Empresa' : 'Crear Empresa'}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* Búsqueda de Empresas */}
-              <div
-                className="rounded-xl shadow-lg p-4 mb-6"
-                style={{ background: theme.surface }}
-              >
-                <div className="flex gap-4 flex-wrap items-center">
-                  <div className="flex-1 min-w-[200px]">
-                    <input
-                      type="text"
-                      value={companySearchTerm}
-                      onChange={(e) => setCompanySearchTerm(e.target.value)}
-                      placeholder="Buscar empresa por nombre..."
-                      className="w-full px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
-                  </div>
-                  <select
-                    value={companyTypeFilter}
-                    onChange={(e) => setCompanyTypeFilter(e.target.value)}
-                    className="px-4 py-2 border-2 rounded-lg focus:outline-none transition-colors cursor-pointer"
-                    style={{
-                      borderColor: theme.border,
-                      background: isDark ? '#0f1419' : '#fff',
-                      color: theme.text,
-                    }}
-                  >
-                    <option value="">Todos los tipos</option>
-                    <option value="auditoria">Auditoría</option>
-                    <option value="contabilidad">Contabilidad</option>
-                  </select>
-                  <span className="text-sm" style={{ color: theme.textSecondary }}>
-                    {filteredCompanies.length} empresas
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className="rounded-xl shadow-lg overflow-hidden"
-                style={{ background: theme.surface }}
-              >
-                {filteredCompanies.length === 0 ? (
-                  <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                    No hay empresas registradas
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-white" style={{ background: theme.primary }}>
-                        <tr>
-                          <th className="px-4 py-3 text-left">Nombre</th>
-                          <th className="px-4 py-3 text-left">Tipo</th>
-                          <th className="px-4 py-3 text-left">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredCompanies.map(company => (
-                          <tr
-                            key={company.id}
-                            className="border-b hover:opacity-75 transition-opacity"
-                            style={{
-                              borderColor: theme.border,
-                              background: isDark ? 'transparent' : '#f8f9fa'
-                            }}
-                          >
-                            <td className="px-4 py-3 font-semibold">{company.name}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-2 flex-wrap">
-                                {(company.types || [company.type]).map(type => (
-                                  <span
-                                    key={type}
-                                    className="px-3 py-1 rounded-full text-white text-xs font-semibold"
-                                    style={{
-                                      background: type === 'auditoria' ? '#3498db' : '#27ae60'
-                                    }}
-                                  >
-                                    {type === 'auditoria' ? 'Auditoría' : 'Contabilidad'}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 flex gap-2">
-                              <button
-                                onClick={() => handleEditCompany(company)}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
-                                style={{ background: '#3498db' }}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCompany(company.id)}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer"
                                 style={{ background: '#e74c3c' }}
                               >
                                 <Trash2 className="w-3 h-3 inline" /> Eliminar
@@ -1456,11 +1440,40 @@ export default function AdminPage() {
           {/* Usamos display style para mantener el componente montado y no perder el progreso del respaldo */}
           <div style={{ display: activeTab === 'archivos' ? 'block' : 'none' }}>
             <div className="animate-fade-in space-y-6">
-              {/* Backup Panel */}
-              <BackupPanel currentUser={{ full_name: adminName }} />
+              {/* Tooltip-like header for small backup button */}
+              <div className="flex justify-end pr-2">
+                <button
+                  onClick={() => setShowBackupModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                  style={{ background: theme.primary }}
+                >
+                  <TrendingUp size={16} /> Respaldo Cloud
+                </button>
+              </div>
 
               {/* OneDrive Container */}
               <OneDriveContainer />
+
+              {/* Backup Modal Overlay */}
+              {showBackupModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                  <div
+                    className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-scale-up"
+                    style={{ background: theme.surface }}
+                  >
+                    <button
+                      onClick={() => setShowBackupModal(false)}
+                      className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
+                    >
+                      <X size={20} style={{ color: theme.textSecondary }} />
+                    </button>
+
+                    <div className="p-1">
+                      <BackupPanel currentUser={{ full_name: adminName }} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div >
@@ -1598,8 +1611,31 @@ export default function AdminPage() {
             </div>
           )
         }
+        {/* Custom Confirmation Modal */}
+        {confirmModal.show && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ zIndex: 110 }}>
+            <div className="bg-white dark:bg-[#1a1f2e] rounded-xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-bold mb-3" style={{ color: theme.text }}>Confirmación</h3>
+              <p className="mb-6" style={{ color: theme.textSecondary }}>{confirmModal.title}</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                  className="px-4 py-2 rounded-lg transition-colors hover:opacity-80"
+                  style={{ color: theme.textSecondary, background: theme.surface }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-md"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main >
     </div >
   );
 }
-

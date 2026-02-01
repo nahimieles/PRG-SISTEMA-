@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
-import { initializeGraphClient, getFollowedSites, getSiteDefaultDrive } from "@/lib/onedriveService";
+import { initializeGraphClient, getFollowedSites } from "@/lib/onedriveService";
 
 const SharePointContext = createContext(null);
 
@@ -30,14 +30,26 @@ export const SharePointProvider = ({ children }) => {
         setLoading(true);
         setError(null);
         try {
-            const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request).catch(async () => {
-                await instance.acquireTokenRedirect(request);
+            const request = {
+                ...loginRequest,
+                account: accounts[0]
+            };
+
+            // Try to get token silently
+            const response = await instance.acquireTokenSilent(request).catch(async (err) => {
+                console.warn("Silent token acquisition failed. Error:", err.errorCode);
+                // DO NOT trigger redirect automatically here to avoid infinite loops on localhost
+                // If silent fails, we simply won't load the sites automatically, 
+                // and the user will have to trigger a login manually if needed.
+                throw err;
             });
-            initializeGraphClient(response.accessToken);
-            const fetchedSites = await getFollowedSites();
-            setSites(fetchedSites);
-            setIsInitialized(true);
+
+            if (response && response.accessToken) {
+                initializeGraphClient(response.accessToken);
+                const fetchedSites = await getFollowedSites();
+                setSites(fetchedSites);
+                setIsInitialized(true);
+            }
         } catch (err) {
             console.error("SharePoint preload error:", err);
             setError(err.message);

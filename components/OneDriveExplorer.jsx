@@ -25,7 +25,7 @@ const normalize = (str) => {
 
 
 const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role }) => {
-    const { instance, accounts } = useMsal();
+    const { instance, accounts, inProgress } = useMsal();
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
     const { getCachedDriveId, cacheDriveId } = useSharePointData();
@@ -845,7 +845,17 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         setPreviewFile(null);
     };
 
+    // --- AUTH CHECK ---
     if (accounts.length === 0) {
+        if (inProgress !== 'none') {
+            return (
+                <div className="flex flex-col items-center justify-center p-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+                    <p className="text-gray-500 font-medium">Autenticando con Microsoft...</p>
+                </div>
+            );
+        }
+
         const handleLogin = async () => {
             try {
                 await instance.loginRedirect(loginRequest);
@@ -856,19 +866,27 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
         return (
             <div
-                className="flex flex-col items-center justify-center p-10 rounded-lg border border-dashed"
+                className="flex flex-col items-center justify-center p-10 rounded-2xl border-2 border-dashed transition-all hover:border-blue-500/50"
                 style={{ background: theme.surface, borderColor: theme.border }}
             >
-                <p className="text-lg mb-4" style={{ color: theme.textSecondary }}>Conecta tu cuenta para ver tus archivos</p>
+                <div className="p-4 bg-blue-500/10 rounded-full mb-4">
+                    <LucideIcons.Cloud size={40} className="text-blue-500" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Conectar con Microsoft</h3>
+                <p className="text-sm mb-6 text-center max-w-xs" style={{ color: theme.textSecondary }}>
+                    Necesitas vincular tu cuenta de OneDrive para acceder a los archivos y sitios de SharePoint.
+                </p>
                 <button
                     onClick={handleLogin}
-                    className="bg-[#2A5C82] text-white px-6 py-2 rounded-lg hover:bg-[#1e4a6d] transition-colors"
+                    className="bg-[#2A5C82] text-white px-8 py-3 rounded-xl hover:bg-[#1e4a6d] transition-all hover:scale-105 active:scale-95 font-bold shadow-lg flex items-center gap-2"
                 >
+                    <LucideIcons.LogIn size={20} />
                     Conectar OneDrive
                 </button>
             </div>
         );
     }
+    // ------------------
 
     return (
         <div

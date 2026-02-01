@@ -48,6 +48,7 @@ export default function FuncionariosPage() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
   const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   // Verificar sesión al montar el componente
   useEffect(() => {
@@ -222,7 +223,7 @@ export default function FuncionariosPage() {
   }
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
       {/* Sidebar */}
       <Sidebar
         items={sidebarItems}
@@ -231,12 +232,18 @@ export default function FuncionariosPage() {
         userName={currentWorker?.full_name}
         onLogout={handleLogout}
         showBackButton={false}
+        onHoverChange={setIsSidebarExpanded}
       />
 
       {/* Contenido Principal */}
       <main
-        className="dashboard-content min-h-screen transition-colors p-4 lg:p-6 page-transition scroll-smooth"
-        style={{ background: theme.background, color: theme.text }}
+        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-6 page-transition scroll-smooth"
+        style={{
+          background: theme.background,
+          color: theme.text,
+          marginLeft: isSidebarExpanded ? '256px' : '72px',
+          minHeight: '100vh'
+        }}
       >
         <div className="max-w-4xl mx-auto">
 
