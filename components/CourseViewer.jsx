@@ -2,16 +2,26 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { X, Maximize2, Minimize2, ChevronLeft, ChevronRight, MonitorPlay, CheckCircle2, User, Globe, Loader2 } from 'lucide-react';
+import { X, Maximize2, Minimize2, ChevronLeft, ChevronRight, MonitorPlay, CheckCircle2, User, Globe, Loader2, Folder, FileText } from 'lucide-react';
 import { getCompanyCourses, getCourses } from '../lib/auth';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
+
+const DEFAULT_FOLDER = 'Material PRG Auditores';
+
+const getFolderFromDescription = (desc) => {
+    if (!desc) return DEFAULT_FOLDER;
+    const match = desc.match(/^\[FOLDER:\s*(.*?)\]/);
+    return match ? match[1].trim() : DEFAULT_FOLDER;
+};
 
 export default function CourseViewer({ companyId, company, onBack, adminPreview = false }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
     const [courses, setCourses] = useState([]);
+    const [folders, setFolders] = useState([]);
+    const [currentFolder, setCurrentFolder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeCourse, setActiveCourse] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -45,6 +55,19 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
         }
 
         setCourses(data || []);
+
+        // Extract Folders
+        const uniqueFolders = new Set();
+        (data || []).forEach(c => {
+            uniqueFolders.add(getFolderFromDescription(c.description));
+        });
+        setFolders([...uniqueFolders].sort());
+
+        // AUTO-ENTER if only one folder
+        if (uniqueFolders.size === 1) {
+            setCurrentFolder([...uniqueFolders][0]);
+        }
+
         setLoading(false);
     };
 
@@ -54,13 +77,10 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
         setShowFinalScreen(false);
         setFileLoading(true);
 
-        // Multi-stage focus logic for keyboard navigation
-        // Stage 1: Immediate parent focus
         setTimeout(() => {
             if (contentRef.current) contentRef.current.focus();
         }, 50);
 
-        // Stage 2: Faster aggressive interval for the first 2 seconds
         const focusInterval = setInterval(() => {
             if (iframeRef.current && !showFinalScreen) {
                 iframeRef.current.focus();
@@ -92,25 +112,19 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
     };
 
     useEffect(() => {
-        const handleKeys = (e) => {
-            if (!activeCourse) return;
-
-            // Proxy keys to iframe if it's not focused and using arrows
-            if (!showFinalScreen && iframeRef.current &&
-                (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === 'PageUp')) {
-                if (document.activeElement !== iframeRef.current) {
+        if (activeCourse && !fileLoading && iframeRef.current) {
+            const focusIframe = () => {
+                if (iframeRef.current) {
                     iframeRef.current.focus();
+                    try { iframeRef.current.contentWindow?.focus(); } catch (e) { }
                 }
-            }
-
-            if (showFinalScreen && (e.key === 'Enter' || e.key === ' ')) {
-                closeCourse();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeys);
-        return () => window.removeEventListener('keydown', handleKeys);
-    }, [activeCourse, showFinalScreen]);
+            };
+            focusIframe();
+            const intervalId = setInterval(focusIframe, 200);
+            const timeoutId = setTimeout(() => { clearInterval(intervalId); }, 2000);
+            return () => { clearInterval(intervalId); clearTimeout(timeoutId); };
+        }
+    }, [activeCourse, fileLoading]);
 
     if (activeCourse) {
         const fileUrl = activeCourse.file_url?.toLowerCase() || '';
@@ -122,7 +136,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             if (isPdf) {
                 return `${activeCourse.file_url}#toolbar=0&view=FitH`;
             }
-            // Add other embed URL logic here if needed for other types
             return activeCourse.file_url;
         };
 
@@ -130,29 +143,23 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             <div
                 ref={contentRef}
                 tabIndex={0}
-                onFocus={() => {
-                    if (!showFinalScreen && iframeRef.current) {
-                        iframeRef.current.focus();
-                    }
-                }}
-                onClick={() => {
-                    if (!showFinalScreen && iframeRef.current) {
-                        iframeRef.current.focus();
-                    }
-                }}
+                onFocus={() => { if (!showFinalScreen && iframeRef.current) iframeRef.current.focus(); }}
+                onClick={() => { if (!showFinalScreen && iframeRef.current) iframeRef.current.focus(); }}
                 className={`fixed inset-0 z-50 bg-[#06080a] flex flex-col transition-opacity duration-200 outline-none ${isFullscreen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             >
-                {/* Close Button ("X") - Always slightly visible for better UX */}
-                <button
+                <div
+                    role="button"
+                    tabIndex={0}
                     onClick={closeCourse}
-                    className="fixed top-6 right-10 z-[60] p-3 text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') closeCourse(); }}
+                    className="fixed top-6 right-10 z-[60] cursor-pointer transition-transform duration-200 hover:scale-110 opacity-80 hover:opacity-100 outline-none focus:outline-none border-none bg-transparent hover:bg-transparent p-0 appearance-none ring-0 focus:ring-0 shadow-none hover:shadow-none"
                     title="Cerrar curso (Esc)"
+                    style={{ background: 'transparent !important', boxShadow: 'none !important' }}
                 >
-                    <X size={28} />
-                </button>
+                    <img src="/prg_logo_final.png" alt="Cerrar" className="h-24 w-auto object-contain drop-shadow-2xl" />
+                </div>
 
                 <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                    {/* Loading State Overlay - Matches viewer background */}
                     {fileLoading && !showFinalScreen && (
                         <div className="absolute inset-0 z-[55] bg-[#06080a] flex items-center justify-center">
                             <div className="flex flex-col items-center gap-4">
@@ -193,7 +200,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                                     allowFullScreen
                                     onLoad={() => {
                                         setFileLoading(false);
-                                        // Immediate focus capture on load completion
                                         setTimeout(() => {
                                             if (iframeRef.current) {
                                                 iframeRef.current.focus();
@@ -206,29 +212,19 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                                 <div className="w-full h-full overflow-hidden relative bg-white">
                                     <iframe
                                         ref={iframeRef}
-                                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeCourse.file_url)}&wdAr=0&wdStartOn=1&wdPrint=0&wdEmbedCode=0`}
+                                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeCourse.file_url)}&wdAr=1&wdStartOn=1&wdPrint=0&wdEmbedCode=0`}
                                         className="w-full h-[calc(100%+32px)] border-none -mb-[32px]"
                                         title={activeCourse.title}
                                         loading="eager"
                                         allow="fullscreen"
-                                        onLoad={() => {
-                                            setFileLoading(false);
-                                            // Aggressive focus immediately on load
-                                            setTimeout(() => {
-                                                if (iframeRef.current) {
-                                                    iframeRef.current.focus();
-                                                    try { iframeRef.current.contentWindow?.focus(); } catch (e) { }
-                                                }
-                                            }, 50);
-                                        }}
+                                        onLoad={() => setFileLoading(false)}
                                     />
-                                    {/* Focus Bridge Overlay: Disappears on first interaction but ensures focus transfer */}
                                     <div
                                         className="absolute inset-0 z-[56] cursor-default bg-transparent"
                                         onMouseMove={(e) => {
                                             if (iframeRef.current && document.activeElement !== iframeRef.current) {
                                                 iframeRef.current.focus();
-                                                e.currentTarget.style.display = 'none'; // Only need it once
+                                                e.currentTarget.style.display = 'none';
                                             }
                                         }}
                                         onClick={(e) => {
@@ -254,30 +250,54 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                         </>
                     )}
                 </div>
-            </div>
+            </div >
         );
     }
 
-    const half = Math.ceil(courses.length / 2);
-    const leftCourses = courses.slice(0, half);
-    const rightCourses = courses.slice(half);
+    const filteredCourses = currentFolder
+        ? courses.filter(c => getFolderFromDescription(c.description) === currentFolder)
+        : [];
+
+    const half = Math.ceil(filteredCourses.length / 2);
+    const leftCourses = filteredCourses.slice(0, half);
+    const rightCourses = filteredCourses.slice(half);
 
     return (
         <div className="p-4 md:p-6 animate-fade-in min-h-screen transition-colors" style={{ background: theme.background, color: theme.text }}>
 
             <div className="flex flex-col items-center md:items-start mb-8 gap-3 max-w-6xl mx-auto">
-                {adminPreview && (
-                    <button
-                        onClick={onBack}
-                        className="mb-1 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 text-[10px] font-black text-blue-600 dark:text-blue-400 transition-all flex items-center gap-1 uppercase tracking-widest"
-                    >
-                        <ChevronLeft size={12} />
-                        Volver al panel
-                    </button>
-                )}
-                <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>
-                    PANEL DE <span className="text-blue-500">CONTROL</span>
-                </h1>
+                {/* Header Navigation */}
+                <div className="flex items-center gap-2">
+                    {adminPreview && (
+                        <button
+                            onClick={onBack}
+                            className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 text-[10px] font-black text-blue-600 dark:text-blue-400 transition-all flex items-center gap-1 uppercase tracking-widest"
+                        >
+                            <ChevronLeft size={12} />
+                            Salir
+                        </button>
+                    )}
+                    {currentFolder && folders.length > 1 && (
+                        <button
+                            onClick={() => setCurrentFolder(null)}
+                            className="px-3 py-1 rounded-full bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20 text-[10px] font-black text-gray-600 dark:text-gray-400 transition-all flex items-center gap-1 uppercase tracking-widest"
+                        >
+                            <ChevronLeft size={12} />
+                            Módulos
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex flex-col">
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>
+                        {currentFolder ? currentFolder : (
+                            <>PANEL DE <span className="text-blue-500">CONTROL</span></>
+                        )}
+                    </h1>
+                    {currentFolder && (
+                        <p className="text-sm font-medium opacity-50 pl-1">{filteredCourses.length} Clases Disponibles</p>
+                    )}
+                </div>
             </div>
 
             {loading ? (
@@ -287,22 +307,58 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             ) : courses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-2xl" style={{ borderColor: theme.border, background: theme.surface }}>
                     <LucideIcons.FileText className="w-8 h-8 mb-3 opacity-20" style={{ color: theme.text }} />
-                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>No hay cursos asignados actualmente.</p>
+                    <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>No hay contenido asignado.</p>
                 </div>
             ) : (
                 <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                        <div className="space-y-3">
-                            {leftCourses.map(course => (
-                                <CourseRow key={course.id} course={course} onClick={() => openCourse(course)} theme={theme} />
-                            ))}
+
+                    {/* FOLDER VIEW (ROOT) */}
+                    {!currentFolder && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {folders.map(folder => {
+                                const count = courses.filter(c => getFolderFromDescription(c.description) === folder).length;
+                                return (
+                                    <button
+                                        key={folder}
+                                        onClick={() => setCurrentFolder(folder)}
+                                        className="group relative p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 text-left"
+                                        style={{ borderColor: theme.border, background: theme.surface }}
+                                    >
+                                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
+                                            <Folder size={28} strokeWidth={2.5} />
+                                        </div>
+
+                                        <div className="w-full">
+                                            <h3 className="text-lg font-black uppercase tracking-tight mb-1" style={{ color: theme.text }}>{folder}</h3>
+                                            <p className="text-xs font-bold opacity-60 flex items-center gap-1">
+                                                <FileText size={12} /> {count} Clases
+                                            </p>
+                                        </div>
+
+                                        <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
+                                            <ChevronRight size={20} className="text-blue-500" />
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <div className="space-y-3">
-                            {rightCourses.map(course => (
-                                <CourseRow key={course.id} course={course} onClick={() => openCourse(course)} theme={theme} />
-                            ))}
+                    )}
+
+                    {/* FILE VIEW (INSIDE FOLDER) */}
+                    {currentFolder && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 animate-fade-in-up">
+                            <div className="space-y-3">
+                                {leftCourses.map(course => (
+                                    <CourseRow key={course.id} course={course} onClick={() => openCourse(course)} theme={theme} />
+                                ))}
+                            </div>
+                            <div className="space-y-3">
+                                {rightCourses.map(course => (
+                                    <CourseRow key={course.id} course={course} onClick={() => openCourse(course)} theme={theme} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
         </div>

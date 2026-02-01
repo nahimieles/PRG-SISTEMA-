@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Plus, Edit2, Trash2, X, Upload, Save, Eye, Users, FileText, Image as ImageIcon, ChevronUp, ChevronDown, ChevronLeft, Folder, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Upload, Save, Eye, Users, FileText, ChevronUp, ChevronDown, ChevronLeft, Folder, CheckCircle, Search, Layers, Globe, FolderPlus, PenTool, Settings, Play } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import {
@@ -11,11 +11,75 @@ import {
     updateCourse,
     deleteCourse,
     getCompanies,
-    uploadFile
+    getCompanyGroups,
+    uploadFile,
+    updateCoursePosition
 } from '../lib/auth';
+
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import IconSelector from './IconSelector';
 import Toast from './Toast';
+
+// --- HELPER FUNCTIONS ---
+const DEFAULT_FOLDER_NAME = 'Material PRG Auditores';
+
+const getFolderFromDescription = (desc) => {
+    if (!desc) return DEFAULT_FOLDER_NAME;
+    const match = desc.match(/^\[FOLDER:\s*(.*?)\]/);
+    return match ? match[1].trim() : DEFAULT_FOLDER_NAME;
+};
+
+const getCleanDescription = (desc) => {
+    if (!desc) return '';
+    return desc.replace(/^\[FOLDER:\s*.*?\]\s*/, '');
+};
+
+const formatDescription = (folder, cleanDesc) => {
+    const safeFolder = (folder || DEFAULT_FOLDER_NAME).replace(/[\[\]]/g, '').trim();
+    return `[FOLDER: ${safeFolder}] ${cleanDesc || ''}`;
+};
+
+// --- SORTABLE ITEM COMPONENT ---
+function SortableItem(props) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: props.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+        position: 'relative'
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            {props.children}
+        </div>
+    );
+}
+
 
 export default function CourseEditor({ onPreview }) {
     const { isDark } = useTheme();
@@ -23,543 +87,566 @@ export default function CourseEditor({ onPreview }) {
 
     const [courses, setCourses] = useState([]);
     const [companies, setCompanies] = useState([]);
+    const [groups, setGroups] = useState([]); // NEW STATE
     const [loading, setLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+
+    // UI States
+    const [currentFolder, setCurrentFolder] = useState(null); // null = Root
+    const [folders, setFolders] = useState([]);
+
+    // Modal States
+    const [showCourseModal, setShowCourseModal] = useState(false);
+    const [showFolderModal, setShowFolderModal] = useState(false);
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
+
     const [editingCourse, setEditingCourse] = useState(null);
+    const [editingFolder, setEditingFolder] = useState(null); // { name: string, companies: [] }
 
-    // State for 3-level Drill-down: Groups → Companies → Courses
-    const [expandedGroup, setExpandedGroup] = useState(null);
-    const [expandedCompany, setExpandedCompany] = useState(null);
-    const [companyCourses, setCompanyCourses] = useState([]);
-
-    // Group definitions
-    const groups = [
-        { id: 'contabilidad', name: 'Contabilidad', color: 'green', filter: (c) => c.type === 'contabilidad' && !c.name.toUpperCase().includes('PRG') },
-        { id: 'auditoria', name: 'Auditoría', color: 'blue', filter: (c) => c.type === 'auditoria' && !c.name.toUpperCase().includes('PRG') }
-    ];
-
-    const prgCompany = companies.find(c => c.name.toUpperCase().includes('PRG'));
-
-    const handleGroupClick = (groupId) => {
-        setExpandedGroup(groupId);
-        setExpandedCompany(null);
-        setCompanyCourses([]);
-    };
-
-    const handleBackToGroups = () => {
-        setExpandedGroup(null);
-        setExpandedCompany(null);
-        setCompanyCourses([]);
-    };
-
-    const handleCompanyClick = (companyId) => {
-        if (expandedCompany === companyId) {
-            setExpandedCompany(null);
-            setCompanyCourses([]);
-        } else {
-            setExpandedCompany(companyId);
-            loadCompanySpecificCourses(companyId);
-        }
-    };
-
-    const handleBackToCompanies = () => {
-        setExpandedCompany(null);
-        setCompanyCourses([]);
-    };
-
-    const loadCompanySpecificCourses = async (companyId) => {
-        setLoading(true);
-        const { getCompanyCourses } = await import('../lib/auth');
-        const ordered = await getCompanyCourses(companyId);
-        setCompanyCourses(ordered);
-        setLoading(false);
-    };
-
-    const moveCourse = async (index, direction) => {
-        if (!expandedCompany) return;
-        const newCourses = [...companyCourses];
-        if (direction === 'up' && index > 0) {
-            [newCourses[index], newCourses[index - 1]] = [newCourses[index - 1], newCourses[index]];
-        } else if (direction === 'down' && index < newCourses.length - 1) {
-            [newCourses[index], newCourses[index + 1]] = [newCourses[index + 1], newCourses[index]];
-        } else return;
-
-        setCompanyCourses(newCourses);
-        const { updateCourseOrder } = await import('../lib/auth');
-        await updateCourseOrder(expandedCompany, newCourses);
-    };
-
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        file: null,
-        cover: null,
-        assigned_company_ids: [],
-        icon_name: 'FileText'
-    });
-
-    const [toast, setToast] = useState(null);
-    const showToast = (message, type = 'success') => {
-        setToast({ message, type });
-        setTimeout(() => setToast(null), 3000);
-    };
-
+    // --- INITIAL DATA LOAD ---
     useEffect(() => {
         loadData();
     }, []);
 
     const loadData = async () => {
         setLoading(true);
-        const [coursesData, companiesData] = await Promise.all([
+        const [coursesData, companiesData, groupsData] = await Promise.all([
             getCourses(),
-            getCompanies()
+            getCompanies(),
+            getCompanyGroups() // NEW FETCH
         ]);
-        setCourses(coursesData);
+
+        // Sort courses by position if available, otherwise by title or created_at
+        const sortedCourses = coursesData.sort((a, b) => (a.position || 0) - (b.position || 0));
+
+        setCourses(sortedCourses);
         setCompanies(companiesData);
+        setGroups(groupsData); // SET GROUPS
+
+        // Extract folders dynamically
+        const uniqueFolders = new Set();
+        coursesData.forEach(c => {
+            uniqueFolders.add(getFolderFromDescription(c.description));
+        });
+
+        // Ensure default folder exists if we have no courses yet, or just to be safe
+        if (uniqueFolders.size === 0) uniqueFolders.add(DEFAULT_FOLDER_NAME);
+
+        setFolders([...uniqueFolders].sort());
         setLoading(false);
     };
 
-    const resetForm = () => {
-        setFormData({
-            title: '',
-            description: '',
-            file: null,
-            cover: null,
-            assigned_company_ids: [],
-            icon_name: 'FileText'
-        });
-        setEditingCourse(null);
+    // --- FOLDER ACTIONS ---
+
+    // Open Folder Edit/Create Modal
+    const handleOpenFolderModal = (folderName = null) => {
+        if (folderName) {
+            // Editing existing folder
+            const exampleCourse = courses.find(c => getFolderFromDescription(c.description) === folderName);
+            const initialids = exampleCourse ? (exampleCourse.assigned_company_ids || []) : [];
+
+            setEditingFolder({
+                originalName: folderName,
+                name: folderName,
+                assigned_company_ids: initialids
+            });
+        } else {
+            // Creating new folder
+            setEditingFolder({
+                originalName: null,
+                name: '',
+                assigned_company_ids: []
+            });
+        }
+        setShowFolderModal(true);
     };
 
-    const handleOpenModal = (course = null) => {
+    const handleSaveFolder = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const oldName = editingFolder.originalName;
+            const newName = editingFolder.name.trim();
+            const newIds = editingFolder.assigned_company_ids;
+
+            if (!newName) throw new Error("El nombre de la carpeta es requerido");
+            if (folders.includes(newName) && newName !== oldName) throw new Error("Ya existe una carpeta con ese nombre");
+
+            if (oldName) {
+                // UPDATE EXISTING FOLDER
+                const folderCourses = courses.filter(c => getFolderFromDescription(c.description) === oldName);
+
+                for (const course of folderCourses) {
+                    const newDesc = formatDescription(newName, getCleanDescription(course.description));
+                    await updateCourse(course.id, {
+                        ...course,
+                        description: newDesc,
+                        assigned_company_ids: newIds
+                    });
+                }
+                showToast(`Carpeta updated (${folderCourses.length} clases sincronizadas)`);
+            } else {
+                // CREATE NEW FOLDER (Virtual)
+                setFolders(prev => [...prev, newName].sort());
+                showToast("Carpeta creada");
+            }
+
+            setShowFolderModal(false);
+            setEditingFolder(null);
+            loadData();
+
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- COURSE ACTIONS ---
+
+    const handleOpenCourseModal = (course = null) => {
         if (course) {
             setEditingCourse(course);
-            setFormData({
+            setCourseFormData({
                 title: course.title,
-                description: course.description || '',
+                description: getCleanDescription(course.description),
+                folder: getFolderFromDescription(course.description),
                 file: null,
-                cover: null,
                 assigned_company_ids: course.assigned_company_ids || [],
                 icon_name: course.icon_name || 'FileText'
             });
         } else {
-            resetForm();
+            setEditingCourse(null);
+            // INHERITANCE
+            const folderCourses = courses.filter(c => getFolderFromDescription(c.description) === currentFolder);
+            const inheritedIds = folderCourses.length > 0 ? (folderCourses[0].assigned_company_ids || []) : [];
+
+            setCourseFormData({
+                title: '',
+                description: '',
+                folder: currentFolder || DEFAULT_FOLDER_NAME,
+                file: null,
+                assigned_company_ids: inheritedIds,
+                icon_name: 'FileText'
+            });
         }
-        setShowModal(true);
+        setShowCourseModal(true);
     };
 
-    const [searchTerm, setSearchTerm] = useState('');
-    const filteredCompanies = companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    const filteredCourses = companyCourses.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    const [courseFormData, setCourseFormData] = useState({
+        title: '', description: '', folder: '', file: null, assigned_company_ids: [], icon_name: 'FileText'
+    });
 
-    const handleDelete = async (id) => {
-        if (!confirm('¿Estás seguro de eliminar este curso?')) return;
-        setLoading(true);
-        try {
-            const result = await deleteCourse(id);
-            if (!result.success) throw new Error(result.error);
-            showToast('Curso eliminado correctamente.');
-            loadData();
-            if (expandedCompany) loadCompanySpecificCourses(expandedCompany);
-        } catch (error) {
-            showToast(error.message, 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSave = async (e) => {
+    const handleSaveCourse = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
             let fileUrl = editingCourse?.file_url;
-            if (formData.file) {
-                const uploadRes = await uploadFile(formData.file, 'course-doc');
+            if (courseFormData.file) {
+                const uploadRes = await uploadFile(courseFormData.file, 'course-doc');
                 if (!uploadRes.success) throw new Error(uploadRes.error);
                 fileUrl = uploadRes.fileUrl;
             } else if (!editingCourse) {
-                throw new Error('Debes subir un archivo para el curso (PDF o Imagen).');
+                throw new Error('Debes subir un archivo.');
             }
 
+            const finalDesc = formatDescription(currentFolder, courseFormData.description);
             const courseData = {
-                title: formData.title,
-                description: '',
+                title: courseFormData.title,
+                description: finalDesc,
                 file_url: fileUrl,
                 cover_image: null,
-                assigned_company_ids: editingCourse ? (editingCourse.assigned_company_ids || [expandedCompany]) : [expandedCompany],
-                icon_name: formData.icon_name || 'FileText'
+                assigned_company_ids: courseFormData.assigned_company_ids,
+                icon_name: courseFormData.icon_name || 'FileText'
             };
 
             let result;
-            if (editingCourse) {
-                result = await updateCourse(editingCourse.id, courseData);
-            } else {
-                result = await createCourse(courseData);
-            }
+            if (editingCourse) result = await updateCourse(editingCourse.id, courseData);
+            else result = await createCourse(courseData);
 
             if (!result.success) throw new Error(result.error);
 
-            setShowModal(false);
-            resetForm();
+            setShowCourseModal(false);
             loadData();
-            if (expandedCompany) loadCompanySpecificCourses(expandedCompany);
-            showToast('Curso guardado correctamente.');
+            showToast('Clase guardada correctamente');
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteCourse = async (id) => {
+        if (!confirm("¿Eliminar clase?")) return;
+        setLoading(true);
+        await deleteCourse(id);
+        loadData();
+        setLoading(false);
+    };
+
+    // --- SHARED UI HELPERS ---
+    const [toast, setToast] = useState(null);
+    const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
+    const [menuSearch, setMenuSearch] = useState('');
+
+    // Toggle ID in a list
+    const toggleId = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+
+    // Toggle GROUP (Batch Select)
+    const toggleGroup = (list, groupId) => {
+        const groupCompanies = companies.filter(c => c.group_id === groupId || (c.type === groupId && !c.group_id)); // Support Legacy Types as "Groups" by ID if needed, but primarily use real groups
+        // Actually, let's treat groups strictly by ID for dynamic ones.
+        const targetCompanies = companies.filter(c => c.group_id === groupId);
+
+        if (targetCompanies.length === 0) return list;
+
+        const targetIds = targetCompanies.map(c => c.id);
+        const allSelected = targetIds.every(id => list.includes(id));
+
+        if (allSelected) {
+            // Deselect all
+            return list.filter(id => !targetIds.includes(id));
+        } else {
+            // Select all
+            const newIds = new Set([...list, ...targetIds]);
+            return [...newIds];
+        }
+    };
+
+    // --- DRAG AND DROP SENSORS ---
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = async (event) => {
+        const { active, over } = event;
+
+        if (active.id !== over.id) {
+            setCourses((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+                const newItems = arrayMove(items, oldIndex, newIndex);
+
+                // Persist new positions
+                // We typically only need to update the moved item and those shifted, 
+                // but for simplicity/robustness we can update the range or just the moved one's neighbors.
+                // Or update all indices in the local list for consistency.
+
+                // Let's update backend asynchronously
+                const updates = newItems.map((item, index) => ({ id: item.id, position: index }));
+
+                // Trigger backend updates (optimistic UI)
+                updates.forEach(u => updateCoursePosition(u.id, u.position));
+
+                return newItems;
+            });
         }
     };
 
     return (
         <div className="animate-fade-in space-y-6">
+
+            {/* HEADER */}
             <div className="flex flex-col md:flex-row justify-between items-center p-6 rounded-xl border gap-4" style={{ background: theme.surface, borderColor: theme.border }}>
-                <div>
-                    <h2 className="text-2xl font-bold" style={{ color: theme.text }}>Gestión de Cursos</h2>
-                    <p style={{ color: theme.textSecondary }}>Administra el material educativo</p>
+                <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-blue-500/10 text-blue-500">
+                        <Layers size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold" style={{ color: theme.text }}>Gestión de Material</h2>
+                        <p style={{ color: theme.textSecondary }}>Biblioteca Global de Conocimiento</p>
+                    </div>
                 </div>
 
-                {(expandedGroup || expandedCompany) && (
-                    <div className="relative w-full md:w-64">
-                        <input
-                            type="text"
-                            placeholder={expandedCompany ? "Buscar curso..." : "Buscar empresa..."}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full border rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-                            style={{
-                                background: isDark ? 'rgba(0,0,0,0.2)' : '#fff',
-                                borderColor: theme.border,
-                                color: theme.text
-                            }}
-                        />
-                        <LucideIcons.Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                    </div>
-                )}
+                {/* Preview Trigger */}
+                <button
+                    onClick={() => {
+                        // 1. Find Context
+                        let relevantCourses = courses;
+                        if (currentFolder) {
+                            relevantCourses = courses.filter(c => getFolderFromDescription(c.description) === currentFolder);
+                        }
+
+                        // 2. Extract Valid IDs
+                        const validIds = new Set();
+                        relevantCourses.forEach(c => {
+                            if (c.assigned_company_ids && Array.isArray(c.assigned_company_ids)) {
+                                c.assigned_company_ids.forEach(id => validIds.add(id));
+                            }
+                        });
+
+
+                        // 3. Decide
+                        if (validIds.size > 0) {
+                            const firstId = [...validIds][0];
+                            const companyName = companies.find(c => c.id === firstId)?.name;
+                            showToast(`Simulando vista como: ${companyName || 'Empresa'}`);
+                            onPreview(firstId);
+                        } else {
+                            // If no context, Open Global Preview (Admin View)
+                            showToast('Modo Vista Global (Sin filtro de empresa)', 'info');
+                            onPreview(null);
+                        }
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 hover:scale-105 active:scale-95"
+                >
+                    <Eye size={18} />
+                    <span>Vista Previa</span>
+                </button>
             </div>
 
-            {loading && !showModal && <div className="text-center py-10 text-gray-400 animate-pulse">Cargando datos...</div>}
+            {loading && !showCourseModal && !showFolderModal && <div className="text-center py-10 opacity-50 animate-pulse">Cargando...</div>}
 
-            {!expandedGroup && !expandedCompany && (
-                <div className="space-y-8">
-                    {prgCompany && (
-                        <div>
-                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: isDark ? '#fbbf24' : '#d97706' }}>
-                                <Users size={20} />
-                                Empresa Principal
-                            </h3>
+            {/* === LIBRARY VIEW (FOLDERS) === */}
+            {!loading && (
+                <div className="space-y-6">
+                    {/* BREADCRUMBS & ACTIONS */}
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-xl font-bold" style={{ color: theme.text }}>
                             <button
-                                onClick={() => {
-                                    setExpandedCompany(prgCompany.id);
-                                    loadCompanySpecificCourses(prgCompany.id);
-                                }}
-                                className="w-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-6 rounded-2xl border border-amber-500/30 hover:border-amber-500/50 shadow-lg hover:shadow-amber-500/20 transition-all duration-300 text-left group"
+                                onClick={() => setCurrentFolder(null)}
+                                className={`hover:text-blue-500 transition-colors flex items-center gap-2 ${!currentFolder ? 'text-blue-600 cursor-default' : 'text-gray-400'}`}
                             >
-                                <div className="flex items-center gap-6">
-                                    {prgCompany.avatar_url ? (
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-amber-500/50 shadow-lg group-hover:scale-110 transition-transform">
-                                            <img src={prgCompany.avatar_url} alt={prgCompany.name} className="w-full h-full object-cover" />
-                                        </div>
-                                    ) : (
-                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                                            <Users size={32} />
-                                        </div>
-                                    )}
-                                    <div className="flex-1">
-                                        <h3 className="text-2xl font-bold" style={{ color: theme.text }}>{prgCompany.name}</h3>
-                                        <p className="text-sm uppercase tracking-wide opacity-60" style={{ color: theme.text }}>{prgCompany.type}</p>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="px-4 py-1.5 rounded-full border bg-black/5 border-black/10 text-sm font-bold" style={{ color: theme.text }}>
-                                            {courses.filter(c => c.assigned_company_ids?.includes(prgCompany.id)).length} cursos
-                                        </span>
-                                        <ChevronLeft size={24} className="text-gray-400 rotate-180" />
-                                    </div>
-                                </div>
+                                <Layers size={24} /> Módulos
                             </button>
+                            {currentFolder && (
+                                <>
+                                    <ChevronLeft size={20} className="text-gray-300 rotate-180" />
+                                    <span className="text-blue-600 flex items-center gap-2">
+                                        <Folder size={24} /> {currentFolder}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+
+                        <div>
+                            {!currentFolder ? (
+                                <button
+                                    onClick={() => handleOpenFolderModal()}
+                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all"
+                                >
+                                    <FolderPlus size={18} /> NUEVA CARPETA
+                                </button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleOpenFolderModal(currentFolder)}
+                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold flex items-center gap-2 transition-all"
+                                    >
+                                        <Settings size={18} /> CONFIGURAR CARPETA
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenCourseModal()}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all"
+                                    >
+                                        <Plus size={18} /> NUEVA CLASE
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ROOT: FOLDER GRID */}
+                    {!currentFolder && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {folders.map(folder => {
+                                const count = courses.filter(c => getFolderFromDescription(c.description) === folder).length;
+                                // Find permissions summary from first course
+                                const firstCourse = courses.find(c => getFolderFromDescription(c.description) === folder);
+                                const permCount = firstCourse?.assigned_company_ids?.length || 0;
+
+                                return (
+                                    <div
+                                        key={folder}
+                                        onClick={() => setCurrentFolder(folder)}
+                                        className="group relative p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900"
+                                        style={{ borderColor: theme.border, background: theme.surface }}
+                                    >
+                                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
+                                            <Folder size={28} strokeWidth={2.5} />
+                                        </div>
+
+                                        <div className="w-full">
+                                            <h3 className="text-xl font-bold truncate mb-1" style={{ color: theme.text }}>{folder}</h3>
+                                            <div className="flex items-center gap-3 text-xs font-bold opacity-60">
+                                                <span className="flex items-center gap-1"><FileText size={12} /> {count} Clases</span>
+                                                <span className="flex items-center gap-1"><Users size={12} /> {permCount} Accesos</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleOpenFolderModal(folder); }}
+                                                className="p-2 hover:bg-black/10 rounded-full text-gray-400 hover:text-blue-500"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {folders.length === 0 && (
+                                <div className="col-span-full py-20 text-center opacity-50 flex flex-col items-center">
+                                    <FolderPlus size={48} className="mb-4 text-gray-300" />
+                                    <p className="font-bold">No hay carpetas creadas.</p>
+                                    <p className="text-sm">Inicia creando una carpeta maestra.</p>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <div>
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.textSecondary }}>
-                            <Folder size={20} />
-                            Grupos de Empresas
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {groups.map(group => {
-                                const groupCompanies = companies.filter(group.filter);
-                                const totalCourses = courses.filter(c =>
-                                    groupCompanies.some(company => c.assigned_company_ids?.includes(company.id))
-                                ).length;
+                    {/* FOLDER CONTENT: FILE LIST */}
+                    {currentFolder && (
+                        <div className="rounded-2xl border overflow-hidden shadow-sm animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
+                            <div className="grid grid-cols-12 gap-4 p-4 border-b text-xs font-black uppercase tracking-widest opacity-50" style={{ borderColor: theme.border, color: theme.text }}>
+                                <div className="col-span-1 text-center">Icono</div>
+                                <div className="col-span-6">Nombre de la Clase</div>
+                                <div className="col-span-3 text-center">Permisos Actuales</div>
+                                <div className="col-span-2 text-right">Acciones</div>
+                            </div>
 
-                                const colorClasses = {
-                                    green: { bg: 'bg-green-500/10', text: 'text-green-600 dark:text-green-400', hover: 'hover:border-green-500/50 hover:shadow-green-500/10' },
-                                    blue: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', hover: 'hover:border-blue-500/50 hover:shadow-blue-500/10' }
-                                }[group.color];
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map(c => c.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    {courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map((course) => {
+                                        const Icon = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : FileText;
+                                        const accessCount = course.assigned_company_ids?.length || 0;
 
-                                return (
-                                    <button
-                                        key={group.id}
-                                        onClick={() => handleGroupClick(group.id)}
-                                        className={`group flex flex-col items-center p-10 border rounded-2xl ${colorClasses.hover} transition-all duration-300 shadow-lg text-center`}
-                                        style={{ background: theme.surface, borderColor: theme.border }}
-                                    >
-                                        <div className={`w-24 h-24 rounded-full ${colorClasses.bg} ${colorClasses.text} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
-                                            <Users size={40} />
-                                        </div>
-                                        <h3 className={`text-xl font-bold mb-3 group-hover:${colorClasses.text} transition-colors uppercase`} style={{ color: theme.text }}>{group.name}</h3>
-                                        <div className="flex gap-3 text-xs font-bold opacity-70">
-                                            <span className="px-3 py-1 rounded-full border border-black/5 bg-black/5" style={{ color: theme.textSecondary }}>
-                                                {groupCompanies.length} empresas
-                                            </span>
-                                            <span className="px-3 py-1 rounded-full border border-black/5 bg-black/5" style={{ color: theme.textSecondary }}>
-                                                {totalCourses} cursos
-                                            </span>
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                                        return (
+                                            <SortableItem key={course.id} id={course.id}>
+                                                <div className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-black/[0.02] transition-colors border-b last:border-0 bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
+                                                    <div className="col-span-1 flex justify-center text-blue-500 opacity-80 cursor-grab active:cursor-grabbing">
+                                                        <Icon size={20} />
+                                                    </div>
+                                                    <div className="col-span-6 min-w-0">
+                                                        <h4 className="font-bold text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
+                                                        <p className="text-[10px] font-mono opacity-40 truncate">{course.file_url ? course.file_url.split('/').pop() : '...'}</p>
+                                                    </div>
+                                                    <div className="col-span-3 flex justify-center">
+                                                        {accessCount === 0 ? (
+                                                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-100 text-red-600">Sin Acceso</span>
+                                                        ) : (
+                                                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-green-100 text-green-600 flex items-center gap-1">
+                                                                <CheckCircle size={10} /> {accessCount} Empresas
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-2 flex justify-end gap-1">
+                                                        <button
+                                                            onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
+                                                            onClick={() => handleOpenCourseModal(course)}
+                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onPointerDown={(e) => e.stopPropagation()}
+                                                            onClick={() => handleDeleteCourse(course.id)}
+                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </SortableItem>
+                                        );
+                                    })}
+                                </SortableContext>
+                            </DndContext>
                         </div>
-                    </div>
+                    )}
                 </div>
             )}
 
-            {expandedGroup && !expandedCompany && (() => {
-                const currentGroup = groups.find(g => g.id === expandedGroup);
-                const groupCompanies = filteredCompanies.filter(currentGroup.filter);
-                const colorClasses = {
-                    green: { bg: 'bg-green-500/10', text: 'text-green-600 dark:text-green-400', hover: 'hover:border-green-500/50 hover:shadow-green-500/10' },
-                    blue: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', hover: 'hover:border-blue-500/50 hover:shadow-blue-500/10' }
-                }[currentGroup.color];
-
-                return (
-                    <div className="animate-fade-in space-y-6">
-                        <div className="flex items-center gap-4 pb-4 border-b" style={{ borderColor: theme.border }}>
-                            <button
-                                onClick={handleBackToGroups}
-                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400 hover:text-black"
-                            >
-                                <ChevronLeft size={24} />
-                            </button>
-                            <div>
-                                <h3 className={`text-xl font-bold uppercase ${colorClasses.text} flex items-center gap-2 tracking-tight`}>
-                                    <Folder size={20} />
-                                    {currentGroup.name}
-                                </h3>
-                                <p className="text-xs font-bold opacity-60" style={{ color: theme.text }}>{groupCompanies.length} empresas en este grupo</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {groupCompanies.map(company => {
-                                const assignedCount = courses.filter(c => c.assigned_company_ids?.includes(company.id)).length;
-                                return (
-                                    <button
-                                        key={company.id}
-                                        onClick={() => handleCompanyClick(company.id)}
-                                        className={`group flex flex-col items-center p-8 border rounded-2xl ${colorClasses.hover} transition-all duration-300 shadow-lg text-center relative overflow-hidden`}
-                                        style={{ background: theme.surface, borderColor: theme.border }}
-                                    >
-                                        <div className={`w-20 h-20 rounded-2xl ${colorClasses.bg} ${colorClasses.text} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner overflow-hidden border-2 ${colorClasses.hover.split(' ')[0].replace('hover:', '')}`}>
-                                            {company.avatar_url ? (
-                                                <img src={company.avatar_url} alt={company.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Users size={32} />
-                                            )}
-                                        </div>
-                                        <h3 className="text-xl font-bold mb-2 group-hover:text-blue-500 transition-colors" style={{ color: theme.text }}>{company.name}</h3>
-                                        <p className="text-xs font-bold px-4 py-1.5 rounded-full border bg-black/5 border-black/10" style={{ color: theme.textSecondary }}>
-                                            {assignedCount} {assignedCount === 1 ? 'CURSO' : 'CURSOS'}
-                                        </p>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {expandedCompany && (
-                <div className="animate-fade-in space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b" style={{ borderColor: theme.border }}>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={handleBackToCompanies}
-                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400 hover:text-black"
-                            >
-                                <ChevronLeft size={24} />
-                            </button>
-                            <div>
-                                <h3 className="text-xl font-bold uppercase flex items-center gap-2 tracking-tight" style={{ color: theme.text }}>
-                                    <Users size={24} className="text-blue-500" />
-                                    {companies.find(c => c.id === expandedCompany)?.name}
-                                </h3>
-                                <p className="text-xs font-bold opacity-60" style={{ color: theme.text }}>Gestionar material para esta empresa</p>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            {onPreview && (
-                                <button
-                                    onClick={() => onPreview(expandedCompany)}
-                                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl flex items-center gap-2 transition-all font-bold text-sm shadow-sm"
-                                >
-                                    <Eye size={18} />
-                                    VISTA PREVIA
-                                </button>
-                            )}
-                            <button
-                                onClick={() => handleOpenModal()}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20 font-bold text-sm uppercase italic"
-                            >
-                                <Plus size={20} />
-                                NUEVO CURSO
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl border overflow-hidden shadow-xl" style={{ background: theme.surface, borderColor: theme.border }}>
-                        {loading && <div className="p-12 text-center text-gray-400 animate-pulse font-bold tracking-widest">ACTUALIZANDO ORDEN...</div>}
-
-                        {!loading && companyCourses.length === 0 && (
-                            <div className="p-20 text-center">
-                                <FileText className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                                <p className="text-gray-400 text-lg font-bold mb-4 uppercase italic">No hay cursos registrados</p>
-                                <button
-                                    onClick={() => handleOpenModal()}
-                                    className="px-6 py-2 bg-blue-50 text-blue-600 rounded-full font-bold text-sm hover:bg-blue-100 transition-colors"
-                                >
-                                    + Crear primer curso
-                                </button>
-                            </div>
-                        )}
-
-                        {!loading && filteredCourses.map((course, index) => {
-                            const IconComponent = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : FileText;
-                            return (
-                                <div key={course.id} className="flex items-center justify-between p-5 border-b transition-all group last:border-0 hover:bg-black/[0.02]" style={{ borderColor: theme.border }}>
-                                    <div className="flex items-center gap-6">
-                                        <div className="flex flex-col items-center gap-1 p-1 bg-black/5 rounded-lg border border-black/5 shadow-inner">
-                                            <button
-                                                onClick={() => moveCourse(index, 'up')}
-                                                disabled={index === 0 || searchTerm !== ''}
-                                                className="p-1 text-gray-400 hover:text-blue-500 disabled:opacity-0 transition-colors"
-                                            >
-                                                <ChevronUp size={18} />
-                                            </button>
-                                            <span className="text-[10px] font-black text-gray-400 leading-none">{index + 1}</span>
-                                            <button
-                                                onClick={() => moveCourse(index, 'down')}
-                                                disabled={index === companyCourses.length - 1 || searchTerm !== ''}
-                                                className="p-1 text-gray-400 hover:text-blue-500 disabled:opacity-0 transition-colors"
-                                            >
-                                                <ChevronDown size={18} />
-                                            </button>
-                                        </div>
-
-                                        <div className="w-12 h-12 flex items-center justify-center bg-blue-500/10 rounded-xl text-blue-500 border border-blue-500/20 shadow-sm">
-                                            <IconComponent size={24} />
-                                        </div>
-
-                                        <div>
-                                            <h4 className="font-bold text-lg" style={{ color: theme.text }}>{course.title}</h4>
-                                            <p className="text-xs font-mono font-medium opacity-40 uppercase tracking-tighter" style={{ color: theme.text }}>{course.file_url?.split('.').pop() || 'DOCUMENTO'}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
-                                        <button
-                                            onClick={() => handleOpenModal(course)}
-                                            className="p-2.5 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                            title="Editar"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(course.id)}
-                                            className="p-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="border rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl scale-in-center" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: theme.border }}>
-                            <h3 className="text-xl font-black uppercase italic" style={{ color: theme.text }}>
-                                {editingCourse ? 'Editar Curso' : 'Nuevo Curso'}
+            {/* === MODAL: EDIT FOLDER & PERMISSIONS === */}
+            {showFolderModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                            <h3 className="font-black text-lg uppercase flex items-center gap-2">
+                                <Folder className="text-blue-500" />
+                                {editingFolder?.originalName ? 'Configurar Carpeta' : 'Nueva Carpeta'}
                             </h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-black transition-colors"><X size={24} /></button>
+                            <button onClick={() => setShowFolderModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
                         </div>
 
-                        <form onSubmit={handleSave} className="p-8 space-y-6">
-                            <div className="space-y-5">
-                                <div>
-                                    <label className="block text-xs font-black uppercase tracking-widest mb-2 opacity-50" style={{ color: theme.text }}>Título del Curso</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.title}
-                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:border-blue-500 transition-all font-bold text-lg"
-                                        style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-                                        placeholder="Nombre del curso..."
-                                    />
-                                </div>
-
-                                <div>
-                                    <IconSelector
-                                        selectedIcon={formData.icon_name}
-                                        onSelect={(iconName) => setFormData({ ...formData, icon_name: iconName })}
-                                    />
-                                </div>
-                            </div>
-
+                        <form onSubmit={handleSaveFolder} className="p-6 space-y-6">
+                            {/* Name */}
                             <div>
-                                <label className="block text-xs font-black uppercase tracking-widest mb-3 opacity-50" style={{ color: theme.text }}>Documento (PDF/PPT/Imagen)</label>
-                                <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-blue-500/5 transition-all group" style={{ borderColor: theme.border }}>
-                                    <div className="flex flex-col items-center justify-center py-6">
-                                        <Upload className="w-10 h-10 text-gray-300 mb-3 group-hover:text-blue-500 transition-colors" />
-                                        <p className="text-sm font-bold text-gray-400 px-4 text-center">
-                                            {formData.file ? formData.file.name : (editingCourse ? '¿Cambiar archivo?' : 'Click para subir archivo')}
-                                        </p>
+                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Nombre del Módulo</label>
+                                <input
+                                    autoFocus type="text" required
+                                    className="w-full text-lg font-bold p-3 border-2 rounded-xl focus:border-blue-500 outline-none bg-transparent"
+                                    placeholder="Ej: Contabilidad 2024"
+                                    value={editingFolder.name}
+                                    onChange={e => setEditingFolder(prev => ({ ...prev, name: e.target.value }))}
+                                />
+                            </div>
+
+                            {/* Batch Permissions */}
+                            <div className="border-t pt-4">
+                                <div className="flex justify-between items-center mb-3">
+                                    <label className="block text-xs font-black uppercase tracking-widest opacity-50">Acceso Global (Todas las clases)</label>
+                                    <div className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex items-center gap-2">
+                                        <Search size={12} className="opacity-50" />
+                                        <input className="bg-transparent text-xs outline-none w-24" placeholder="Buscar..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} />
                                     </div>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg"
-                                        onChange={e => setFormData({ ...formData, file: e.target.files[0] })}
-                                    />
-                                </label>
+                                </div>
+
+                                {/* GROUPS SECTION */}
+                                <div className="mb-2 flex flex-wrap gap-2">
+                                    {groups.length > 0 && (
+                                        <>
+                                            {groups.map(group => {
+                                                const groupCompanies = companies.filter(c => c.group_id === group.id);
+                                                const allChecked = groupCompanies.length > 0 && groupCompanies.every(c => editingFolder.assigned_company_ids.includes(c.id));
+                                                return (
+                                                    <button
+                                                        key={group.id} type="button"
+                                                        onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleGroup(prev.assigned_company_ids, group.id) }))}
+                                                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${allChecked ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-gray-50 border-gray-100 text-gray-500'}`}
+                                                    >
+                                                        {allChecked ? '✓' : ''} Grupo {group.name}
+                                                    </button>
+                                                )
+                                            })}
+                                        </>
+                                    )}
+                                </div>
+
+
+                                <div className="h-48 overflow-y-auto border rounded-xl divide-y dark:border-gray-700">
+                                    {companies.filter(c => c.name.toLowerCase().includes(menuSearch.toLowerCase())).map(company => {
+                                        const isSelected = editingFolder.assigned_company_ids.includes(company.id);
+                                        return (
+                                            <div
+                                                key={company.id}
+                                                onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, company.id) }))}
+                                                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}
+                                            >
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                                                    {isSelected && <CheckCircle size={14} className="text-white" />}
+                                                </div>
+                                                <span className="font-bold text-sm select-none">{company.name}</span>
+                                                {company.group_name && <span className="text-[10px] bg-gray-100 px-2 rounded-full text-gray-500">{company.group_name}</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
-                            <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center gap-3">
-                                <Users size={20} className="text-blue-500" />
-                                <p className="text-xs font-bold text-blue-700">Asignado a: <span className="uppercase">{companies.find(c => c.id === expandedCompany)?.name}</span></p>
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-6 border-t" style={{ borderColor: theme.border }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-all text-sm"
-                                >
-                                    CANCELAR
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="px-8 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 font-black shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-50 uppercase italic text-sm transition-all active:scale-95"
-                                >
-                                    {loading ? 'GUARDANDO...' : <><Save size={20} /> GUARDAR</>}
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button type="button" onClick={() => setShowFolderModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
+                                    {editingFolder.originalName ? 'Guardar y Sincronizar' : 'Crear Carpeta'}
                                 </button>
                             </div>
                         </form>
@@ -567,7 +654,120 @@ export default function CourseEditor({ onPreview }) {
                 </div>
             )}
 
+            {/* === MODAL: EDIT CLASS (COURSE) === */}
+            {showCourseModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 scale-in-center">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                            <h3 className="font-black text-lg uppercase flex items-center gap-2">
+                                <FileText className="text-blue-500" />
+                                {editingCourse ? 'Editar Clase' : 'Nueva Clase'}
+                            </h3>
+                            <button onClick={() => setShowCourseModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
+                        </div>
+
+                        <form onSubmit={handleSaveCourse} className="p-6 space-y-5">
+                            <div>
+                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Nombre de la Clase</label>
+                                <input
+                                    type="text" required
+                                    className="w-full text-lg font-bold p-3 border-2 rounded-xl focus:border-blue-500 outline-none bg-transparent"
+                                    value={courseFormData.title}
+                                    onChange={e => setCourseFormData({ ...courseFormData, title: e.target.value })}
+                                    placeholder="Ej: Introducción a..."
+                                />
+                            </div>
+
+                            {/* Parent Folder (Read Only or Selectable) */}
+                            <div className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-xl border border-dashed">
+                                <Folder className="text-gray-400" size={20} />
+                                <div className="flex-1">
+                                    <p className="text-xs font-bold opacity-50 uppercase">Carpeta contenedora</p>
+                                    <p className="font-bold">{courseFormData.folder}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Archivo</label>
+                                <label className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+                                    <div className="text-center">
+                                        <Upload className="mx-auto text-gray-300 mb-2" />
+                                        <p className="text-xs font-bold text-gray-400">
+                                            {courseFormData.file ? courseFormData.file.name : (editingCourse?.file_url ? 'Cambiar archivo actual' : 'Subir archivo')}
+                                        </p>
+                                    </div>
+                                    <input type="file" className="hidden" onChange={e => setCourseFormData({ ...courseFormData, file: e.target.files[0] })} />
+                                </label>
+                            </div>
+
+                            {/* Permissions */}
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-xs font-black uppercase tracking-widest opacity-50">Empresas con Acceso</label>
+                                    <button type="button" onClick={() => setCourseFormData(prev => ({ ...prev, showPerms: !prev.showPerms }))} className="text-xs text-blue-500 font-bold hover:underline">
+                                        {courseFormData.showPerms ? 'Ocultar' : 'Personalizar'}
+                                    </button>
+                                </div>
+
+                                {(courseFormData.showPerms || courseFormData.assigned_company_ids.length > 0) && (
+                                    <div className="h-32 overflow-y-auto border rounded-xl divide-y p-1">
+                                        {companies.map(c => (
+                                            <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={courseFormData.assigned_company_ids.includes(c.id)}
+                                                    onChange={() => setCourseFormData(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, c.id) }))}
+                                                />
+                                                <span className="text-sm font-bold">{c.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                                <button type="button" onClick={() => setShowCourseModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
+                                    Guardar Clase
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* === MODAL: PREVIEW SELECTOR === */}
+            {showPreviewModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                            <div>
+                                <h3 className="font-black text-lg uppercase flex items-center gap-2">
+                                    <Eye className="text-blue-500" />
+                                    Simulación de Estudiante
+                                </h3>
+                            </div>
+                            <button onClick={() => setShowPreviewModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
+                        </div>
+                        <div className="p-6">
+                            <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center gap-2 mb-4">
+                                <Search size={16} className="opacity-50" />
+                                <input className="bg-transparent text-sm outline-none w-full font-bold" placeholder="Buscar empresa..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} autoFocus />
+                            </div>
+                            <div className="h-64 overflow-y-auto border rounded-xl divide-y dark:border-gray-700">
+                                {companies.filter(c => c.name.toLowerCase().includes(menuSearch.toLowerCase())).map(company => (
+                                    <button key={company.id} onClick={() => { onPreview(company.id); setShowPreviewModal(false); }} className="w-full flex items-center justify-between p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group text-left">
+                                        <span className="font-bold text-sm">{company.name}</span>
+                                        <div className="p-2 rounded-full bg-white dark:bg-gray-800 text-gray-300 group-hover:text-blue-500 shadow-sm transition-colors"><Play size={16} fill="currentColor" /></div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        </div >
+        </div>
     );
 }

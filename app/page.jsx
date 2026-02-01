@@ -74,7 +74,7 @@ export default function HomePage() {
       >
         <div className="animate-pulse text-center">
           <img
-            src="/Sin título-1-08.png"
+            src="/prg_logo_final.png"
             alt="Logo PRG Auditores"
             className="w-24 h-24 object-contain mx-auto opacity-50"
           />
@@ -99,7 +99,7 @@ export default function HomePage() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img
-              src="/Sin título-1-08.png"
+              src="/prg_logo_final.png"
               alt="Logo PRG Auditores"
               className="w-72 h-auto object-contain"
             />
