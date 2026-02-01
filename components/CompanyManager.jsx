@@ -12,6 +12,8 @@ import {
 } from '../lib/auth';
 
 export default function CompanyManager() {
+    // V3.11.1 - Redeploy Trigger
+
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
