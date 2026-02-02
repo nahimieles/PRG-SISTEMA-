@@ -8,37 +8,38 @@ export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    // Check local storage or system preference on mount
+    // 1. Initial Load: Read preference
     const saved = localStorage.getItem('theme');
-    // If no saved preference, default to light explicitly as per user request (or system)
-    // User complaint implies it resets.
     if (saved === 'dark') {
       setIsDark(true);
-      document.documentElement.classList.add('dark');
     } else if (saved === 'light') {
       setIsDark(false);
-      document.documentElement.classList.remove('dark');
     } else {
-      // Fallback to system
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        setIsDark(true);
-        document.documentElement.classList.add('dark');
-      }
+      setIsDark(prefersDark);
     }
   }, []);
 
+  // 2. Sync DOM with State (Always runs when isDark changes)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+    // Safety check: ensure no residual classes
+    if (!isDark && root.classList.contains('dark')) {
+      root.classList.remove('dark');
+    }
+  }, [isDark]);
+
   const toggleTheme = () => {
-    setIsDark(prev => {
-      const newVal = !prev;
-      localStorage.setItem('theme', newVal ? 'dark' : 'light');
-      if (newVal) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      return newVal;
-    });
+    setIsDark(prev => !prev);
   };
 
   return (

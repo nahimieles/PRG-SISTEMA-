@@ -349,14 +349,27 @@ export default function CourseEditor({ onPreview }) {
         <div className="animate-fade-in space-y-6">
 
             {/* HEADER */}
-            <div className="flex flex-col md:flex-row justify-between items-center p-6 rounded-xl border gap-4" style={{ background: theme.surface, borderColor: theme.border }}>
+            <div
+                key={`header-${isDark ? 'dark' : 'light'}`}
+                className="flex flex-col md:flex-row justify-between items-center p-6 rounded-xl border gap-4"
+                style={{
+                    background: isDark ? '#111827' : '#ffffff',
+                    borderColor: isDark ? '#374151' : '#e5e7eb'
+                }}
+            >
                 <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-blue-500/10 text-blue-500">
+                    <div
+                        className="p-3 rounded-lg text-blue-500 border"
+                        style={{
+                            backgroundColor: isDark ? '#1e3a5f' : '#ffffff',
+                            borderColor: isDark ? '#2563eb' : '#bfdbfe'
+                        }}
+                    >
                         <Layers size={24} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold" style={{ color: theme.text }}>Gestión de Material</h2>
-                        <p style={{ color: theme.textSecondary }}>Biblioteca Global de Conocimiento</p>
+                        <h2 className="text-2xl font-bold" style={{ color: isDark ? '#ffffff' : '#111827' }}>Gestión de Material</h2>
+
                     </div>
                 </div>
 
@@ -390,7 +403,11 @@ export default function CourseEditor({ onPreview }) {
                             onPreview(null);
                         }
                     }}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 hover:scale-105 active:scale-95"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
+                    style={{
+                        backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                        color: isDark ? '#d1d5db' : '#4b5563'
+                    }}
                 >
                     <Eye size={18} />
                     <span>Vista Previa</span>
@@ -528,7 +545,7 @@ export default function CourseEditor({ onPreview }) {
                                                     </div>
                                                     <div className="col-span-6 min-w-0">
                                                         <h4 className="font-bold text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
-                                                        <p className="text-[10px] font-mono opacity-40 truncate">{course.file_url ? course.file_url.split('/').pop() : '...'}</p>
+                                                        <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
                                                     </div>
                                                     <div className="col-span-3 flex justify-center">
                                                         {accessCount === 0 ? (
@@ -568,170 +585,351 @@ export default function CourseEditor({ onPreview }) {
 
             {/* === MODAL: EDIT FOLDER & PERMISSIONS === */}
             {showFolderModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-                            <h3 className="font-black text-lg uppercase flex items-center gap-2">
-                                <Folder className="text-blue-500" />
-                                {editingFolder?.originalName ? 'Configurar Carpeta' : 'Nueva Carpeta'}
-                            </h3>
-                            <button onClick={() => setShowFolderModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
+                <div key={`folder-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+                    <div
+                        className="w-full max-w-lg rounded-3xl shadow-2xl border flex flex-col max-h-[90vh] overflow-hidden scale-in-center"
+                        style={{
+                            backgroundColor: isDark ? '#111827' : '#ffffff',
+                            borderColor: isDark ? '#374151' : '#e5e7eb'
+                        }}
+                    >
+                        <div
+                            className="p-6 border-b flex justify-between items-start shrink-0"
+                            style={{
+                                backgroundColor: isDark ? '#1f2937' : '#f9fafb',
+                                borderColor: isDark ? '#374151' : '#e5e7eb'
+                            }}
+                        >
+                            <div>
+                                <h3 className="font-black text-xl uppercase tracking-tighter italic flex items-center gap-2" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                                    <Folder className="text-blue-600" size={24} />
+                                    {editingFolder?.originalName ? 'Configurar Módulo' : 'Nuevo Módulo'}
+                                </h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Gestión de contenido y accesos</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowFolderModal(false)}
+                                className="p-2 rounded-xl transition-all group"
+                                style={{ backgroundColor: isDark ? '#374151' : '#f3f4f6', color: '#9ca3af' }}
+                            >
+                                <X size={20} className="group-hover:rotate-90 transition-transform" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSaveFolder} className="p-6 space-y-6">
-                            {/* Name */}
-                            <div>
-                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Nombre del Módulo</label>
-                                <input
-                                    autoFocus type="text" required
-                                    className="w-full text-lg font-bold p-3 border-2 rounded-xl focus:border-blue-500 outline-none bg-transparent"
-                                    placeholder="Ej: Contabilidad 2024"
-                                    value={editingFolder.name}
-                                    onChange={e => setEditingFolder(prev => ({ ...prev, name: e.target.value }))}
-                                />
-                            </div>
+                        <div className="overflow-y-auto custom-scrollbar" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
+                            <form onSubmit={handleSaveFolder} className="p-8 space-y-8">
+                                {/* Name */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-end">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre del Módulo</label>
+                                        <span className="text-[10px] font-bold text-blue-500">Requerido</span>
+                                    </div>
+                                    <input
+                                        autoFocus type="text" required
+                                        className="w-full text-xl font-black p-4 border-2 rounded-2xl outline-none transition-all"
+                                        style={{
+                                            backgroundColor: isDark ? '#374151' : '#ffffff',
+                                            borderColor: isDark ? '#4b5563' : '#e5e7eb',
+                                            color: isDark ? '#ffffff' : '#111827'
+                                        }}
+                                        placeholder="Ej: Auditoría Externa 2024"
+                                        value={editingFolder.name}
+                                        onChange={e => setEditingFolder(prev => ({ ...prev, name: e.target.value }))}
+                                    />
+                                </div>
 
-                            {/* Batch Permissions */}
-                            <div className="border-t pt-4">
-                                <div className="flex justify-between items-center mb-3">
-                                    <label className="block text-xs font-black uppercase tracking-widest opacity-50">Acceso Global (Todas las clases)</label>
-                                    <div className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex items-center gap-2">
-                                        <Search size={12} className="opacity-50" />
-                                        <input className="bg-transparent text-xs outline-none w-24" placeholder="Buscar..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} />
+                                {/* Batch Permissions */}
+                                <div className="border-t pt-4" style={{ borderColor: isDark ? '#374151' : '#e5e7eb' }}>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Acceso Global (Todas las clases)</label>
+                                        <div
+                                            className="px-3 py-1.5 rounded-xl flex items-center gap-2 border shadow-inner"
+                                            style={{
+                                                backgroundColor: isDark ? '#374151' : '#f9fafb',
+                                                borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                                            }}
+                                        >
+                                            <Search size={14} style={{ color: '#9ca3af' }} />
+                                            <input
+                                                className="bg-transparent text-xs font-bold outline-none w-32"
+                                                style={{ color: isDark ? '#ffffff' : '#111827' }}
+                                                placeholder="Buscar..."
+                                                value={menuSearch}
+                                                onChange={e => setMenuSearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* GROUPS SECTION */}
+                                    <div className="mb-2 flex flex-wrap gap-2">
+                                        {groups.length > 0 && (
+                                            <>
+                                                {groups.map(group => {
+                                                    const groupCompanies = companies.filter(c => c.group_id === group.id);
+                                                    const allChecked = groupCompanies.length > 0 && groupCompanies.every(c => editingFolder.assigned_company_ids.includes(c.id));
+                                                    return (
+                                                        <button
+                                                            key={group.id} type="button"
+                                                            onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleGroup(prev.assigned_company_ids, group.id) }))}
+                                                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-2 ${allChecked ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100'}`}
+                                                        >
+                                                            {group.image_url ? (
+                                                                <img src={group.image_url} alt="" className="w-4 h-4 rounded-full object-cover shadow-sm bg-white" />
+                                                            ) : (
+                                                                <Folder size={12} className={allChecked ? 'text-purple-500' : 'text-gray-400'} />
+                                                            )}
+                                                            <span>{group.name}</span>
+                                                            {allChecked && <CheckCircle size={12} />}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </>
+                                        )}
+                                    </div>
+
+
+                                    <div
+                                        className="h-48 overflow-y-auto border rounded-xl divide-y"
+                                        style={{
+                                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                                            backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                                        }}
+                                    >
+                                        {companies.filter(c => c.name.toLowerCase().includes(menuSearch.toLowerCase())).map(company => {
+                                            const isSelected = editingFolder.assigned_company_ids.includes(company.id);
+                                            return (
+                                                <div
+                                                    key={company.id}
+                                                    onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, company.id) }))}
+                                                    className="flex items-center gap-3 p-3 cursor-pointer transition-colors"
+                                                    style={{
+                                                        backgroundColor: isSelected ? (isDark ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff') : 'transparent',
+                                                        borderColor: isDark ? '#374151' : '#f3f4f6'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(59, 130, 246, 0.15)' : '#f0f9ff'}
+                                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = isSelected ? (isDark ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff') : 'transparent'}
+                                                >
+                                                    <div
+                                                        className="w-5 h-5 rounded border flex items-center justify-center transition-all"
+                                                        style={{
+                                                            backgroundColor: isSelected ? '#3b82f6' : 'transparent',
+                                                            borderColor: isSelected ? '#3b82f6' : (isDark ? '#4b5563' : '#d1d5db')
+                                                        }}
+                                                    >
+                                                        {isSelected && <CheckCircle size={14} className="text-white" />}
+                                                    </div>
+
+                                                    {/* Company Logo in List */}
+                                                    <div
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border"
+                                                        style={{
+                                                            backgroundColor: isDark ? '#374151' : '#ffffff',
+                                                            borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                                                        }}
+                                                    >
+                                                        {(company.logo_url || company.avatar_url) ? (
+                                                            <img src={company.logo_url || company.avatar_url} alt="" className="w-full h-full object-contain p-0.5" />
+                                                        ) : (
+                                                            <LucideIcons.Building2 size={16} style={{ color: isDark ? '#9ca3af' : '#9ca3af' }} />
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex flex-col flex-1 min-w-0">
+                                                        <span className="font-bold text-sm select-none truncate" style={{ color: isDark ? '#f3f4f6' : '#111827' }}>{company.name}</span>
+                                                        {company.group_name && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter">{company.group_name}</span>}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                {/* GROUPS SECTION */}
-                                <div className="mb-2 flex flex-wrap gap-2">
-                                    {groups.length > 0 && (
-                                        <>
-                                            {groups.map(group => {
-                                                const groupCompanies = companies.filter(c => c.group_id === group.id);
-                                                const allChecked = groupCompanies.length > 0 && groupCompanies.every(c => editingFolder.assigned_company_ids.includes(c.id));
-                                                return (
-                                                    <button
-                                                        key={group.id} type="button"
-                                                        onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleGroup(prev.assigned_company_ids, group.id) }))}
-                                                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${allChecked ? 'bg-purple-100 text-purple-600 border-purple-200' : 'bg-gray-50 border-gray-100 text-gray-500'}`}
-                                                    >
-                                                        {allChecked ? '✓' : ''} Grupo {group.name}
-                                                    </button>
-                                                )
-                                            })}
-                                        </>
-                                    )}
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <button type="button" onClick={() => setShowFolderModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
+                                        {editingFolder.originalName ? 'Guardar y Sincronizar' : 'Crear Carpeta'}
+                                    </button>
                                 </div>
-
-
-                                <div className="h-48 overflow-y-auto border rounded-xl divide-y dark:border-gray-700">
-                                    {companies.filter(c => c.name.toLowerCase().includes(menuSearch.toLowerCase())).map(company => {
-                                        const isSelected = editingFolder.assigned_company_ids.includes(company.id);
-                                        return (
-                                            <div
-                                                key={company.id}
-                                                onClick={() => setEditingFolder(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, company.id) }))}
-                                                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''}`}
-                                            >
-                                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
-                                                    {isSelected && <CheckCircle size={14} className="text-white" />}
-                                                </div>
-                                                <span className="font-bold text-sm select-none">{company.name}</span>
-                                                {company.group_name && <span className="text-[10px] bg-gray-100 px-2 rounded-full text-gray-500">{company.group_name}</span>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowFolderModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
-                                    {editingFolder.originalName ? 'Guardar y Sincronizar' : 'Crear Carpeta'}
-                                </button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* === MODAL: EDIT CLASS (COURSE) === */}
             {showCourseModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 scale-in-center">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-                            <h3 className="font-black text-lg uppercase flex items-center gap-2">
-                                <FileText className="text-blue-500" />
-                                {editingCourse ? 'Editar Clase' : 'Nueva Clase'}
-                            </h3>
-                            <button onClick={() => setShowCourseModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
+                <div key={`course-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+                    <div
+                        className="w-full max-w-lg rounded-3xl shadow-2xl border scale-in-center flex flex-col max-h-[90vh] overflow-hidden"
+                        style={{
+                            backgroundColor: isDark ? '#111827' : '#ffffff',
+                            borderColor: isDark ? '#374151' : '#e5e7eb'
+                        }}
+                    >
+                        <div
+                            className="p-6 border-b flex justify-between items-start shrink-0"
+                            style={{
+                                backgroundColor: isDark ? '#1f2937' : '#f9fafb',
+                                borderColor: isDark ? '#374151' : '#e5e7eb'
+                            }}
+                        >
+                            <div>
+                                <h3 className="font-black text-xl uppercase tracking-tighter italic flex items-center gap-2" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                                    <FileText className="text-blue-600" size={24} />
+                                    {editingCourse ? 'Editar Clase' : 'Crear Nueva Clase'}
+                                </h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Detalles del material educativo</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowCourseModal(false)}
+                                className="p-2 rounded-xl transition-all group"
+                                style={{
+                                    backgroundColor: isDark ? '#374151' : '#f3f4f6',
+                                    color: '#9ca3af'
+                                }}
+                            >
+                                <X size={20} className="group-hover:rotate-90 transition-transform" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSaveCourse} className="p-6 space-y-5">
-                            <div>
-                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Nombre de la Clase</label>
-                                <input
-                                    type="text" required
-                                    className="w-full text-lg font-bold p-3 border-2 rounded-xl focus:border-blue-500 outline-none bg-transparent"
-                                    value={courseFormData.title}
-                                    onChange={e => setCourseFormData({ ...courseFormData, title: e.target.value })}
-                                    placeholder="Ej: Introducción a..."
-                                />
-                            </div>
-
-                            {/* Parent Folder (Read Only or Selectable) */}
-                            <div className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-xl border border-dashed">
-                                <Folder className="text-gray-400" size={20} />
-                                <div className="flex-1">
-                                    <p className="text-xs font-bold opacity-50 uppercase">Carpeta contenedora</p>
-                                    <p className="font-bold">{courseFormData.folder}</p>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-black uppercase tracking-widest opacity-50 mb-2">Archivo</label>
-                                <label className="flex items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
-                                    <div className="text-center">
-                                        <Upload className="mx-auto text-gray-300 mb-2" />
-                                        <p className="text-xs font-bold text-gray-400">
-                                            {courseFormData.file ? courseFormData.file.name : (editingCourse?.file_url ? 'Cambiar archivo actual' : 'Subir archivo')}
-                                        </p>
+                        <div className="overflow-y-auto custom-scrollbar" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
+                            <form onSubmit={handleSaveCourse} className="p-8 space-y-8">
+                                {/* Title First */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-end">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre de la Clase</label>
+                                        <span className="text-[10px] font-bold text-blue-500">Requerido</span>
                                     </div>
-                                    <input type="file" className="hidden" onChange={e => setCourseFormData({ ...courseFormData, file: e.target.files[0] })} />
-                                </label>
-                            </div>
+                                    <input
+                                        autoFocus type="text" required
+                                        className="w-full text-xl font-black p-4 border-2 rounded-2xl outline-none transition-all"
+                                        style={{
+                                            backgroundColor: isDark ? '#374151' : '#ffffff',
+                                            borderColor: isDark ? '#4b5563' : '#e5e7eb',
+                                            color: isDark ? '#ffffff' : '#111827'
+                                        }}
+                                        value={courseFormData.title}
+                                        onChange={e => setCourseFormData({ ...courseFormData, title: e.target.value })}
+                                        placeholder="Ej: Introducción a la Auditoría"
+                                    />
+                                </div>
 
-                            {/* Permissions */}
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-xs font-black uppercase tracking-widest opacity-50">Empresas con Acceso</label>
-                                    <button type="button" onClick={() => setCourseFormData(prev => ({ ...prev, showPerms: !prev.showPerms }))} className="text-xs text-blue-500 font-bold hover:underline">
-                                        {courseFormData.showPerms ? 'Ocultar' : 'Personalizar'}
+                                {/* Icon Selector Second */}
+                                <div>
+                                    <IconSelector
+                                        selectedIcon={courseFormData.icon_name}
+                                        onSelect={(icon) => setCourseFormData({ ...courseFormData, icon_name: icon })}
+                                    />
+                                </div>
+
+                                {/* Parent Folder (Read Only) */}
+                                <div
+                                    className="p-4 rounded-2xl border-2 border-dashed flex items-center gap-4"
+                                    style={{
+                                        backgroundColor: isDark ? '#374151' : '#f9fafb',
+                                        borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                                    }}
+                                >
+                                    <div
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center text-blue-500 shadow-sm border"
+                                        style={{
+                                            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                                            borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                                        }}
+                                    >
+                                        <Folder size={20} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Carpeta Contenedora</p>
+                                        <p className="font-black" style={{ color: isDark ? '#ffffff' : '#111827' }}>{courseFormData.folder}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Archivo de Contenido</label>
+                                    <label
+                                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-2xl cursor-pointer transition-all group"
+                                        style={{
+                                            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                                            borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                                        }}
+                                    >
+                                        <div
+                                            className="p-4 rounded-full mb-3 group-hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff' }}
+                                        >
+                                            <Upload className="text-blue-500" size={24} />
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-tighter" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                                            {courseFormData.file ? courseFormData.file.name : (editingCourse?.file_url ? 'Cambiar archivo actual' : 'Seleccionar PDF o Imagen')}
+                                        </p>
+                                        <p className="text-[10px] font-bold mt-1" style={{ color: '#9ca3af' }}>Arrastra aquí o haz clic para buscar</p>
+                                        <input type="file" className="hidden" onChange={e => setCourseFormData({ ...courseFormData, file: e.target.files[0] })} />
+                                    </label>
+                                </div>
+
+                                {/* Permissions */}
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="block text-xs font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Empresas con Acceso</label>
+                                        <button type="button" onClick={() => setCourseFormData(prev => ({ ...prev, showPerms: !prev.showPerms }))} className="text-xs text-blue-500 font-bold hover:underline">
+                                            {courseFormData.showPerms ? 'Ocultar' : 'Personalizar'}
+                                        </button>
+                                    </div>
+
+                                    {(courseFormData.showPerms || courseFormData.assigned_company_ids.length > 0) && (
+                                        <div
+                                            className="h-32 overflow-y-auto border rounded-xl divide-y p-1"
+                                            style={{
+                                                backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                                                borderColor: isDark ? '#374151' : '#e5e7eb'
+                                            }}
+                                        >
+                                            {companies.map(c => (
+                                                <label
+                                                    key={c.id}
+                                                    className="flex items-center gap-2 p-2 rounded cursor-pointer transition-colors"
+                                                    style={{ backgroundColor: 'transparent' }}
+                                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f9fafb'}
+                                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded text-blue-500"
+                                                        style={{ borderColor: isDark ? '#4b5563' : '#d1d5db' }}
+                                                        checked={courseFormData.assigned_company_ids.includes(c.id)}
+                                                        onChange={() => setCourseFormData(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, c.id) }))}
+                                                    />
+                                                    <div
+                                                        className="w-6 h-6 rounded flex items-center justify-center overflow-hidden"
+                                                        style={{
+                                                            backgroundColor: isDark ? '#374151' : '#ffffff',
+                                                            border: `1px solid ${isDark ? '#4b5563' : '#e5e7eb'}`
+                                                        }}
+                                                    >
+                                                        {(c.logo_url || c.avatar_url) ? (
+                                                            <img src={c.logo_url || c.avatar_url} alt="" className="w-full h-full object-contain" />
+                                                        ) : (
+                                                            <LucideIcons.Building2 size={12} style={{ color: '#9ca3af' }} />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-sm font-bold truncate" style={{ color: isDark ? '#f3f4f6' : '#111827' }}>{c.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-4 border-t">
+                                    <button type="button" onClick={() => setShowCourseModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
+                                        Guardar Clase
                                     </button>
                                 </div>
-
-                                {(courseFormData.showPerms || courseFormData.assigned_company_ids.length > 0) && (
-                                    <div className="h-32 overflow-y-auto border rounded-xl divide-y p-1">
-                                        {companies.map(c => (
-                                            <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={courseFormData.assigned_company_ids.includes(c.id)}
-                                                    onChange={() => setCourseFormData(prev => ({ ...prev, assigned_company_ids: toggleId(prev.assigned_company_ids, c.id) }))}
-                                                />
-                                                <span className="text-sm font-bold">{c.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-4 border-t">
-                                <button type="button" onClick={() => setShowCourseModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
-                                    Guardar Clase
-                                </button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
@@ -739,20 +937,26 @@ export default function CourseEditor({ onPreview }) {
             {/* === MODAL: PREVIEW SELECTOR === */}
             {showPreviewModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800 shrink-0">
                             <div>
                                 <h3 className="font-black text-lg uppercase flex items-center gap-2">
                                     <Eye className="text-blue-500" />
                                     Simulación de Estudiante
                                 </h3>
                             </div>
-                            <button onClick={() => setShowPreviewModal(false)}><X className="opacity-50 hover:opacity-100" /></button>
+                            <button
+                                type="button"
+                                onClick={() => setShowPreviewModal(false)}
+                                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-gray-500 hover:text-red-500 dark:text-gray-300"
+                            >
+                                <X size={20} />
+                            </button>
                         </div>
-                        <div className="p-6">
+                        <div className="overflow-y-auto p-6">
                             <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center gap-2 mb-4">
-                                <Search size={16} className="opacity-50" />
-                                <input className="bg-transparent text-sm outline-none w-full font-bold" placeholder="Buscar empresa..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} autoFocus />
+                                <Search size={16} className="opacity-50 dark:text-gray-400" />
+                                <input className="bg-transparent text-sm outline-none w-full font-bold text-gray-900 dark:text-gray-100 placeholder-gray-500" placeholder="Buscar empresa..." value={menuSearch} onChange={e => setMenuSearch(e.target.value)} autoFocus />
                             </div>
                             <div className="h-64 overflow-y-auto border rounded-xl divide-y dark:border-gray-700">
                                 {companies.filter(c => c.name.toLowerCase().includes(menuSearch.toLowerCase())).map(company => (

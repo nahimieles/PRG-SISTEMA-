@@ -63,6 +63,7 @@ const OneDriveContainer = () => {
                         siteName={'Archivos'}
                         currentUser={currentUser}
                         role={currentRole}
+                        disableGroups={true}
                     />
                 ) : (
                     <div className="flex items-center justify-center h-64">

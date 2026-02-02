@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import { lightTheme, darkTheme } from '../lib/colors';
+import LoginLogo from './LoginLogo';
 
 export default function Sidebar({
     items = [],
@@ -87,21 +88,13 @@ export default function Sidebar({
     const SidebarContent = ({ expanded = true }) => (
         <>
             {/* Logo/Brand */}
+            {/* Logo/Brand */}
             <div className={`flex items-center ${expanded ? 'px-4 py-4' : 'justify-center py-4'} transition-all duration-300`}>
-                <div className={`flex items-center gap-3 ${expanded ? '' : 'flex-col'}`}>
-                    <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg flex-shrink-0 transition-transform duration-300 hover:scale-105">
-                        <img
-                            src="/Sin título-1-08.png"
-                            alt="PRG Logo"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                    {expanded && (
-                        <div className="animate-fade-in">
-                            <h1 className="text-white font-bold text-lg">PRG</h1>
-                            <p className="text-gray-400 text-xs">Sistema de Gestión</p>
-                        </div>
-                    )}
+                <div className={`flex items-center justify-center w-full transition-all duration-300`}>
+                    <LoginLogo
+                        className={`transition-all duration-300 ${expanded ? 'w-48 h-auto' : 'w-10 h-auto'
+                            }`}
+                    />
                 </div>
             </div>
 
@@ -191,10 +184,7 @@ export default function Sidebar({
                 style={{ background: sidebarBg }}
             >
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-white font-bold">PRG</span>
+                    <LoginLogo className="w-24 h-auto" />
                 </div>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

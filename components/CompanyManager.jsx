@@ -134,10 +134,16 @@ export default function CompanyManager() {
             }
         } else {
             // SAVING GROUP
+            // SAVING GROUP
+            const groupData = {
+                name: formData.name,
+                image_url: formData.avatar_url || null
+            };
+
             if (editingItem) {
-                result = await updateCompanyGroup(editingItem.id, formData.name);
+                result = await updateCompanyGroup(editingItem.id, groupData);
             } else {
-                result = await createCompanyGroup(formData.name);
+                result = await createCompanyGroup(groupData);
             }
         }
 
@@ -184,12 +190,12 @@ export default function CompanyManager() {
     const showToast = (text, type = 'success') => { setMessage({ text, type }); setTimeout(() => setMessage(null), 3000); };
 
     const openModal = (item = null, isGroup = false) => {
+        console.log('[DEBUG] openModal called with item:', item);
         setEditingItem(item);
         if (item) {
-            if (isGroup || !item.username) { // Logic to detect if it is a group object (simplification)
-                // It is a group
-                setFormData({ name: item.name });
-            } else {
+            // Use 'type' field to detect company vs group - companies have 'type', groups don't
+            const isCompany = item.type !== undefined && !isGroup;
+            if (isCompany) {
                 // It is a company
                 setFormData({
                     name: item.name,
@@ -198,6 +204,12 @@ export default function CompanyManager() {
                     password: '',
                     group_id: item.group_id || '',
                     avatar_url: item.avatar_url || ''
+                });
+            } else {
+                // It is a group
+                setFormData({
+                    name: item.name,
+                    avatar_url: item.image_url || ''
                 });
             }
         } else {
@@ -299,17 +311,25 @@ export default function CompanyManager() {
                                                 className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-4 group-hover:bg-purple-600 group-hover:text-white transition-all shadow-sm">
-                                                    <Folder size={24} />
+                                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    {group.image_url ? (
+                                                        <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                                                    ) : (
+                                                        <Folder size={28} className="text-blue-500" />
+                                                    )}
                                                 </div>
                                                 <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
-                                                <p className="text-xs font-medium opacity-50 uppercase tracking-widest mb-4">{groupCompanies.length} Empresas</p>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
+                                                        {groupCompanies.length} Empresas
+                                                    </span>
+                                                </div>
 
                                                 {/* Member Preview */}
                                                 {groupCompanies.length > 0 ? (
                                                     <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
-                                                        <p className="text-xs text-gray-500 truncate dark:text-gray-400">
-                                                            {previewNames} {moreCount && <span className="font-bold text-gray-400">{moreCount}</span>}
+                                                        <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
+                                                            {previewNames} {moreCount && <span className="text-blue-500 font-bold">{moreCount}</span>}
                                                         </p>
                                                     </div>
                                                 ) : (
@@ -335,14 +355,18 @@ export default function CompanyManager() {
                                                 className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full opacity-80 hover:opacity-100"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className={`w-12 h-12 rounded-xl bg-gray-500/10 text-gray-600 flex items-center justify-center mb-4 group-hover:bg-gray-600 group-hover:text-white transition-all shadow-sm`}>
-                                                    <Users size={24} />
+                                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <Users size={28} className="text-gray-400" />
                                                 </div>
                                                 <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{lg.name}</h3>
-                                                <p className="text-xs font-medium opacity-50 uppercase tracking-widest mb-4">{typeCompanies.length} Empresas</p>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700 uppercase tracking-tight">
+                                                        {typeCompanies.length} Empresas
+                                                    </span>
+                                                </div>
                                                 <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
-                                                    <p className="text-xs text-gray-500 truncate dark:text-gray-400">
-                                                        {previewNames || 'Vacio'}
+                                                    <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
+                                                        {previewNames || <span className="italic opacity-50 font-normal">Sin empresas</span>}
                                                     </p>
                                                 </div>
                                             </button>
@@ -369,31 +393,73 @@ export default function CompanyManager() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredCompanies.filter(c => {
-                                    if (expandedGroup.type) return c.type === expandedGroup.type; // Filter by Legacy Type
-                                    return c.group_id === expandedGroup.id; // Filter by Dynamic ID
-                                }).map(company => (
-                                    <div key={company.id} className="p-5 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
-                                        <div className="flex justify-between items-start mb-3">
-                                            {company.avatar_url ? (
-                                                <img src={company.avatar_url} className="w-14 h-14 rounded-xl object-cover border shadow-sm" />
-                                            ) : (
-                                                <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400">
-                                                    <Building2 size={24} />
+                                {(() => {
+                                    const legacyTypes = ['contabilidad', 'auditoria']; // Only these are legacy type filters
+                                    const groupCompanies = filteredCompanies.filter(c => {
+                                        // If it's a legacy type group (contabilidad/auditoria), filter by company type
+                                        if (expandedGroup.type && legacyTypes.includes(expandedGroup.type)) {
+                                            return c.type === expandedGroup.type;
+                                        }
+                                        // Otherwise, it's a dynamic group - filter by group_id
+                                        return c.group_id === expandedGroup.id;
+                                    });
+
+                                    console.log('[DEBUG] Group Companies Filter:', {
+                                        expandedGroupId: expandedGroup.id,
+                                        expandedGroupType: expandedGroup.type,
+                                        totalCompanies: filteredCompanies.length,
+                                        matchingCompanies: groupCompanies.length,
+                                        sampleCompanyGroupIds: filteredCompanies.slice(0, 3).map(c => ({ name: c.name, group_id: c.group_id }))
+                                    });
+
+                                    if (groupCompanies.length === 0) {
+                                        return (
+                                            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                                                <Building2 size={48} className="text-gray-300 mb-4" />
+                                                <p className="text-lg font-bold" style={{ color: theme.text }}>No hay empresas en este grupo</p>
+                                                <p className="text-sm opacity-60 mt-1">Asigna empresas a este grupo editándolas individualmente</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return groupCompanies.map(company => (
+                                        <div key={company.id} className="p-5 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
+                                            <div className="flex justify-between items-start mb-3">
+                                                {(company.logo_url || company.avatar_url) ? (
+                                                    <div className="w-16 h-16 rounded-2xl border overflow-hidden shadow-sm transition-transform group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1.5" alt={company.name} />
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-gray-400 border shadow-sm transition-transform group-hover:-rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        <Building2 size={32} />
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => openModal(company)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                                    <button onClick={() => handleDelete(company.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16} /></button>
                                                 </div>
-                                            )}
-                                            <div className="flex gap-2">
-                                                <button onClick={() => openModal(company)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg"><Edit2 size={16} /></button>
-                                                <button onClick={() => handleDelete(company.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                                            </div>
+                                            <h3 className="font-bold text-lg mb-1 truncate" style={{ color: theme.text }}>{company.name}</h3>
+                                            <div className="flex flex-wrap gap-2 text-[10px] font-bold tracking-tight uppercase">
+                                                {(() => {
+                                                    const type = (company.type || 'otro').toLowerCase();
+                                                    let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+
+                                                    if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
+                                                    else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
+                                                    else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
+
+                                                    return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
+                                                })()}
+                                                {company.username && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-blue-50/50 text-blue-600 dark:bg-blue-500/5 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30">
+                                                        ID: {company.username}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                        <h3 className="font-bold text-lg mb-1 truncate" style={{ color: theme.text }}>{company.name}</h3>
-                                        <div className="flex flex-wrap gap-2 text-xs">
-                                            <span className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 opacity-70 uppercase">{company.type}</span>
-                                            {company.username && <span className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-bold">USER: {company.username}</span>}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ));
+                                })()}
                             </div>
                         </div>
                     )}
@@ -429,6 +495,34 @@ export default function CompanyManager() {
                                 {editingItem ? 'Editar' : 'Crear Nuevo'}
                             </h3>
                             <form onSubmit={handleSave} className="space-y-4">
+                                {/* Image Upload */}
+                                <div className="flex justify-center mb-4">
+                                    <div className="relative group cursor-pointer">
+                                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-black/20 hover:bg-gray-100 transition-colors">
+                                            {formData.avatar_url ? (
+                                                <img src={formData.avatar_url} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="text-center p-2">
+                                                    <ImageIcon className="mx-auto text-gray-400 mb-1" size={24} />
+                                                    <span className="text-[10px] text-gray-400 font-bold uppercase">Subir Imagen</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleAvatarUpload}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            disabled={uploadingAvatar}
+                                        />
+                                        {uploadingAvatar && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-2xl">
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Nombre</label>
                                     <input

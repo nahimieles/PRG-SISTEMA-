@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <head>
-        <title>PRG - Sistema de Trabajos</title>
+        <title>PRG Sistemas</title>
         <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
       </head>
       <body className={montserrat.className}>

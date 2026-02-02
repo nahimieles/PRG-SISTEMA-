@@ -54,6 +54,9 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             console.error("Error loading courses:", error);
         }
 
+        if (data && data.length > 0) {
+            data.sort((a, b) => (a.position || 0) - (b.position || 0));
+        }
         setCourses(data || []);
 
         // Extract Folders
@@ -294,9 +297,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                             <>PANEL DE <span className="text-blue-500">CONTROL</span></>
                         )}
                     </h1>
-                    {currentFolder && (
-                        <p className="text-sm font-medium opacity-50 pl-1">{filteredCourses.length} Clases Disponibles</p>
-                    )}
                 </div>
             </div>
 

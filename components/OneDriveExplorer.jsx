@@ -24,7 +24,7 @@ const normalize = (str) => {
 // ... (rest of imports)
 
 
-const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role }) => {
+const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, role, disableGroups = false }) => {
     const { instance, accounts, inProgress } = useMsal();
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -126,7 +126,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 const isSharePointSiteId = (str) => str && str.includes(',');
 
                 // Determine what to fetch
-                const shouldFetchGroups = type === 'root' || (type === 'group' && !isSharePointSiteId(id));
+                const shouldFetchGroups = !disableGroups && (type === 'root' || (type === 'group' && !isSharePointSiteId(id)));
                 const shouldFetchSites = type === 'root';
                 const shouldFetchFiles = !!effectiveDriveId;
 

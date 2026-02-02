@@ -7,6 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { lightTheme, darkTheme } from '../lib/colors';
 import { loginUnified, saveUnifiedSession, getUnifiedSession } from '../lib/auth';
+import LoginLogo from '../components/LoginLogo';
 
 export default function HomePage() {
   const router = useRouter();
@@ -73,11 +74,7 @@ export default function HomePage() {
         style={{ background: theme.background }}
       >
         <div className="animate-pulse text-center">
-          <img
-            src="/prg_logo_final.png"
-            alt="Logo PRG Auditores"
-            className="w-24 h-24 object-contain mx-auto opacity-50"
-          />
+          <LoginLogo className="w-24 h-auto mx-auto opacity-50" />
         </div>
       </div>
     );
@@ -96,23 +93,10 @@ export default function HomePage() {
       {/* Contenedor del login */}
       <div className="w-full max-w-md">
         {/* Logo y título */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/prg_logo_final.png"
-              alt="Logo PRG Auditores"
-              className="w-72 h-auto object-contain"
-            />
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-0">
+            <LoginLogo className="w-96 h-auto" />
           </div>
-          <h1
-            className="text-3xl font-bold mb-2"
-            style={{ color: theme.primary }}
-          >
-            PRG Auditores
-          </h1>
-          <p style={{ color: theme.textSecondary }}>
-            Sistema de Registro de Actividades
-          </p>
         </div>
 
         {/* Formulario de login */}
