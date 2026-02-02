@@ -17,7 +17,6 @@ export default function CompanyManager() {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
 
-    const [activeTab, setActiveTab] = useState('companies'); // 'companies' (Dashboard) or 'manage_groups' (CRUD)
     const [loading, setLoading] = useState(true);
     const [companies, setCompanies] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -29,8 +28,8 @@ export default function CompanyManager() {
 
     // Hardcoded Types (Legacy Groups)
     const legacyGroups = [
-        { id: 'contabilidad', name: 'Contabilidad (Tipo)', color: 'green', type: 'contabilidad' },
-        { id: 'auditoria', name: 'Auditoría (Tipo)', color: 'blue', type: 'auditoria' }
+        { id: 'contabilidad', name: 'Contabilidad', color: 'green', type: 'contabilidad' },
+        { id: 'auditoria', name: 'Auditoría', color: 'blue', type: 'auditoria' }
     ];
 
     // Get PRG company (direct access)
@@ -43,13 +42,19 @@ export default function CompanyManager() {
     };
 
     const handleBackToGroups = () => {
+        if (expandedGroup && expandedGroup.category) {
+            // If we are in a sub-group that belongs to a legacy category, go back to category
+            const parentCat = legacyGroups.find(lg => lg.type === expandedGroup.category);
+            if (parentCat) {
+                setExpandedGroup(parentCat);
+                return;
+            }
+        }
         setExpandedGroup(null);
         setSelectedPRGCompany(null);
     };
 
-    const handleBackToDashboard = () => {
-        setActiveTab('companies');
-    };
+
 
     // Estado Formularios
     const [showModal, setShowModal] = useState(false);
@@ -62,7 +67,8 @@ export default function CompanyManager() {
         username: '',
         password: '',
         group_id: '',
-        avatar_url: ''
+        avatar_url: '',
+        category: null
     });
 
     const [message, setMessage] = useState(null);
@@ -93,68 +99,92 @@ export default function CompanyManager() {
     const handleSave = async (e) => {
         e.preventDefault();
         setMessage(null);
-        let result;
+        console.log('[DEBUG] handleSave started');
+        console.log('[DEBUG] formData:', formData);
+        console.log('[DEBUG] editingItem:', editingItem);
 
-        if (activeTab === 'companies' || (activeTab === 'manage_groups' && editingItem && editingItem.username !== undefined)) { // Hack to detect company vs group
-            // SAVING COMPANY
-            const payload = {
-                name: formData.name,
-                type: formData.type,
-                group_id: formData.group_id || null,
-                avatar_url: formData.avatar_url || null
-            };
+        try {
+            let result;
 
-            if (editingItem && editingItem.username !== undefined) { // Is Company
-                const updates = {};
-                if (formData.name !== editingItem.name) updates.name = formData.name;
-                if (formData.type !== editingItem.type) updates.type = formData.type;
-                if ((formData.group_id || null) !== (editingItem.group_id || null)) updates.group_id = formData.group_id || null;
-                if ((formData.avatar_url || null) !== (editingItem.avatar_url || null)) updates.avatar_url = formData.avatar_url || null;
+            // The most reliable way to tell if we are saving a company or a group is 
+            // whether the 'type' field (legacy category) exists in our current form state
+            const isSavingCompany = formData.type !== undefined;
+            console.log('[DEBUG] isSavingCompany:', isSavingCompany);
 
-                const currentUsername = (formData.username || '').trim();
-                const originalUsername = (editingItem.username || '').trim();
+            if (isSavingCompany) {
+                // SAVING COMPANY
+                console.log('[DEBUG] Branch: Saving Company');
+                if (editingItem) {
+                    // Update Company
+                    const updates = {};
+                    if (formData.name !== editingItem.name) updates.name = formData.name;
+                    if (formData.type !== editingItem.type) updates.type = formData.type;
+                    if ((formData.group_id || null) !== (editingItem.group_id || null)) updates.group_id = formData.group_id || null;
+                    if ((formData.avatar_url || null) !== (editingItem.avatar_url || null)) {
+                        updates.avatar_url = formData.avatar_url || null;
+                        updates.logo_url = formData.avatar_url || null;
+                    }
 
-                if (currentUsername !== originalUsername) updates.username = currentUsername || null;
-                if (formData.password && formData.password.trim() !== '') updates.password = formData.password;
+                    const currentUsername = (formData.username || '').trim();
+                    const originalUsername = (editingItem.username || '').trim();
 
-                if (Object.keys(updates).length === 0) {
-                    setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
+                    if (currentUsername !== originalUsername) updates.username = currentUsername || null;
+                    if (formData.password && formData.password.trim() !== '') updates.password = formData.password;
+
+                    console.log('[DEBUG] updates:', updates);
+                    if (Object.keys(updates).length === 0) {
+                        console.log('[DEBUG] No updates detected, returning');
+                        setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
+                    }
+                    result = await updateCompany(editingItem.id, updates);
+                } else {
+                    // Create Company
+                    console.log('[DEBUG] Action: addCompany');
+                    result = await addCompany(
+                        formData.name,
+                        formData.type,
+                        formData.username,
+                        formData.password,
+                        formData.group_id || null,
+                        formData.avatar_url || null
+                    );
                 }
-                result = await updateCompany(editingItem.id, updates);
             } else {
-                // Create Company
-                result = await addCompany(
-                    formData.name,
-                    formData.type,
-                    formData.username,
-                    formData.password,
-                    formData.group_id || null,
-                    formData.avatar_url || null
-                );
-            }
-        } else {
-            // SAVING GROUP
-            // SAVING GROUP
-            const groupData = {
-                name: formData.name,
-                image_url: formData.avatar_url || null
-            };
+                // SAVING GROUP
+                console.log('[DEBUG] Branch: Saving Group');
+                const groupData = {
+                    name: formData.name,
+                    image_url: formData.avatar_url || null,
+                    category: formData.category || null,
+                    username: formData.username || null,
+                    password: formData.password || null
+                };
+                console.log('[DEBUG] groupData:', groupData);
 
-            if (editingItem) {
-                result = await updateCompanyGroup(editingItem.id, groupData);
+                if (editingItem) {
+                    console.log('[DEBUG] Action: updateCompanyGroup');
+                    result = await updateCompanyGroup(editingItem.id, groupData);
+                } else {
+                    console.log('[DEBUG] Action: createCompanyGroup');
+                    result = await createCompanyGroup(groupData);
+                }
+            }
+
+            console.log('[DEBUG] result:', result);
+            if (result && result.success) {
+                showToast(editingItem ? 'Actualizado correctamente' : 'Creado correctamente');
+                setShowModal(false);
+                setEditingItem(null);
+                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: null, category: null });
+                loadData();
             } else {
-                result = await createCompanyGroup(groupData);
+                const errorMsg = result?.error || 'Error al guardar';
+                console.error('[DEBUG] Save failed:', errorMsg);
+                showToast(errorMsg, 'error');
             }
-        }
-
-        if (result.success) {
-            setShowModal(false);
-            setEditingItem(null);
-            setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '' });
-            loadData();
-            showToast(editingItem ? 'Actualizado correctamente' : 'Agregado correctamente');
-        } else {
-            showToast(result.error || 'Error al guardar', 'error');
+        } catch (error) {
+            console.error('[DEBUG] Unexpected error in handleSave:', error);
+            showToast('Error inesperado al procesar la solicitud', 'error');
         }
     };
 
@@ -209,15 +239,32 @@ export default function CompanyManager() {
                 // It is a group
                 setFormData({
                     name: item.name,
-                    avatar_url: item.image_url || ''
+                    avatar_url: item.image_url || '',
+                    category: item.category || (expandedGroup && !item.id ? expandedGroup.type : null),
+                    username: item.username || '',
+                    password: item.password || ''
                 });
             }
         } else {
             // New Item
-            if (activeTab === 'manage_groups' && !isGroup) { // Creating a group in manage tab
-                setFormData({ name: '' });
+            if (isGroup) { // NEW: Handle "Add Group" from category view
+                setFormData({
+                    name: '',
+                    avatar_url: '',
+                    category: expandedGroup ? expandedGroup.type : null,
+                    username: '',
+                    password: ''
+                });
             } else {
-                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: '' });
+                setFormData({
+                    name: '',
+                    type: expandedGroup?.type || 'auditoria',
+                    username: '',
+                    password: '',
+                    group_id: expandedGroup && !['contabilidad', 'auditoria'].includes(expandedGroup.type) ? expandedGroup.id : '',
+                    avatar_url: '',
+                    category: null
+                });
             }
         }
         setShowModal(true);
@@ -230,26 +277,15 @@ export default function CompanyManager() {
 
     return (
         <div className="animate-fade-in relative transition-all">
-            {/* Header Tabs */}
-            <div className="flex gap-4 mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
-                <button onClick={() => setActiveTab('companies')} className={`pb-2 px-4 text-sm font-medium transition-colors relative ${activeTab === 'companies' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
-                    Listado de Empresas
-                    {activeTab === 'companies' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full" />}
-                </button>
-                <button onClick={() => setActiveTab('manage_groups')} className={`pb-2 px-4 text-sm font-medium transition-colors relative ${activeTab === 'manage_groups' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
-                    Administrar Grupos
-                    {activeTab === 'manage_groups' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full" />}
-                </button>
-            </div>
-
+            {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
             {/* Content Actions */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 className="text-xl font-bold" style={{ color: theme.text }}>
-                    {activeTab === 'companies' ? 'Dashboard de Empresas' : 'Gestión de Grupos'}
+                    Dashboard de Empresas
                 </h2>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    {(activeTab === 'companies' && expandedGroup) && (
+                    {expandedGroup && (
                         <div className="relative flex-1 md:w-64">
                             <input
                                 type="text" placeholder="Buscar empresa..."
@@ -260,15 +296,15 @@ export default function CompanyManager() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         </div>
                     )}
-                    <button onClick={() => openModal(null, activeTab === 'manage_groups')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm whitespace-nowrap">
-                        <Plus size={18} /> <span>{activeTab === 'companies' ? 'Nueva Empresa' : 'Nuevo Grupo'}</span>
+                    <button onClick={() => openModal(null)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm whitespace-nowrap">
+                        <Plus size={18} /> <span>Nueva Empresa</span>
                     </button>
                 </div>
             </div>
 
             {loading ? (
                 <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-            ) : activeTab === 'companies' ? (
+            ) : (
                 /* === DASHBOARD VIEW === */
                 <>
                     {/* LEVEL 1: GROUPS GRID */}
@@ -298,7 +334,7 @@ export default function CompanyManager() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
                                     {/* DYAMIC GROUPS */}
-                                    {groups.map(group => {
+                                    {groups.filter(g => !g.category).map(group => {
                                         // Get companies in this group
                                         const groupCompanies = companies.filter(c => c.group_id === group.id);
                                         const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
@@ -311,12 +347,28 @@ export default function CompanyManager() {
                                                 className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                    {group.image_url ? (
-                                                        <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
-                                                    ) : (
-                                                        <Folder size={28} className="text-blue-500" />
-                                                    )}
+                                                <div className="w-full flex items-start justify-between mb-4">
+                                                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        {group.image_url ? (
+                                                            <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                                                        ) : (
+                                                            <Folder size={28} className="text-blue-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
+                                                            className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
+                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
                                                 <div className="flex items-center gap-2 mb-4">
@@ -390,15 +442,89 @@ export default function CompanyManager() {
                                     </h3>
                                     <p className="text-sm opacity-60">Visualizando empresas del grupo</p>
                                 </div>
+                                {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
+                                    <button
+                                        onClick={() => openModal(null, true)}
+                                        className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 font-bold"
+                                    >
+                                        <FolderPlus size={18} />
+                                        <span>Nuevo Grupo</span>
+                                    </button>
+                                )}
                             </div>
+
+                            {/* LEVEL 2: SUB-GROUPS (Only for categories) */}
+                            {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Grupos en {expandedGroup.name}</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 border-b border-gray-100 dark:border-gray-800/50">
+                                        {groups.filter(g => g.category === expandedGroup.type).map(group => {
+                                            const groupCompanies = companies.filter(c => c.group_id === group.id);
+                                            const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
+                                            const moreCount = groupCompanies.length > 3 ? `+${groupCompanies.length - 3}` : '';
+
+                                            return (
+                                                <button
+                                                    key={group.id}
+                                                    onClick={() => handleGroupClick(group)}
+                                                    className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
+                                                    style={{ background: theme.surface, borderColor: theme.border }}
+                                                >
+                                                    <div className="w-full flex items-start justify-between mb-4">
+                                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                            {group.image_url ? (
+                                                                <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                                                            ) : (
+                                                                <Folder size={28} className="text-blue-500" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
+                                                                className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
+                                                                className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
+                                                    <div className="flex items-center gap-2 mb-4">
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
+                                                            {groupCompanies.length} Empresas
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                        <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
+                                                            {previewNames} {moreCount && <span className="text-blue-500 font-bold">{moreCount}</span>}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                        {groups.filter(g => g.category === expandedGroup.type).length === 0 && (
+                                            <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-100 dark:border-gray-800/50 rounded-2xl">
+                                                <p className="text-sm italic opacity-40">No hay grupos creados en esta categoría</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Empresas Directas</h4>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {(() => {
                                     const legacyTypes = ['contabilidad', 'auditoria']; // Only these are legacy type filters
                                     const groupCompanies = filteredCompanies.filter(c => {
                                         // If it's a legacy type group (contabilidad/auditoria), filter by company type
+                                        // But only show those NOT in a specific sub-group to avoid clutter
                                         if (expandedGroup.type && legacyTypes.includes(expandedGroup.type)) {
-                                            return c.type === expandedGroup.type;
+                                            return c.type === expandedGroup.type && !c.group_id;
                                         }
                                         // Otherwise, it's a dynamic group - filter by group_id
                                         return c.group_id === expandedGroup.id;
@@ -464,31 +590,11 @@ export default function CompanyManager() {
                         </div>
                     )}
                 </>
-            ) : (
-                /* === GROUP MANAGEMENT VIEW (CRUD) === */
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {groups.map(group => (
-                        <div key={group.id} className="p-6 rounded-2xl border flex items-center justify-between group hover:shadow-lg transition-all" style={{ background: theme.surface, borderColor: theme.border }}>
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-purple-500/10 text-purple-600 rounded-xl"><Folder size={24} /></div>
-                                <div>
-                                    <h3 className="font-bold text-lg" style={{ color: theme.text }}>{group.name}</h3>
-                                    <p className="text-xs opacity-50">ID: ...{group.id.slice(-4)}</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => openModal(group, true)} className="p-2 text-gray-400 hover:text-blue-500 bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button>
-                                <button onClick={() => handleDelete(group.id, true)} className="p-2 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
-                            </div>
-                        </div>
-                    ))}
-                    {groups.length === 0 && <div className="col-span-full text-center py-20 opacity-50">No hay grupos creados.</div>}
-                </div>
             )}
 
             {/* Modal Formulario */}
             {showModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" style={{ zIndex: 100 }}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" style={{ background: theme.surface, borderColor: theme.border }}>
                     <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
                         <div className="p-6">
                             <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -534,11 +640,36 @@ export default function CompanyManager() {
                                     />
                                 </div>
 
-                                {/* Company Fields */}
-                                {(activeTab === 'companies' || (editingItem && editingItem.username !== undefined)) && (
+                                {/* Shared Credentials Section */}
+                                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <label className="block text-xs text-gray-500 mb-1 uppercase font-bold">Credenciales Globales</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Usuario"
+                                            autoComplete="off"
+                                            className="w-full px-3 py-2 rounded-lg border bg-transparent outline-none"
+                                            style={{ borderColor: theme.border, color: theme.text }}
+                                            value={formData.username}
+                                            onChange={e => setFormData({ ...formData, username: e.target.value })}
+                                        />
+                                        <input
+                                            type="password"
+                                            placeholder="Clave"
+                                            autoComplete="new-password"
+                                            className="w-full px-3 py-2 rounded-lg border bg-transparent outline-none"
+                                            style={{ borderColor: theme.border, color: theme.text }}
+                                            value={formData.password}
+                                            onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Company Only Fields (Hidden for Groups) */}
+                                {((!formData.category && !editingItem) || (editingItem && editingItem.type !== undefined)) && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Tipo (Legacy)</label>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Categoría (Legacy)</label>
                                             <select
                                                 className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
                                                 style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
@@ -546,28 +677,54 @@ export default function CompanyManager() {
                                             >
                                                 <option value="auditoria">Auditoría</option>
                                                 <option value="contabilidad">Contabilidad</option>
-                                                <option value="rrjj">RRJJ</option>
                                                 <option value="otro">Otro</option>
                                             </select>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Grupo de Trabajo</label>
-                                            <div className="flex gap-2">
-                                                <select
-                                                    className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
-                                                    style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-                                                    value={formData.group_id} onChange={e => setFormData({ ...formData, group_id: e.target.value })}
-                                                >
-                                                    <option value="">-- Sin Grupo asignado --</option>
-                                                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                                            <label className="block text-xs text-gray-500 mb-1 uppercase font-bold">Credenciales</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <input type="text" placeholder="Usuario" className="w-full px-3 py-2 rounded-lg border bg-transparent" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} />
-                                                <input type="password" placeholder="Clave" className="w-full px-3 py-2 rounded-lg border bg-transparent" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-medium" style={{ color: theme.textSecondary }}>Grupo de Empresas</label>
+                                            <div
+                                                className="w-full rounded-xl border overflow-hidden"
+                                                style={{ borderColor: theme.border, background: isDark ? 'rgba(0,0,0,0.2)' : '#fff' }}
+                                            >
+                                                <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, group_id: '' })}
+                                                        className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left border-b font-medium text-xs uppercase tracking-wider ${!formData.group_id ? 'bg-blue-50/50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-white/5 opacity-50'}`}
+                                                        style={{ borderColor: theme.border }}
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                                            <X size={14} />
+                                                        </div>
+                                                        -- Sin Grupo asignado --
+                                                    </button>
+
+                                                    {groups.map(g => (
+                                                        <button
+                                                            key={g.id}
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, group_id: g.id })}
+                                                            className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left border-b last:border-0 ${formData.group_id === g.id ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                                                            style={{ borderColor: theme.border }}
+                                                        >
+                                                            <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 border bg-white dark:bg-gray-800" style={{ borderColor: theme.border }}>
+                                                                {g.image_url ? (
+                                                                    <img src={g.image_url} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-blue-500">
+                                                                        <Folder size={16} />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-sm" style={{ color: formData.group_id === g.id ? 'inherit' : theme.text }}>{g.name}</span>
+                                                                {g.category && <span className="text-[10px] opacity-50 uppercase font-black">{g.category}</span>}
+                                                            </div>
+                                                            {formData.group_id === g.id && <CheckCircle size={16} className="ml-auto" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </>
@@ -581,21 +738,24 @@ export default function CompanyManager() {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Confirmation Modal */}
-            {confirmModal.show && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex: 110 }}>
-                    <div className="rounded-xl shadow-2xl w-full max-w-sm border p-6" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <h3 className="text-lg font-bold mb-3" style={{ color: theme.text }}>Confirmación</h3>
-                        <p className="mb-6" style={{ color: theme.textSecondary }}>{confirmModal.title}</p>
-                        <div className="flex justify-end gap-3">
-                            <button onClick={() => setConfirmModal({ ...confirmModal, show: false })} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
-                            <button onClick={confirmModal.onConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">Confirmar</button>
+            {
+                confirmModal.show && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex: 110 }}>
+                        <div className="rounded-xl shadow-2xl w-full max-w-sm border p-6" style={{ background: theme.surface, borderColor: theme.border }}>
+                            <h3 className="text-lg font-bold mb-3" style={{ color: theme.text }}>Confirmación</h3>
+                            <p className="mb-6" style={{ color: theme.textSecondary }}>{confirmModal.title}</p>
+                            <div className="flex justify-end gap-3">
+                                <button onClick={() => setConfirmModal({ ...confirmModal, show: false })} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                <button onClick={confirmModal.onConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">Confirmar</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
