@@ -1042,3 +1042,147 @@ html {
 .toast-exit {
   animation: toastSlideOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
+
+/* ============================================
+   MOBILE UI FIXES
+   ============================================ */
+
+/* Prevent horizontal overflow on all containers */
+@media (max-width: 768px) {
+
+  /* Force content to stay within viewport */
+  .dashboard-content,
+  main,
+  section,
+  article,
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Full-width buttons on mobile */
+  button,
+  .btn {
+    min-height: 44px;
+    /* Touch-friendly tap target */
+  }
+
+  /* Wrap text properly */
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  span,
+  label {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Fix grids to single column on very small screens */
+  .grid {
+    max-width: 100%;
+  }
+
+  /* Make cards full width */
+  .rounded-xl,
+  .rounded-2xl {
+    max-width: 100%;
+  }
+
+  /* Fix flex items overflow */
+  .flex {
+    flex-wrap: wrap;
+  }
+
+  /* Remove margin-left from dashboard content on mobile */
+  .dashboard-content {
+    margin-left: 0 !important;
+    padding-top: 60px;
+  }
+
+  /* Larger touch targets for icons */
+  button svg,
+  a svg {
+    min-width: 20px;
+    min-height: 20px;
+  }
+
+  /* Improve table mobile experience */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  table th,
+  table td {
+    padding: 8px 12px;
+    min-width: 80px;
+  }
+
+  /* Improve inputs on mobile */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+    /* Prevents zoom on iOS */
+    min-height: 44px;
+  }
+
+  /* Fix modal sizing */
+  .fixed.inset-0 {
+    padding: 8px !important;
+  }
+
+  /* Modal inner content */
+  .fixed.inset-0>div {
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  /* Fix breadcrumbs overflow */
+  nav,
+  .breadcrumbs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Even smaller screens */
+@media (max-width: 480px) {
+
+  .dashboard-content,
+  main {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Smaller text on very small screens */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  /* Stack all flex items */
+  .flex:not(.flex-col) {
+    flex-direction: column;
+  }
+
+  /* Button text smaller */
+  button {
+    font-size: 0.8rem;
+    padding: 10px 12px;
+  }
+}
