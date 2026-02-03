@@ -196,54 +196,54 @@ export default function GroupManager() {
         return (
             <div className="select-none">
                 <div
-                    className={`flex items-center gap-2 p-2 rounded-lg hover:bg-black/5 transition-colors border-b border-gray-100/50 group`}
-                    style={{ marginLeft: `${depth * 20}px` }}
+                    className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-black/5 transition-colors border-b border-gray-100/50 group`}
+                    style={{ marginLeft: `${depth * 16}px` }}
                 >
                     <button
                         onClick={() => toggleExpand(item.id)}
-                        className={`p-1 rounded hover:bg-black/10 transition-transform ${hasChildren ? '' : 'invisible'}`}
+                        className={`p-0.5 sm:p-1 rounded hover:bg-black/10 transition-transform flex-shrink-0 ${hasChildren ? '' : 'invisible'}`}
                     >
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        {isExpanded ? <ChevronDown size={12} className="sm:w-3.5 sm:h-3.5" /> : <ChevronRight size={12} className="sm:w-3.5 sm:h-3.5" />}
                     </button>
 
                     <div
-                        className="w-8 h-8 flex items-center justify-center rounded-lg shadow-sm"
+                        className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg shadow-sm flex-shrink-0"
                         style={{ backgroundColor: item.color + '20', color: item.color }}
                     >
-                        <ItemIcon size={16} />
+                        <ItemIcon size={14} className="sm:w-4 sm:h-4" />
                     </div>
 
-                    <div className="flex-1">
-                        <div className="font-medium text-sm flex items-center gap-2">
-                            {item.name}
-                            {item.type === 'link' && <span className="px-1.5 py-0.5 rounded text-[9px] bg-blue-100 text-blue-700 font-bold uppercase">Link</span>}
+                    <div className="flex-1 min-w-0">
+                        <div className="font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2">
+                            <span className="truncate">{item.name}</span>
+                            {item.type === 'link' && <span className="px-1 py-0.5 rounded text-[8px] sm:text-[9px] bg-blue-100 text-blue-700 font-bold uppercase flex-shrink-0">Link</span>}
                         </div>
-                        <div className="text-xs opacity-50 flex gap-2">
-                            {item.resource_id && <span className="font-mono text-[10px]">{item.resource_id}</span>}
+                        <div className="text-[10px] sm:text-xs opacity-50 hidden sm:flex gap-2">
+                            {item.resource_id && <span className="font-mono truncate">{item.resource_id}</span>}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <button
                             onClick={() => handleCreate(item.id)}
                             title="Add Child"
-                            className="p-1.5 hover:bg-blue-50 text-blue-600 rounded"
+                            className="p-1 sm:p-1.5 hover:bg-blue-50 text-blue-600 rounded"
                         >
-                            <Plus size={14} />
+                            <Plus size={12} className="sm:w-3.5 sm:h-3.5" />
                         </button>
                         <button
                             onClick={() => handleEdit(item)}
                             title="Edit"
-                            className="p-1.5 hover:bg-amber-50 text-amber-600 rounded"
+                            className="p-1 sm:p-1.5 hover:bg-amber-50 text-amber-600 rounded"
                         >
-                            <Edit2 size={14} />
+                            <Edit2 size={12} className="sm:w-3.5 sm:h-3.5" />
                         </button>
                         <button
                             onClick={() => handleDelete(item.id)}
                             title="Delete"
-                            className="p-1.5 hover:bg-red-50 text-red-600 rounded"
+                            className="p-1 sm:p-1.5 hover:bg-red-50 text-red-600 rounded"
                         >
-                            <Trash2 size={14} />
+                            <Trash2 size={12} className="sm:w-3.5 sm:h-3.5" />
                         </button>
                     </div>
                 </div>
@@ -260,14 +260,14 @@ export default function GroupManager() {
     };
 
     return (
-        <div className="w-full h-full flex flex-col animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="w-full h-full flex flex-col animate-fade-in overflow-x-hidden">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <div>
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                        <LayoutGrid className="text-blue-600" />
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold flex items-center gap-2">
+                        <LayoutGrid className="text-blue-600" size={20} />
                         Gestor de Grupos
                     </h2>
-                    <p className="text-sm opacity-60">Configura la estructura virtual de la organización.</p>
+                    <p className="text-xs sm:text-sm opacity-60">Configura la estructura virtual.</p>
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
@@ -353,22 +353,22 @@ export default function GroupManager() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in my-8"
+                        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in my-4 sm:my-8"
                         style={{ background: theme.surface, color: theme.text }}
                     >
-                        <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                            <h3 className="font-bold text-xl flex items-center gap-2">
-                                {modalMode === 'create' ? <Plus size={20} className="text-blue-500" /> : <Edit2 size={20} className="text-amber-500" />}
-                                {modalMode === 'create' ? 'Crear Nuevo Grupo' : 'Editar Propiedades'}
+                        <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-100">
+                            <h3 className="font-bold text-base sm:text-lg flex items-center gap-2">
+                                {modalMode === 'create' ? <Plus size={16} className="text-blue-500" /> : <Edit2 size={16} className="text-amber-500" />}
+                                {modalMode === 'create' ? 'Nuevo Grupo' : 'Editar'}
                             </h3>
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                                <X size={20} />
+                            <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto scrollbar-thin">
+                        <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-4 max-h-[70vh] overflow-y-auto scrollbar-thin">
 
                             {/* Name Input */}
                             <div className="space-y-2">

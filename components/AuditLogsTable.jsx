@@ -38,14 +38,15 @@ export default function AuditLogsTable() {
     }, []);
 
     const getActionIcon = (type) => {
+        const iconClass = "w-4 h-4 sm:w-5 sm:h-5";
         switch (type) {
-            case 'UPLOAD': return <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full"><Upload className="w-5 h-5 text-blue-600" /></div>;
-            case 'DELETE': return <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full"><Trash2 className="w-5 h-5 text-red-600" /></div>;
-            case 'RENAME': return <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full"><Edit2 className="w-5 h-5 text-amber-600" /></div>;
-            case 'CREATE_FOLDER': return <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full"><FolderPlus className="w-5 h-5 text-green-600" /></div>;
-            case 'MOVE': return <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full"><Move className="w-5 h-5 text-purple-600" /></div>;
-            case 'OPEN_EDIT': return <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full"><Edit2 className="w-5 h-5 text-orange-600" /></div>;
-            default: return <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full"><FileText className="w-5 h-5 text-gray-600" /></div>;
+            case 'UPLOAD': return <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full"><Upload className={`${iconClass} text-blue-600`} /></div>;
+            case 'DELETE': return <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-full"><Trash2 className={`${iconClass} text-red-600`} /></div>;
+            case 'RENAME': return <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full"><Edit2 className={`${iconClass} text-amber-600`} /></div>;
+            case 'CREATE_FOLDER': return <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-full"><FolderPlus className={`${iconClass} text-green-600`} /></div>;
+            case 'MOVE': return <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full"><Move className={`${iconClass} text-purple-600`} /></div>;
+            case 'OPEN_EDIT': return <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-full"><Edit2 className={`${iconClass} text-orange-600`} /></div>;
+            default: return <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-full"><FileText className={`${iconClass} text-gray-600`} /></div>;
         }
     };
 
@@ -66,54 +67,54 @@ export default function AuditLogsTable() {
     };
 
     return (
-        <div className="animate-fade-in max-w-4xl mx-auto mb-8">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h3 className="text-xl font-bold" style={{ color: theme.text }}>Actividad Reciente</h3>
-                    <p className="text-sm" style={{ color: theme.textSecondary }}>Últimos movimientos en archivos</p>
+        <div className="animate-fade-in max-w-4xl mx-auto mb-6">
+            <div className="flex flex-row flex-wrap justify-between items-center gap-2 mb-4">
+                <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg lg:text-xl font-bold" style={{ color: theme.text }}>Actividad Reciente</h3>
+                    <p className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>Últimos movimientos en archivos</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-row gap-1.5 sm:gap-2 flex-shrink-0">
                     <button
                         onClick={loadLogs}
-                        className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
+                        className="p-1.5 sm:p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
                         title="Actualizar"
                     >
-                        <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} style={{ color: theme.text }} />
+                        <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} style={{ color: theme.text }} />
                     </button>
                     <button
                         onClick={() => exportToExcel(logs, 'Actividad_Reciente')}
                         disabled={logs.length === 0}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition text-xs sm:text-sm"
                     >
-                        <Download size={18} /> <span className="hidden sm:inline">Excel</span>
+                        <Download size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Excel</span>
                     </button>
                 </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {logs.length === 0 ? (
-                    <div className="text-center py-12 rounded-xl border border-dashed" style={{ borderColor: theme.border }}>
-                        <p style={{ color: theme.textSecondary }}>No hay actividad registrada recientemente.</p>
+                    <div className="text-center py-8 sm:py-12 rounded-xl border border-dashed" style={{ borderColor: theme.border }}>
+                        <p className="text-sm" style={{ color: theme.textSecondary }}>No hay actividad registrada recientemente.</p>
                     </div>
                 ) : (
                     logs.map((log) => (
                         <div
                             key={log.id}
-                            className="flex items-start gap-4 p-4 rounded-xl shadow-sm border transition-transform hover:scale-[1.01]"
+                            className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl shadow-sm border transition-transform hover:scale-[1.01]"
                             style={{ background: theme.surface, borderColor: theme.border }}
                         >
                             {getActionIcon(log.action_type)}
 
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm" style={{ color: theme.textSecondary }}>
+                                <p className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
                                     {getActionText(log)}
                                 </p>
-                                <div className="flex items-center gap-4 mt-1">
-                                    <span className="text-xs flex items-center gap-1 opacity-70" style={{ color: theme.textSecondary }}>
-                                        <Clock size={12} /> {new Date(log.timestamp).toLocaleString()}
+                                <div className="flex items-center gap-2 sm:gap-4 mt-1 flex-wrap">
+                                    <span className="text-[10px] sm:text-xs flex items-center gap-1 opacity-70" style={{ color: theme.textSecondary }}>
+                                        <Clock size={10} className="sm:w-3 sm:h-3" /> {new Date(log.timestamp).toLocaleString()}
                                     </span>
                                     {log.metadata?.driveId && (
-                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-gray-500">
+                                        <span className="text-[10px] sm:text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 hidden sm:inline">
                                             Drive ID: ...{log.metadata.driveId.slice(-6)}
                                         </span>
                                     )}
@@ -126,3 +127,4 @@ export default function AuditLogsTable() {
         </div>
     );
 }
+

@@ -772,52 +772,52 @@ export default function CourseEditor({ onPreview }) {
 
             {/* === MODAL: EDIT CLASS (COURSE) === */}
             {showCourseModal && (
-                <div key={`course-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+                <div key={`course-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
-                        className="w-full max-w-lg rounded-3xl shadow-2xl border scale-in-center flex flex-col max-h-[90vh] overflow-hidden"
+                        className="w-full max-w-lg rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border scale-in-center flex flex-col max-h-[90vh] sm:max-h-[85vh] my-4 overflow-hidden"
                         style={{
                             backgroundColor: isDark ? '#111827' : '#ffffff',
                             borderColor: isDark ? '#374151' : '#e5e7eb'
                         }}
                     >
                         <div
-                            className="p-6 border-b flex justify-between items-start shrink-0"
+                            className="p-3 sm:p-4 lg:p-6 border-b flex justify-between items-start shrink-0"
                             style={{
                                 backgroundColor: isDark ? '#1f2937' : '#f9fafb',
                                 borderColor: isDark ? '#374151' : '#e5e7eb'
                             }}
                         >
                             <div>
-                                <h3 className="font-black text-xl uppercase tracking-tighter italic flex items-center gap-2" style={{ color: isDark ? '#ffffff' : '#111827' }}>
-                                    <FileText className="text-blue-600" size={24} />
-                                    {editingCourse ? 'Editar Clase' : 'Crear Nueva Clase'}
+                                <h3 className="font-black text-base sm:text-lg lg:text-xl uppercase tracking-tighter italic flex items-center gap-2" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                                    <FileText className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+                                    {editingCourse ? 'Editar Clase' : 'Nueva Clase'}
                                 </h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Detalles del material educativo</p>
+                                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest mt-0.5 sm:mt-1" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Material educativo</p>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowCourseModal(false)}
-                                className="p-2 rounded-xl transition-all group"
+                                className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all group"
                                 style={{
                                     backgroundColor: isDark ? '#374151' : '#f3f4f6',
                                     color: '#9ca3af'
                                 }}
                             >
-                                <X size={20} className="group-hover:rotate-90 transition-transform" />
+                                <X size={16} className="sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform" />
                             </button>
                         </div>
 
-                        <div className="overflow-y-auto custom-scrollbar" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
-                            <form onSubmit={handleSaveCourse} className="p-8 space-y-8">
+                        <div className="overflow-y-auto custom-scrollbar flex-1" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
+                            <form onSubmit={handleSaveCourse} className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
                                 {/* Title First */}
-                                <div className="space-y-3">
+                                <div className="space-y-2 sm:space-y-3">
                                     <div className="flex justify-between items-end">
-                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre de la Clase</label>
-                                        <span className="text-[10px] font-bold text-blue-500">Requerido</span>
+                                        <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wide sm:tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre</label>
+                                        <span className="text-[9px] sm:text-[10px] font-bold text-blue-500">Requerido</span>
                                     </div>
                                     <input
                                         autoFocus type="text" required
-                                        className="w-full text-xl font-black p-4 border-2 rounded-2xl outline-none transition-all"
+                                        className="w-full text-base sm:text-lg lg:text-xl font-black p-3 sm:p-4 border-2 rounded-xl sm:rounded-2xl outline-none transition-all"
                                         style={{
                                             backgroundColor: isDark ? '#374151' : '#ffffff',
                                             borderColor: isDark ? '#4b5563' : '#e5e7eb',
