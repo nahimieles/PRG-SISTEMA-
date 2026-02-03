@@ -413,45 +413,47 @@ export default function CourseEditor({ onPreview }) {
             {!loading && (
                 <div className="space-y-6">
                     {/* BREADCRUMBS & ACTIONS */}
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center flex-wrap gap-2 text-lg sm:text-xl font-bold w-full sm:w-auto justify-center sm:justify-start" style={{ color: theme.text }}>
+                    <div className="flex flex-col gap-4">
+                        {/* Breadcrumb Row */}
+                        <div className="flex items-center flex-wrap gap-2 text-base sm:text-lg md:text-xl font-bold overflow-hidden" style={{ color: theme.text }}>
                             <button
                                 onClick={() => setCurrentFolder(null)}
-                                className={`hover:text-blue-500 transition-colors flex items-center gap-2 ${!currentFolder ? 'text-blue-600 cursor-default' : 'text-gray-400'}`}
+                                className={`hover:text-blue-500 transition-colors flex items-center gap-1.5 flex-shrink-0 ${!currentFolder ? 'text-blue-600 cursor-default' : 'text-gray-400'}`}
                             >
-                                <Layers size={24} /> Módulos
+                                <Layers size={20} /> <span className="hidden sm:inline">Módulos</span><span className="sm:hidden">Mód.</span>
                             </button>
                             {currentFolder && (
-                                <div className="flex items-center gap-2">
-                                    <ChevronLeft size={20} className="text-gray-300 rotate-180" />
-                                    <span className="text-blue-600 flex items-center gap-2 truncate max-w-[200px]">
-                                        <Folder size={24} /> {currentFolder}
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <ChevronLeft size={16} className="text-gray-300 rotate-180 flex-shrink-0" />
+                                    <span className="text-blue-600 flex items-center gap-1.5 truncate">
+                                        <Folder size={20} className="flex-shrink-0" /> <span className="truncate max-w-[120px] sm:max-w-[200px]">{currentFolder}</span>
                                     </span>
                                 </div>
                             )}
                         </div>
 
-                        <div className="w-full sm:w-auto">
+                        {/* Action Buttons Row */}
+                        <div className="w-full">
                             {!currentFolder ? (
                                 <button
                                     onClick={() => handleOpenFolderModal()}
-                                    className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
+                                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all text-sm"
                                 >
-                                    <FolderPlus size={18} /> NUEVA CARPETA
+                                    <FolderPlus size={18} /> <span>NUEVA CARPETA</span>
                                 </button>
                             ) : (
                                 <div className="flex flex-col sm:flex-row gap-2 w-full">
                                     <button
                                         onClick={() => handleOpenFolderModal(currentFolder)}
-                                        className="w-full sm:w-auto px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border dark:border-gray-700"
+                                        className="w-full sm:w-auto px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border dark:border-gray-700 text-sm"
                                     >
-                                        <Settings size={18} /> CONFIGURAR
+                                        <Settings size={18} /> <span>CONFIGURAR</span>
                                     </button>
                                     <button
                                         onClick={() => handleOpenCourseModal()}
-                                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
+                                        className="w-full sm:w-auto px-4 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all text-sm"
                                     >
-                                        <Plus size={18} /> NUEVA CLASE
+                                        <Plus size={18} /> <span>NUEVA CLASE</span>
                                     </button>
                                 </div>
                             )}

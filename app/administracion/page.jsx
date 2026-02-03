@@ -963,61 +963,125 @@ export default function AdminPage() {
                     No hay funcionarios registrados
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-white" style={{ background: theme.primary }}>
-                        <tr>
-                          <th className="px-4 py-3 text-left">Usuario</th>
-                          <th className="px-4 py-3 text-left">Nombre</th>
-                          <th className="px-4 py-3 text-left">Email</th>
-                          <th className="px-4 py-3 text-left">Contraseña</th>
-                          <th className="px-4 py-3 text-left">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {workers.map(worker => (
-                          <tr
-                            key={worker.id}
-                            className="border-b hover:opacity-75 transition-opacity"
-                            style={{
-                              borderColor: theme.border,
-                              background: isDark ? 'transparent' : '#f8f9fa'
-                            }}
-                          >
-                            <td className="px-4 py-3 font-semibold">{worker.username}</td>
-                            <td className="px-4 py-3">{worker.full_name}</td>
-                            <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
-                            <td className="px-4 py-3 flex items-center gap-2">
-                              <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
-                              <button
-                                onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
-                                className="hover:opacity-70"
-                                style={{ color: theme.primary }}
-                              >
-                                {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 flex gap-2">
-                              <button
-                                onClick={() => handleEditWorker(worker)}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                                style={{ background: '#3498db' }}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => handleDeleteWorker(worker.id)}
-                                className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                                style={{ background: '#e74c3c' }}
-                              >
-                                <Trash2 className="w-3 h-3 inline" /> Eliminar
-                              </button>
-                            </td>
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-white" style={{ background: theme.primary }}>
+                          <tr>
+                            <th className="px-4 py-3 text-left">Usuario</th>
+                            <th className="px-4 py-3 text-left">Nombre</th>
+                            <th className="px-4 py-3 text-left">Email</th>
+                            <th className="px-4 py-3 text-left">Contraseña</th>
+                            <th className="px-4 py-3 text-left">Acciones</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {workers.map(worker => (
+                            <tr
+                              key={worker.id}
+                              className="border-b hover:opacity-75 transition-opacity"
+                              style={{
+                                borderColor: theme.border,
+                                background: isDark ? 'transparent' : '#f8f9fa'
+                              }}
+                            >
+                              <td className="px-4 py-3 font-semibold">{worker.username}</td>
+                              <td className="px-4 py-3">{worker.full_name}</td>
+                              <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
+                              <td className="px-4 py-3 flex items-center gap-2">
+                                <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
+                                <button
+                                  onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
+                                  className="hover:opacity-70"
+                                  style={{ color: theme.primary }}
+                                >
+                                  {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 flex gap-2">
+                                <button
+                                  onClick={() => handleEditWorker(worker)}
+                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
+                                  style={{ background: '#3498db' }}
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWorker(worker.id)}
+                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
+                                  style={{ background: '#e74c3c' }}
+                                >
+                                  <Trash2 className="w-3 h-3 inline" /> Eliminar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card Layout */}
+                    <div className="md:hidden divide-y" style={{ borderColor: theme.border }}>
+                      {workers.map(worker => (
+                        <div
+                          key={worker.id}
+                          className="p-4 space-y-3"
+                          style={{ background: isDark ? 'transparent' : '#f8f9fa' }}
+                        >
+                          {/* Header with Avatar and Name */}
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                              {worker.full_name?.charAt(0)?.toUpperCase() || worker.username?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold truncate" style={{ color: theme.text }}>{worker.full_name || worker.username}</p>
+                              <p className="text-xs opacity-60 truncate">@{worker.username}</p>
+                            </div>
+                          </div>
+
+                          {/* Info Grid */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="p-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
+                              <p className="opacity-50 text-[10px] uppercase font-bold mb-0.5">Email</p>
+                              <p className="truncate" style={{ color: theme.text }}>{worker.email || '-'}</p>
+                            </div>
+                            <div className="p-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
+                              <p className="opacity-50 text-[10px] uppercase font-bold mb-0.5">Contraseña</p>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono truncate">{showPasswordsSet[worker.id] ? worker.password : '••••••'}</span>
+                                <button
+                                  onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
+                                  className="hover:opacity-70 flex-shrink-0"
+                                  style={{ color: theme.primary }}
+                                >
+                                  {showPasswordsSet[worker.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleEditWorker(worker)}
+                              className="flex-1 text-white py-2 rounded-lg hover:opacity-90 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                              style={{ background: '#3498db' }}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" /> Editar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteWorker(worker.id)}
+                              className="flex-1 text-white py-2 rounded-lg hover:opacity-90 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                              style={{ background: '#e74c3c' }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
