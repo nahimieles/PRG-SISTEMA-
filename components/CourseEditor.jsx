@@ -442,18 +442,18 @@ export default function CourseEditor({ onPreview }) {
                                     <FolderPlus size={18} /> <span>NUEVA CARPETA</span>
                                 </button>
                             ) : (
-                                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                                <div className="flex flex-row gap-2 w-full">
                                     <button
                                         onClick={() => handleOpenFolderModal(currentFolder)}
-                                        className="w-full sm:w-auto px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border dark:border-gray-700 text-sm"
+                                        className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-lg sm:rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all border dark:border-gray-700 text-xs sm:text-sm"
                                     >
-                                        <Settings size={18} /> <span>CONFIGURAR</span>
+                                        <Settings size={14} className="sm:w-[18px] sm:h-[18px]" /> <span>CONFIGURAR</span>
                                     </button>
                                     <button
                                         onClick={() => handleOpenCourseModal()}
-                                        className="w-full sm:w-auto px-4 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all text-sm"
+                                        className="flex-1 sm:flex-initial px-3 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg sm:rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-xs sm:text-sm"
                                     >
-                                        <Plus size={18} /> <span>NUEVA CLASE</span>
+                                        <Plus size={14} className="sm:w-[18px] sm:h-[18px]" /> <span>NUEVA CLASE</span>
                                     </button>
                                 </div>
                             )}
@@ -537,16 +537,16 @@ export default function CourseEditor({ onPreview }) {
                                             return (
                                                 <SortableItem key={course.id} id={course.id}>
                                                     {/* CARD VIEW (Mobile) + ROW VIEW (Desktop) */}
-                                                    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 items-center hover:bg-black/[0.02] transition-colors bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
+                                                    <div className="flex flex-col md:grid md:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 items-center hover:bg-black/[0.02] transition-colors bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
                                                         <div className="w-full flex items-center justify-between md:contents">
                                                             {/* Icon + Title on same row in mobile */}
-                                                            <div className="flex items-center gap-3 md:col-span-1 md:justify-center">
-                                                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 cursor-grab active:cursor-grabbing">
-                                                                    <Icon size={20} />
+                                                            <div className="flex items-center gap-2 sm:gap-3 md:col-span-1 md:justify-center flex-1 min-w-0">
+                                                                <div className="p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-500 cursor-grab active:cursor-grabbing flex-shrink-0">
+                                                                    <Icon size={16} className="sm:w-5 sm:h-5" />
                                                                 </div>
-                                                                <div className="md:hidden min-w-0">
-                                                                    <h4 className="font-bold text-sm sm:text-base truncate" style={{ color: theme.text }}>{course.title}</h4>
-                                                                    <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
+                                                                <div className="md:hidden min-w-0 flex-1">
+                                                                    <h4 className="font-bold text-xs sm:text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
+                                                                    <p className="text-[9px] sm:text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
                                                                 </div>
                                                             </div>
 
@@ -555,33 +555,33 @@ export default function CourseEditor({ onPreview }) {
                                                                 <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
                                                             </div>
 
-                                                            {/* Status Badge */}
-                                                            <div className="md:col-span-3 flex justify-center">
+                                                            {/* Status Badge - Hidden on very small mobile */}
+                                                            <div className="md:col-span-3 flex justify-center flex-shrink-0">
                                                                 {accessCount === 0 ? (
-                                                                    <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-red-100 text-red-600 dark:bg-red-500/10">Sin Acceso</span>
+                                                                    <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold bg-red-100 text-red-600 dark:bg-red-500/10">Sin Acceso</span>
                                                                 ) : (
-                                                                    <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-green-100 text-green-600 dark:bg-green-500/10 flex items-center gap-1">
-                                                                        <CheckCircle size={10} /> <span className="hidden sm:inline">{accessCount} Empresas</span><span className="sm:hidden">{accessCount} E.</span>
+                                                                    <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold bg-green-100 text-green-600 dark:bg-green-500/10 flex items-center gap-0.5 sm:gap-1">
+                                                                        <CheckCircle size={10} className="hidden sm:block" /> <span>{accessCount}</span><span className="hidden sm:inline"> Empresas</span>
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
 
-                                                        {/* Actions Button Bar */}
-                                                        <div className="w-full md:col-span-2 flex justify-end gap-2 mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
+                                                        {/* Actions Button Bar - Compact on mobile */}
+                                                        <div className="w-full md:col-span-2 flex justify-center sm:justify-end gap-1.5 sm:gap-2 mt-2 md:mt-0 pt-2 sm:pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
                                                             <button
                                                                 onPointerDown={(e) => e.stopPropagation()}
                                                                 onClick={() => handleOpenCourseModal(course)}
-                                                                className="flex-1 md:flex-none flex items-center justify-center gap-2 p-2.5 sm:px-4 md:p-2 bg-blue-50 sm:bg-transparent text-blue-500 hover:bg-blue-100 rounded-xl transition-all font-bold text-xs"
+                                                                className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2.5 md:p-2 bg-blue-50 md:bg-transparent text-blue-500 hover:bg-blue-100 rounded-lg sm:rounded-xl transition-all font-bold text-[10px] sm:text-xs"
                                                             >
-                                                                <Edit2 size={16} /> <span className="md:hidden">Editar</span>
+                                                                <Edit2 size={12} className="sm:w-4 sm:h-4" /> <span className="md:hidden">Editar</span>
                                                             </button>
                                                             <button
                                                                 onPointerDown={(e) => e.stopPropagation()}
                                                                 onClick={() => handleDeleteCourse(course.id)}
-                                                                className="flex-1 md:flex-none flex items-center justify-center gap-2 p-2.5 sm:px-4 md:p-2 bg-red-50 sm:bg-transparent text-red-500 hover:bg-red-100 rounded-xl transition-all font-bold text-xs"
+                                                                className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2.5 md:p-2 bg-red-50 md:bg-transparent text-red-500 hover:bg-red-100 rounded-lg sm:rounded-xl transition-all font-bold text-[10px] sm:text-xs"
                                                             >
-                                                                <Trash2 size={16} /> <span className="md:hidden">Eliminar</span>
+                                                                <Trash2 size={12} className="sm:w-4 sm:h-4" /> <span className="md:hidden">Eliminar</span>
                                                             </button>
                                                         </div>
                                                     </div>
