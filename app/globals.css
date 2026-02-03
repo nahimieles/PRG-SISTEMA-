@@ -63,16 +63,25 @@ body {
 
 /* Modal scrollbar más sutil */
 .modal-scroll::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  /* Sminor for mobile */
 }
 
 .modal-scroll::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 100, 0.4);
+  background: rgba(100, 100, 100, 0.3);
   border-radius: 8px;
 }
 
 .modal-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 100, 0.6);
+  background: rgba(100, 100, 100, 0.5);
+}
+
+/* Responsive Table Helper */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
 }
 
 /* ============================================

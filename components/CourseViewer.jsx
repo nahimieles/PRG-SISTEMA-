@@ -266,15 +266,15 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
     const rightCourses = filteredCourses.slice(half);
 
     return (
-        <div className="p-4 md:p-6 animate-fade-in min-h-screen transition-colors" style={{ background: theme.background, color: theme.text }}>
+        <div className="p-4 sm:p-6 animate-fade-in min-h-screen transition-colors" style={{ background: theme.background, color: theme.text }}>
 
-            <div className="flex flex-col items-center md:items-start mb-8 gap-3 max-w-6xl mx-auto">
+            <div className="flex flex-col items-center sm:items-start mb-8 gap-4 max-w-6xl mx-auto">
                 {/* Header Navigation */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 w-full">
                     {adminPreview && (
                         <button
                             onClick={onBack}
-                            className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 text-[10px] font-black text-blue-600 dark:text-blue-400 transition-all flex items-center gap-1 uppercase tracking-widest"
+                            className="px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 text-[10px] font-black text-blue-600 dark:text-blue-400 transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"
                         >
                             <ChevronLeft size={12} />
                             Salir
@@ -283,7 +283,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                     {currentFolder && folders.length > 1 && (
                         <button
                             onClick={() => setCurrentFolder(null)}
-                            className="px-3 py-1 rounded-full bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20 text-[10px] font-black text-gray-600 dark:text-gray-400 transition-all flex items-center gap-1 uppercase tracking-widest"
+                            className="px-4 py-1.5 rounded-full bg-gray-500/10 border border-gray-500/20 hover:bg-gray-500/20 text-[10px] font-black text-gray-600 dark:text-gray-400 transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"
                         >
                             <ChevronLeft size={12} />
                             Módulos
@@ -291,8 +291,8 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                     )}
                 </div>
 
-                <div className="flex flex-col">
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>
+                <div className="flex flex-col text-center sm:text-left">
+                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>
                         {currentFolder ? currentFolder : (
                             <>PANEL DE <span className="text-blue-500">CONTROL</span></>
                         )}
@@ -321,7 +321,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                                     <button
                                         key={folder}
                                         onClick={() => setCurrentFolder(folder)}
-                                        className="group relative p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 text-left"
+                                        className="group relative p-6 sm:p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 text-left"
                                         style={{ borderColor: theme.border, background: theme.surface }}
                                     >
                                         <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">

@@ -351,38 +351,34 @@ export default function CourseEditor({ onPreview }) {
             {/* HEADER */}
             <div
                 key={`header-${isDark ? 'dark' : 'light'}`}
-                className="flex flex-col md:flex-row justify-between items-center p-6 rounded-xl border gap-4"
+                className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 rounded-2xl border gap-4"
                 style={{
                     background: isDark ? '#111827' : '#ffffff',
                     borderColor: isDark ? '#374151' : '#e5e7eb'
                 }}
             >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div
-                        className="p-3 rounded-lg text-blue-500 border"
+                        className="p-3 rounded-xl text-blue-500 border shadow-inner"
                         style={{
-                            backgroundColor: isDark ? '#1e3a5f' : '#ffffff',
+                            backgroundColor: isDark ? '#1e3a5f' : '#f9fafb',
                             borderColor: isDark ? '#2563eb' : '#bfdbfe'
                         }}
                     >
                         <Layers size={24} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold" style={{ color: isDark ? '#ffffff' : '#111827' }}>Gestión de Material</h2>
-
+                        <h2 className="text-xl sm:text-2xl font-bold" style={{ color: isDark ? '#ffffff' : '#111827' }}>Gestión de Material</h2>
                     </div>
                 </div>
 
                 {/* Preview Trigger */}
                 <button
                     onClick={() => {
-                        // 1. Find Context
                         let relevantCourses = courses;
                         if (currentFolder) {
                             relevantCourses = courses.filter(c => getFolderFromDescription(c.description) === currentFolder);
                         }
-
-                        // 2. Extract Valid IDs
                         const validIds = new Set();
                         relevantCourses.forEach(c => {
                             if (c.assigned_company_ids && Array.isArray(c.assigned_company_ids)) {
@@ -390,20 +386,17 @@ export default function CourseEditor({ onPreview }) {
                             }
                         });
 
-
-                        // 3. Decide
                         if (validIds.size > 0) {
                             const firstId = [...validIds][0];
                             const companyName = companies.find(c => c.id === firstId)?.name;
                             showToast(`Simulando vista como: ${companyName || 'Empresa'}`);
                             onPreview(firstId);
                         } else {
-                            // If no context, Open Global Preview (Admin View)
                             showToast('Modo Vista Global (Sin filtro de empresa)', 'info');
                             onPreview(null);
                         }
                     }}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-sm"
                     style={{
                         backgroundColor: isDark ? '#374151' : '#f3f4f6',
                         color: isDark ? '#d1d5db' : '#4b5563'
@@ -420,8 +413,8 @@ export default function CourseEditor({ onPreview }) {
             {!loading && (
                 <div className="space-y-6">
                     {/* BREADCRUMBS & ACTIONS */}
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-xl font-bold" style={{ color: theme.text }}>
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center flex-wrap gap-2 text-lg sm:text-xl font-bold w-full sm:w-auto justify-center sm:justify-start" style={{ color: theme.text }}>
                             <button
                                 onClick={() => setCurrentFolder(null)}
                                 className={`hover:text-blue-500 transition-colors flex items-center gap-2 ${!currentFolder ? 'text-blue-600 cursor-default' : 'text-gray-400'}`}
@@ -429,34 +422,34 @@ export default function CourseEditor({ onPreview }) {
                                 <Layers size={24} /> Módulos
                             </button>
                             {currentFolder && (
-                                <>
+                                <div className="flex items-center gap-2">
                                     <ChevronLeft size={20} className="text-gray-300 rotate-180" />
-                                    <span className="text-blue-600 flex items-center gap-2">
+                                    <span className="text-blue-600 flex items-center gap-2 truncate max-w-[200px]">
                                         <Folder size={24} /> {currentFolder}
                                     </span>
-                                </>
+                                </div>
                             )}
                         </div>
 
-                        <div>
+                        <div className="w-full sm:w-auto">
                             {!currentFolder ? (
                                 <button
                                     onClick={() => handleOpenFolderModal()}
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all"
+                                    className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
                                 >
                                     <FolderPlus size={18} /> NUEVA CARPETA
                                 </button>
                             ) : (
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2 w-full">
                                     <button
                                         onClick={() => handleOpenFolderModal(currentFolder)}
-                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold flex items-center gap-2 transition-all"
+                                        className="w-full sm:w-auto px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border dark:border-gray-700"
                                     >
-                                        <Settings size={18} /> CONFIGURAR CARPETA
+                                        <Settings size={18} /> CONFIGURAR
                                     </button>
                                     <button
                                         onClick={() => handleOpenCourseModal()}
-                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all"
+                                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
                                     >
                                         <Plus size={18} /> NUEVA CLASE
                                     </button>
@@ -467,7 +460,7 @@ export default function CourseEditor({ onPreview }) {
 
                     {/* ROOT: FOLDER GRID */}
                     {!currentFolder && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {folders.map(folder => {
                                 const count = courses.filter(c => getFolderFromDescription(c.description) === folder).length;
                                 // Find permissions summary from first course
@@ -478,7 +471,7 @@ export default function CourseEditor({ onPreview }) {
                                     <div
                                         key={folder}
                                         onClick={() => setCurrentFolder(folder)}
-                                        className="group relative p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900"
+                                        className="group relative p-6 sm:p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900"
                                         style={{ borderColor: theme.border, background: theme.surface }}
                                     >
                                         <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
@@ -514,10 +507,11 @@ export default function CourseEditor({ onPreview }) {
                         </div>
                     )}
 
-                    {/* FOLDER CONTENT: FILE LIST */}
+                    {/* FOLDER CONTENT: FILE LIST / CARD VIEW ON MOBILE */}
                     {currentFolder && (
                         <div className="rounded-2xl border overflow-hidden shadow-sm animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
-                            <div className="grid grid-cols-12 gap-4 p-4 border-b text-xs font-black uppercase tracking-widest opacity-50" style={{ borderColor: theme.border, color: theme.text }}>
+                            {/* TABLE HEADER (Desktop Only) */}
+                            <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b text-xs font-black uppercase tracking-widest opacity-50" style={{ borderColor: theme.border, color: theme.text }}>
                                 <div className="col-span-1 text-center">Icono</div>
                                 <div className="col-span-6">Nombre de la Clase</div>
                                 <div className="col-span-3 text-center">Permisos Actuales</div>
@@ -533,49 +527,66 @@ export default function CourseEditor({ onPreview }) {
                                     items={courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map(c => c.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                    {courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map((course) => {
-                                        const Icon = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : FileText;
-                                        const accessCount = course.assigned_company_ids?.length || 0;
+                                    <div className="divide-y" style={{ borderColor: theme.border }}>
+                                        {courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map((course) => {
+                                            const Icon = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : FileText;
+                                            const accessCount = course.assigned_company_ids?.length || 0;
 
-                                        return (
-                                            <SortableItem key={course.id} id={course.id}>
-                                                <div className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-black/[0.02] transition-colors border-b last:border-0 bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
-                                                    <div className="col-span-1 flex justify-center text-blue-500 opacity-80 cursor-grab active:cursor-grabbing">
-                                                        <Icon size={20} />
+                                            return (
+                                                <SortableItem key={course.id} id={course.id}>
+                                                    {/* CARD VIEW (Mobile) + ROW VIEW (Desktop) */}
+                                                    <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-4 items-center hover:bg-black/[0.02] transition-colors bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
+                                                        <div className="w-full flex items-center justify-between md:contents">
+                                                            {/* Icon + Title on same row in mobile */}
+                                                            <div className="flex items-center gap-3 md:col-span-1 md:justify-center">
+                                                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 cursor-grab active:cursor-grabbing">
+                                                                    <Icon size={20} />
+                                                                </div>
+                                                                <div className="md:hidden min-w-0">
+                                                                    <h4 className="font-bold text-sm sm:text-base truncate" style={{ color: theme.text }}>{course.title}</h4>
+                                                                    <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="hidden md:block md:col-span-6 min-w-0">
+                                                                <h4 className="font-bold text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
+                                                                <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
+                                                            </div>
+
+                                                            {/* Status Badge */}
+                                                            <div className="md:col-span-3 flex justify-center">
+                                                                {accessCount === 0 ? (
+                                                                    <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-red-100 text-red-600 dark:bg-red-500/10">Sin Acceso</span>
+                                                                ) : (
+                                                                    <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-green-100 text-green-600 dark:bg-green-500/10 flex items-center gap-1">
+                                                                        <CheckCircle size={10} /> <span className="hidden sm:inline">{accessCount} Empresas</span><span className="sm:hidden">{accessCount} E.</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Actions Button Bar */}
+                                                        <div className="w-full md:col-span-2 flex justify-end gap-2 mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
+                                                            <button
+                                                                onPointerDown={(e) => e.stopPropagation()}
+                                                                onClick={() => handleOpenCourseModal(course)}
+                                                                className="flex-1 md:flex-none flex items-center justify-center gap-2 p-2.5 sm:px-4 md:p-2 bg-blue-50 sm:bg-transparent text-blue-500 hover:bg-blue-100 rounded-xl transition-all font-bold text-xs"
+                                                            >
+                                                                <Edit2 size={16} /> <span className="md:hidden">Editar</span>
+                                                            </button>
+                                                            <button
+                                                                onPointerDown={(e) => e.stopPropagation()}
+                                                                onClick={() => handleDeleteCourse(course.id)}
+                                                                className="flex-1 md:flex-none flex items-center justify-center gap-2 p-2.5 sm:px-4 md:p-2 bg-red-50 sm:bg-transparent text-red-500 hover:bg-red-100 rounded-xl transition-all font-bold text-xs"
+                                                            >
+                                                                <Trash2 size={16} /> <span className="md:hidden">Eliminar</span>
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="col-span-6 min-w-0">
-                                                        <h4 className="font-bold text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
-                                                        <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
-                                                    </div>
-                                                    <div className="col-span-3 flex justify-center">
-                                                        {accessCount === 0 ? (
-                                                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-100 text-red-600">Sin Acceso</span>
-                                                        ) : (
-                                                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-green-100 text-green-600 flex items-center gap-1">
-                                                                <CheckCircle size={10} /> {accessCount} Empresas
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="col-span-2 flex justify-end gap-1">
-                                                        <button
-                                                            onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
-                                                            onClick={() => handleOpenCourseModal(course)}
-                                                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onPointerDown={(e) => e.stopPropagation()}
-                                                            onClick={() => handleDeleteCourse(course.id)}
-                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </SortableItem>
-                                        );
-                                    })}
+                                                </SortableItem>
+                                            );
+                                        })}
+                                    </div>
                                 </SortableContext>
                             </DndContext>
                         </div>

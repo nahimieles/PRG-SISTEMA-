@@ -279,24 +279,24 @@ export default function CompanyManager() {
         <div className="animate-fade-in relative transition-all">
             {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
             {/* Content Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold" style={{ color: theme.text }}>
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 className="text-xl font-bold w-full text-center sm:text-left" style={{ color: theme.text }}>
                     Dashboard de Empresas
                 </h2>
 
-                <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                     {expandedGroup && (
-                        <div className="relative flex-1 md:w-64">
+                        <div className="relative w-full sm:w-64">
                             <input
                                 type="text" placeholder="Buscar empresa..."
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 style={{ background: isDark ? '#1a1f2e' : '#fff', borderColor: theme.border, color: theme.text }}
                                 value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                             />
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         </div>
                     )}
-                    <button onClick={() => openModal(null)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm whitespace-nowrap">
+                    <button onClick={() => openModal(null)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm whitespace-nowrap font-bold">
                         <Plus size={18} /> <span>Nueva Empresa</span>
                     </button>
                 </div>
@@ -312,26 +312,29 @@ export default function CompanyManager() {
                         <div className="space-y-8 animate-fade-in">
                             {/* PRG Header */}
                             {prgCompany && (
-                                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-6 rounded-2xl border border-amber-500/20 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                                    <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 sm:p-6 rounded-2xl border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all">
+                                    <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-4">
                                         {prgCompany.avatar_url ? (
                                             <img src={prgCompany.avatar_url} className="w-16 h-16 rounded-xl object-cover border-2 border-amber-500/30" />
                                         ) : (
                                             <div className="w-16 h-16 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-600"><Building2 size={32} /></div>
                                         )}
                                         <div>
-                                            <h3 className="text-xl font-black text-amber-600/80 uppercase">Empresa Principal</h3>
-                                            <p className="text-lg font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
+                                            <h3 className="text-xs sm:text-sm font-black text-amber-600/80 uppercase tracking-widest">Empresa Principal</h3>
+                                            <p className="text-base sm:text-lg font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 rounded-full"><Edit2 size={18} className="text-amber-600" /></button>
+                                    <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 rounded-full flex items-center gap-2 sm:block">
+                                        <Edit2 size={18} className="text-amber-600" />
+                                        <span className="sm:hidden text-amber-600 font-bold text-sm">Editar</span>
+                                    </button>
                                 </div>
                             )}
 
                             {/* Unified Groups Grid */}
                             <div>
                                 <h3 className="text-lg font-bold mb-4 opacity-50 uppercase tracking-widest text-xs flex items-center gap-2"><Layers size={14} /> Grupos de Trabajo</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
                                     {/* DYAMIC GROUPS */}
                                     {groups.filter(g => !g.category).map(group => {
@@ -355,7 +358,7 @@ export default function CompanyManager() {
                                                             <Folder size={28} className="text-blue-500" />
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
                                                             className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
@@ -432,20 +435,22 @@ export default function CompanyManager() {
                     {/* LEVEL 2: DETAILED LIST */}
                     {expandedGroup && (
                         <div className="animate-fade-in space-y-6">
-                            <div className="flex items-center gap-4 pb-4 border-b border-gray-200 dark:border-gray-800">
-                                <button onClick={handleBackToGroups} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                    <ChevronLeft size={24} />
-                                </button>
-                                <div>
-                                    <h3 className="text-2xl font-bold flex items-center gap-2">
-                                        {expandedGroup.name}
-                                    </h3>
-                                    <p className="text-sm opacity-60">Visualizando empresas del grupo</p>
+                            <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-gray-200 dark:border-gray-800 text-center sm:text-left">
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <button onClick={handleBackToGroups} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                        <ChevronLeft size={24} />
+                                    </button>
+                                    <div>
+                                        <h3 className="text-xl sm:text-2xl font-bold flex items-center justify-center sm:justify-start gap-2">
+                                            {expandedGroup.name}
+                                        </h3>
+                                        <p className="text-sm opacity-60">Visualizando empresas del grupo</p>
+                                    </div>
                                 </div>
                                 {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
                                     <button
                                         onClick={() => openModal(null, true)}
-                                        className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 font-bold"
+                                        className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 font-bold"
                                     >
                                         <FolderPlus size={18} />
                                         <span>Nuevo Grupo</span>
@@ -457,7 +462,7 @@ export default function CompanyManager() {
                             {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Grupos en {expandedGroup.name}</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 border-b border-gray-100 dark:border-gray-800/50">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 border-b border-gray-100 dark:border-gray-800/50">
                                         {groups.filter(g => g.category === expandedGroup.type).map(group => {
                                             const groupCompanies = companies.filter(c => c.group_id === group.id);
                                             const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
@@ -478,7 +483,7 @@ export default function CompanyManager() {
                                                                 <Folder size={28} className="text-blue-500" />
                                                             )}
                                                         </div>
-                                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
                                                                 className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
@@ -517,7 +522,7 @@ export default function CompanyManager() {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {(() => {
                                     const legacyTypes = ['contabilidad', 'auditoria']; // Only these are legacy type filters
                                     const groupCompanies = filteredCompanies.filter(c => {

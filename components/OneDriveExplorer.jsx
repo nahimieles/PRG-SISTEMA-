@@ -429,7 +429,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             <>
                 <button
                     onClick={() => setIsLinkModalOpen(true)}
-                    className="p-2 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 hover:bg-green-500/20 transition flex items-center gap-2"
+                    className="p-2 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition flex items-center gap-2"
+                    style={{ color: isDark ? '#4ade80' : '#16a34a' }}
                     title="Vincular SharePoint"
                 >
                     <LucideIcons.Link size={18} />
@@ -443,7 +444,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     {
         isLinkModalOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsLinkModalOpen(false)}>
-                <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }} onClick={e => e.stopPropagation()}>
                     <div className="p-4 border-b flex justify-between items-center">
                         <h3 className="font-bold">Seleccionar Sitio para Vincular</h3>
                         <button onClick={() => setIsLinkModalOpen(false)}><X /></button>
@@ -849,7 +850,13 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     if (accounts.length === 0) {
         if (inProgress !== 'none') {
             return (
-                <div className="flex flex-col items-center justify-center p-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+                <div
+                    className="flex flex-col items-center justify-center p-20 rounded-2xl border-2 border-dashed"
+                    style={{
+                        backgroundColor: isDark ? 'rgba(17, 24, 39, 0.5)' : 'rgba(249, 250, 251, 0.5)',
+                        borderColor: isDark ? '#1f2937' : '#e5e7eb'
+                    }}
+                >
                     <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
                     <p className="text-gray-500 font-medium">Autenticando con Microsoft...</p>
                 </div>
@@ -948,7 +955,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                         <Search className="absolute left-2 top-2 text-gray-400" size={16} />
                     </div>
 
-                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
+                    <div className="h-6 w-px mx-1" style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}></div>
 
                     {/* Action Buttons */}
                     <button
@@ -965,7 +972,12 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     {clipboard && (
                         <button
                             onClick={handlePaste}
-                            className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                            className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer"
+                            style={{
+                                backgroundColor: isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff',
+                                color: isDark ? '#60a5fa' : '#2563eb',
+                                borderColor: isDark ? '#1e3a8a' : '#bfdbfe'
+                            }}
                             title={`Pegar ${clipboard.action === 'cut' ? 'cortado' : 'copiado'}`}
                         >
                             <ClipboardPaste size={16} />
@@ -1000,7 +1012,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                 const name = prompt("Nombre del Grupo:");
                                 if (name && name.trim()) handleCreateGroup(name.trim());
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border hover:bg-opacity-50 transition cursor-pointer bg-blue-500/10 border-blue-500/20"
+                            style={{ color: isDark ? '#60a5fa' : '#2563eb' }}
                             title="Nuevo Grupo"
                         >
                             <Plus size={16} />
@@ -1047,18 +1060,18 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                 className={`rounded-xl border animate-pulse p-3 ${viewMode === 'list' ? 'flex items-center gap-4 h-16' : 'h-40 flex flex-col items-center justify-center gap-4'}`}
                                 style={{ background: isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6', borderColor: 'transparent' }}
                             >
-                                <div className={`bg-gray-300 dark:bg-gray-700 rounded-lg ${viewMode === 'list' ? 'w-10 h-10' : 'w-16 h-16'}`}></div>
+                                <div className={`rounded-lg ${viewMode === 'list' ? 'w-10 h-10' : 'w-16 h-16'}`} style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}></div>
                                 <div className="space-y-2 w-full px-2">
-                                    <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
+                                    <div className="h-3 rounded w-3/4 mx-auto" style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}></div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : error ? (
-                    <div className="text-red-500 text-center p-4 bg-red-50 dark:bg-red-900/10 rounded-lg">{error}</div>
+                    <div className="text-red-500 text-center p-4 rounded-lg" style={{ backgroundColor: isDark ? 'rgba(127, 29, 29, 0.1)' : '#fef2f2' }}>{error}</div>
                 ) : items.length === 0 ? (
                     <div className="text-center p-12 flex flex-col items-center gap-4" style={{ color: theme.textSecondary }}>
-                        <div className="p-4 rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div className="p-4 rounded-full" style={{ backgroundColor: isDark ? '#1f2937' : '#f3f4f6' }}>
                             <Folder size={48} className="opacity-20" />
                         </div>
                         <p>Carpeta vacía</p>
@@ -1091,11 +1104,14 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                         onDragOver={isDropTarget ? (e) => handleDragOver(e, item) : undefined}
                                         onDragLeave={isDropTarget ? handleDragLeave : undefined}
                                         onDrop={isDropTarget ? (e) => handleDrop(e, item) : undefined}
-                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col bg-white dark:bg-gray-800 border dark:border-gray-700
+                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col border
                                         ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}
-                                        ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50 dark:bg-blue-900/20' : ''}
+                                        ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
                                         ${isDraggable ? 'cursor-move' : ''}`}
-                                        style={{ borderColor: isDraggedOver ? '#3b82f6' : theme.border }}
+                                        style={{
+                                            backgroundColor: isDraggedOver ? (isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff') : (isDark ? '#1f2937' : '#ffffff'),
+                                            borderColor: isDraggedOver ? '#3b82f6' : theme.border
+                                        }}
                                         onClick={() => handleNavigate(item)}
                                     >
                                         {/* Menu Trigger */}
@@ -1104,22 +1120,57 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                 e.stopPropagation();
                                                 setActiveMenu(activeMenu === item.id ? null : item.id);
                                             }}
-                                            className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            className="absolute top-2 right-2 p-1.5 rounded-full z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            style={{ backgroundColor: 'transparent' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#e5e7eb'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                         >
                                             <MoreVertical size={16} color={theme.text} />
                                         </button>
 
                                         {/* Context Menu Dropdown */}
                                         {activeMenu === item.id && (
-                                            <div className="absolute right-2 top-8 w-40 bg-white dark:bg-[#1f2937] shadow-xl rounded-lg z-20 border border-gray-200 dark:border-gray-700 overflow-hidden text-sm" onClick={e => e.stopPropagation()}>
-                                                <button onClick={() => { setActiveMenu(null); handleRename(item); }} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                                            <div
+                                                className="absolute right-2 top-8 w-40 shadow-xl rounded-lg z-20 overflow-hidden text-sm"
+                                                style={{
+                                                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                                                    borderColor: isDark ? '#374151' : '#e5e7eb',
+                                                    borderWidth: '1px',
+                                                    borderStyle: 'solid',
+                                                    color: theme.text
+                                                }}
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                <button
+                                                    onClick={() => { setActiveMenu(null); handleRename(item); }}
+                                                    className="w-full text-left px-4 py-2 flex items-center gap-2"
+                                                    style={{ backgroundColor: 'transparent' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
                                                     <Edit2 size={14} /> Renombrar
                                                 </button>
-                                                <button onClick={() => { setActiveMenu(null); handleDelete(item); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 flex items-center gap-2">
+                                                <button
+                                                    onClick={() => { setActiveMenu(null); handleDelete(item); }}
+                                                    className="w-full text-left px-4 py-2 text-red-600 flex items-center gap-2"
+                                                    style={{ backgroundColor: 'transparent' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? 'rgba(127, 29, 29, 0.2)' : '#fef2f2'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
                                                     <Trash2 size={14} /> Eliminar
                                                 </button>
                                                 {item.type !== 'group' && item.type !== 'site' && (
-                                                    <button onClick={() => handleCut(item)} className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700">
+                                                    <button
+                                                        onClick={() => handleCut(item)}
+                                                        className="w-full text-left px-4 py-2 flex items-center gap-2"
+                                                        style={{
+                                                            backgroundColor: 'transparent',
+                                                            borderTopWidth: '1px',
+                                                            borderTopColor: isDark ? '#374151' : '#f3f4f6'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                    >
                                                         <Scissors size={14} /> Cortar
                                                     </button>
                                                 )}
@@ -1139,12 +1190,12 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                         >
                                                             {getInitials(item.name)}
                                                         </div>
-                                                        <LucideIcons.Star size={16} className="text-gray-300 dark:text-gray-600 group-hover:block hidden" />
+                                                        <LucideIcons.Star size={16} className="group-hover:block hidden" style={{ color: isDark ? '#4b5563' : '#d1d5db' }} />
                                                     </div>
 
                                                     {/* Content */}
                                                     <div className="px-4 pb-4 flex-1 flex flex-col justify-end">
-                                                        <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-tight line-clamp-2" title={item.name}>
+                                                        <h3 className="font-bold text-sm leading-tight line-clamp-2" style={{ color: isDark ? '#f3f4f6' : '#1f2937' }} title={item.name}>
                                                             {item.name}
                                                         </h3>
                                                         <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide">Grupo</p>
@@ -1160,7 +1211,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                                                                 <div className="scale-125">{getFileIcon(item.name)}</div>
                                                         }
                                                     </div>
-                                                    <p className="text-xs text-center font-medium text-gray-700 dark:text-gray-300 px-2 w-full truncate">
+                                                    <p className="text-xs text-center font-medium px-2 w-full truncate" style={{ color: isDark ? '#d1d5db' : '#374151' }}>
                                                         {item.name}
                                                     </p>
                                                     <p className="text-[10px] text-gray-400 mt-1">
