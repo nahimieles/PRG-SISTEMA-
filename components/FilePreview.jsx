@@ -25,12 +25,21 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
 
                 // For Office documents, get preview URL from Microsoft Graph
                 if (['word', 'excel', 'powerpoint', 'pdf'].includes(fileType)) {
-                    const url = await getPreviewUrl(file.id, driveId);
-                    if (url) {
-                        setPreviewUrl(url);
+                    // Caching logic: check if we already have the preview URL for this file ID in session memory
+                    const cacheKey = `preview_${file.id}`;
+                    const cachedUrl = sessionStorage.getItem(cacheKey);
+
+                    if (cachedUrl) {
+                        setPreviewUrl(cachedUrl);
                     } else {
-                        // Fallback: try to use webUrl for SharePoint viewing
-                        setPreviewUrl(file.webUrl);
+                        const url = await getPreviewUrl(file.id, driveId);
+                        if (url) {
+                            sessionStorage.setItem(cacheKey, url);
+                            setPreviewUrl(url);
+                        } else {
+                            // Fallback: try to use webUrl for SharePoint viewing
+                            setPreviewUrl(file.webUrl);
+                        }
                     }
                 }
                 setLoading(false);
@@ -181,7 +190,7 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
             onClick={onClose}
         >
             <div
-                className="w-full h-full max-w-7xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-scale-in"
+                className="w-full h-full max-w-7xl max-h-[90vh] rounded-xl shadow-lg overflow-hidden flex flex-col animate-scale-in"
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -255,12 +264,13 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                                 setError(null);
                                 setPreviewUrl(null);
                                 setTimeout(() => {
-                                    // Trigger reload by resetting state
+                                    // Trigger reload by resetting state and ignoring cache
                                     const loadPreview = async () => {
                                         try {
                                             const fileType = getFileType();
                                             if (['word', 'excel', 'powerpoint', 'pdf'].includes(fileType)) {
                                                 const url = await getPreviewUrl(file.id, driveId);
+                                                if (url) sessionStorage.setItem(`preview_${file.id}`, url);
                                                 setPreviewUrl(url || file.webUrl);
                                             }
                                             setLoading(false);

@@ -6,10 +6,14 @@ import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, Chev
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import {
-    getCompanies, addCompany, updateCompany, deleteCompany,
-    getCompanyGroups, createCompanyGroup, updateCompanyGroup, deleteCompanyGroup,
+    getCompanies, deleteCompany,
+    getCompanyGroups, deleteCompanyGroup,
     uploadFile
 } from '../lib/auth';
+import {
+    createCompanyAction, updateCompanyAction,
+    createCompanyGroupAction, updateCompanyGroupAction
+} from '../lib/actions';
 
 export default function CompanyManager() {
     // V3.12.0 - Groups Integration
@@ -136,18 +140,18 @@ export default function CompanyManager() {
                         console.log('[DEBUG] No updates detected, returning');
                         setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
                     }
-                    result = await updateCompany(editingItem.id, updates);
+                    result = await updateCompanyAction(editingItem.id, updates);
                 } else {
                     // Create Company
-                    console.log('[DEBUG] Action: addCompany');
-                    result = await addCompany(
-                        formData.name,
-                        formData.type,
-                        formData.username,
-                        formData.password,
-                        formData.group_id || null,
-                        formData.avatar_url || null
-                    );
+                    console.log('[DEBUG] Action: createCompanyAction');
+                    result = await createCompanyAction({
+                        name: formData.name,
+                        type: formData.type,
+                        username: formData.username,
+                        password: formData.password,
+                        groupId: formData.group_id || null,
+                        logo_url: formData.avatar_url || null
+                    });
                 }
             } else {
                 // SAVING GROUP
@@ -162,11 +166,11 @@ export default function CompanyManager() {
                 console.log('[DEBUG] groupData:', groupData);
 
                 if (editingItem) {
-                    console.log('[DEBUG] Action: updateCompanyGroup');
-                    result = await updateCompanyGroup(editingItem.id, groupData);
+                    console.log('[DEBUG] Action: updateCompanyGroupAction');
+                    result = await updateCompanyGroupAction(editingItem.id, groupData);
                 } else {
-                    console.log('[DEBUG] Action: createCompanyGroup');
-                    result = await createCompanyGroup(groupData);
+                    console.log('[DEBUG] Action: createCompanyGroupAction');
+                    result = await createCompanyGroupAction(groupData);
                 }
             }
 
@@ -312,7 +316,7 @@ export default function CompanyManager() {
                         <div className="space-y-8 animate-fade-in">
                             {/* PRG Header */}
                             {prgCompany && (
-                                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 sm:p-6 rounded-2xl border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all">
+                                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 sm:p-6 rounded-xl border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all">
                                     <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-4">
                                         {prgCompany.avatar_url ? (
                                             <img src={prgCompany.avatar_url} className="w-16 h-16 rounded-xl object-cover border-2 border-amber-500/30" />
@@ -347,13 +351,13 @@ export default function CompanyManager() {
                                             <button
                                                 key={group.id}
                                                 onClick={() => handleGroupClick(group)}
-                                                className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
+                                                className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
                                                 <div className="w-full flex items-start justify-between mb-4">
-                                                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <div className="w-14 h-14 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                         {group.image_url ? (
-                                                            <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                                                            <img src={group.image_url} className="w-full h-full object-cover rounded-xl" alt="" />
                                                         ) : (
                                                             <Folder size={28} className="text-blue-500" />
                                                         )}
@@ -407,10 +411,10 @@ export default function CompanyManager() {
                                             <button
                                                 key={lg.id}
                                                 onClick={() => handleGroupClick(lg)}
-                                                className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full opacity-80 hover:opacity-100"
+                                                className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full opacity-80 hover:opacity-100"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                     <Users size={28} className="text-gray-400" />
                                                 </div>
                                                 <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{lg.name}</h3>
@@ -472,13 +476,13 @@ export default function CompanyManager() {
                                                 <button
                                                     key={group.id}
                                                     onClick={() => handleGroupClick(group)}
-                                                    className="group relative flex flex-col items-start p-6 rounded-2xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
+                                                    className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
                                                     style={{ background: theme.surface, borderColor: theme.border }}
                                                 >
                                                     <div className="w-full flex items-start justify-between mb-4">
-                                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                             {group.image_url ? (
-                                                                <img src={group.image_url} className="w-full h-full object-cover rounded-2xl" alt="" />
+                                                                <img src={group.image_url} className="w-full h-full object-cover rounded-xl" alt="" />
                                                             ) : (
                                                                 <Folder size={28} className="text-blue-500" />
                                                             )}
@@ -513,7 +517,7 @@ export default function CompanyManager() {
                                             );
                                         })}
                                         {groups.filter(g => g.category === expandedGroup.type).length === 0 && (
-                                            <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-100 dark:border-gray-800/50 rounded-2xl">
+                                            <div className="col-span-full py-8 text-center border-2 border-dashed border-gray-100 dark:border-gray-800/50 rounded-xl">
                                                 <p className="text-sm italic opacity-40">No hay grupos creados en esta categoría</p>
                                             </div>
                                         )}
@@ -557,11 +561,11 @@ export default function CompanyManager() {
                                         <div key={company.id} className="p-5 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
                                             <div className="flex justify-between items-start mb-3">
                                                 {(company.logo_url || company.avatar_url) ? (
-                                                    <div className="w-16 h-16 rounded-2xl border overflow-hidden shadow-sm transition-transform group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <div className="w-16 h-16 rounded-xl border overflow-hidden shadow-sm transition-transform group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                         <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1.5" alt={company.name} />
                                                     </div>
                                                 ) : (
-                                                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-gray-400 border shadow-sm transition-transform group-hover:-rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <div className="w-16 h-16 rounded-xl flex items-center justify-center text-gray-400 border shadow-sm transition-transform group-hover:-rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                         <Building2 size={32} />
                                                     </div>
                                                 )}
@@ -600,7 +604,7 @@ export default function CompanyManager() {
             {/* Modal Formulario */}
             {showModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" style={{ background: theme.surface, borderColor: theme.border }}>
-                    <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
+                    <div className="rounded-xl shadow-lg w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
                         <div className="p-6">
                             <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
                                 {editingItem ? 'Editar' : 'Crear Nuevo'}
@@ -609,7 +613,7 @@ export default function CompanyManager() {
                                 {/* Image Upload */}
                                 <div className="flex justify-center mb-4">
                                     <div className="relative group cursor-pointer">
-                                        <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-black/20 hover:bg-gray-100 transition-colors">
+                                        <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-black/20 hover:bg-gray-100 transition-colors">
                                             {formData.avatar_url ? (
                                                 <img src={formData.avatar_url} className="w-full h-full object-cover" />
                                             ) : (
@@ -627,7 +631,7 @@ export default function CompanyManager() {
                                             disabled={uploadingAvatar}
                                         />
                                         {uploadingAvatar && (
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-2xl">
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
                                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                             </div>
                                         )}
@@ -750,7 +754,7 @@ export default function CompanyManager() {
             {
                 confirmModal.show && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex: 110 }}>
-                        <div className="rounded-xl shadow-2xl w-full max-w-sm border p-6" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <div className="rounded-xl shadow-lg w-full max-w-sm border p-6" style={{ background: theme.surface, borderColor: theme.border }}>
                             <h3 className="text-lg font-bold mb-3" style={{ color: theme.text }}>Confirmación</h3>
                             <p className="mb-6" style={{ color: theme.textSecondary }}>{confirmModal.title}</p>
                             <div className="flex justify-end gap-3">

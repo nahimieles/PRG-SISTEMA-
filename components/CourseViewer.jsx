@@ -159,7 +159,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                     title="Cerrar curso (Esc)"
                     style={{ background: 'transparent !important', boxShadow: 'none !important' }}
                 >
-                    <img src="/prg_logo_final.png" alt="Cerrar" className="h-24 w-auto object-contain drop-shadow-2xl" />
+                    <img src="/prg_logo_final.png" alt="Cerrar" className="h-24 w-auto object-contain drop-shadow-lg" />
                 </div>
 
                 <div className="flex-1 relative overflow-hidden flex items-center justify-center">
@@ -305,7 +305,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                     <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
                 </div>
             ) : courses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-2xl" style={{ borderColor: theme.border, background: theme.surface }}>
+                <div className="flex flex-col items-center justify-center h-48 border border-dashed rounded-xl" style={{ borderColor: theme.border, background: theme.surface }}>
                     <LucideIcons.FileText className="w-8 h-8 mb-3 opacity-20" style={{ color: theme.text }} />
                     <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>No hay contenido asignado.</p>
                 </div>
@@ -321,10 +321,10 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                                     <button
                                         key={folder}
                                         onClick={() => setCurrentFolder(folder)}
-                                        className="group relative p-6 sm:p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 text-left"
+                                        className="group relative p-6 sm:p-8 rounded-xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 text-left"
                                         style={{ borderColor: theme.border, background: theme.surface }}
                                     >
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
+                                        <div className="w-14 h-14 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
                                             <Folder size={28} strokeWidth={2.5} />
                                         </div>
 

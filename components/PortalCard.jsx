@@ -4,7 +4,7 @@ export default function PortalCard({ href, icon, title, description, theme }) {
   return (
     <Link href={href}>
       <div
-        className="group relative rounded-2xl shadow-lg p-6 sm:p-8 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl overflow-hidden border-2 border-transparent hover:border-blue-400"
+        className="group relative rounded-xl shadow-lg p-6 sm:p-8 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg overflow-hidden border-2 border-transparent hover:border-blue-400"
         style={{ background: theme.surface }}
       >
         {/* Gradient overlay on hover */}

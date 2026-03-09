@@ -13,6 +13,11 @@ module.exports = {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
             },
+            borderRadius: {
+                'xl': '0.5rem',
+                '2xl': '0.6rem',
+                '3xl': '0.75rem',
+            },
         },
     },
     plugins: [],

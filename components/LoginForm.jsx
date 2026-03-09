@@ -51,7 +51,7 @@ export default function LoginForm({
         </div>
 
         <div
-          className="rounded-2xl shadow-2xl p-8"
+          className="rounded-xl shadow-lg p-8"
           style={{ background: theme.surface }}
         >
           <div className="text-center mb-6">

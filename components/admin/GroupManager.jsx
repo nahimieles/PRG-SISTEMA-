@@ -355,7 +355,7 @@ export default function GroupManager() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
-                        className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in my-4 sm:my-8"
+                        className="bg-white rounded-xl sm:rounded-xl shadow-lg w-full max-w-lg overflow-hidden animate-scale-in my-4 sm:my-8"
                         style={{ background: theme.surface, color: theme.text }}
                     >
                         <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-100">

@@ -101,7 +101,7 @@ export default function HomePage() {
 
         {/* Formulario de login */}
         <div
-          className="rounded-2xl shadow-2xl p-8"
+          className="rounded-xl shadow-lg p-8"
           style={{
             background: theme.surface,
             boxShadow: isDark

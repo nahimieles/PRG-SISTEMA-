@@ -118,7 +118,7 @@ export default function ClientesPage() {
 
         {/* Hero */}
         <div
-          className="rounded-2xl shadow-2xl p-8 mb-6 text-center"
+          className="rounded-xl shadow-lg p-8 mb-6 text-center"
           style={{ background: theme.surface }}
         >
           <h1 className="text-4xl font-bold mb-4" style={{ color: theme.primary }}>
@@ -131,7 +131,7 @@ export default function ClientesPage() {
 
         {/* Búsqueda */}
         <div
-          className="rounded-2xl shadow-lg p-6 mb-6"
+          className="rounded-xl shadow-lg p-6 mb-6"
           style={{ background: theme.surface }}
         >
           <h2 className="text-2xl font-bold mb-4" style={{ color: theme.primary }}>
@@ -164,7 +164,7 @@ export default function ClientesPage() {
 
         {/* Resultados */}
         {companyRecords && (
-          <div className="rounded-2xl shadow-lg p-6 mb-6" style={{ background: theme.surface }}>
+          <div className="rounded-xl shadow-lg p-6 mb-6" style={{ background: theme.surface }}>
             <h3 className="text-2xl font-bold mb-4" style={{ color: theme.primary }}>
               {companyRecords.name}
             </h3>

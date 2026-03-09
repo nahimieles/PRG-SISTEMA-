@@ -1,7 +1,7 @@
 'use client';
 
 import './globals.css'
-import { Montserrat } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import { ThemeProvider } from '../contexts/ThemeContext'
 
@@ -11,9 +11,9 @@ const MsalWrapper = dynamic(() => import('../components/MsalWrapper'), {
   loading: () => null
 });
 
-const montserrat = Montserrat({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600'],
 })
 
 export default function RootLayout({ children }) {
@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
         <title>PRG Sistemas</title>
         <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
       </head>
-      <body className={montserrat.className}>
+      <body className={inter.className}>
         <MsalWrapper>
           <ThemeProvider>
             {children}

@@ -23,6 +23,10 @@ create policy "Enable insert access for all users"
 on audit_logs for insert
 with check (true);
 
+create policy "Enable delete access for all users"
+on audit_logs for delete
+using (true);
+
 -- Optional: Index for faster queries on reports
 create index if not exists audit_logs_timestamp_idx on audit_logs(timestamp desc);
 create index if not exists audit_logs_worker_idx on audit_logs(worker_name);

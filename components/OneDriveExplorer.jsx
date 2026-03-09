@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getFiles, searchFiles, deleteItem, createFolder, getPreviewUrl, renameItem, uploadFile, moveItem, getFollowedSites, getSiteDefaultDrive } from "@/lib/onedriveService";
@@ -296,29 +296,27 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             seenIds.add(site.id);
 
             const name = normalize(site.displayName);
+            const isAdmin = role === 'admin' ||
+                (currentUser?.username?.toLowerCase() === 'valeria');
 
-            // 1. BLACKLIST
-            if (name.includes('c ltda') || name.includes('cia. ltda')) return;
+            // 1. PRG — check FIRST so 'CIA LTDA' in the name doesn't hit blacklist
+            if (name.includes('prg')) {
+                if (isAdmin) processed.push(site);
+                return;
+            }
 
-            // 2. PERMISSIONS
-            const username = currentUser?.username?.toLowerCase() || '';
-            const isAdmin = role === 'admin' || username === 'valeria';
+            // 2. BLACKLIST — noisy sites (runs only for non-PRG sites)
+            if (name.includes('c ltda') || name.includes('cia ltda') || name.includes('cia. ltda')) return;
 
-            // Contabilidad
+            // 3. Contabilidad (admin only)
             if (name.includes('contabilidad')) {
                 if (isAdmin) processed.push(site);
                 return;
             }
 
-            // Auditoria
+            // 4. Auditoria (admin only)
             if (name.includes('auditoria')) {
                 if (isAdmin) processed.push(site);
-                return;
-            }
-
-            // PRG
-            if (name.includes('prg')) {
-                processed.push(site);
                 return;
             }
         });
@@ -444,7 +442,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     {
         isLinkModalOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsLinkModalOpen(false)}>
-                <div className="w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }} onClick={e => e.stopPropagation()}>
+                <div className="w-full max-w-2xl rounded-xl shadow-lg overflow-hidden max-h-[80vh] flex flex-col" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }} onClick={e => e.stopPropagation()}>
                     <div className="p-4 border-b flex justify-between items-center">
                         <h3 className="font-bold">Seleccionar Sitio para Vincular</h3>
                         <button onClick={() => setIsLinkModalOpen(false)}><X /></button>
@@ -513,26 +511,28 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         if (role === 'worker') return alert("No tienes permisos para eliminar.");
         if (!confirm(`¿Eliminar "${item.name}"?`)) return;
 
-        console.log('Deleting item:', item);
-
+        setLoading(true);
+        setActiveMenu(null);
         try {
             if (item.type === 'group') {
-                console.log('Item is a group, calling deleteGroup with ID:', item.id);
                 await deleteGroup(item.id);
             } else {
+                if (!item.id) throw new Error("El elemento no tiene un ID válido para eliminar.");
                 await deleteItem(item.id, effectiveDriveId);
                 await logAuditAction({
                     action_type: 'DELETE',
                     file_name: item.name,
-                    file_path: item.name,
+                    file_path: currentPath.name || '/',
                     worker_name: currentUser?.full_name,
-                    metadata: { driveId: effectiveDriveId }
+                    metadata: { driveId: effectiveDriveId, itemId: item.id }
                 });
             }
-            loadContent();
+            await loadContent();
         } catch (e) {
             console.error("Error deleting:", e);
-            alert(`Error al eliminar: ${e.message || 'Error desconocido'}`);
+            alert(`Error al eliminar "${item.name}": ${e.message || 'Error desconocido'}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -770,6 +770,131 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         }
     };
 
+    // --- Memoized Items Rendering ---
+    // IMPORTANT: Must be AFTER all functions it references (handleDragStart,
+    // handleDragEnd, handleDragOver, handleDragLeave, handleDrop, handleNavigate,
+    // handleRename, handleDelete, handleCut, getFileIcon) to avoid
+    // "Cannot access before initialization" errors.
+    const renderedItems = useMemo(() => items.map((item) => {
+        // Determine Icon
+        const isGroup = item.type === 'group' || item.type === 'site';
+        const Icon = isGroup ? (LucideIcons[item.icon] || Folder) : (item.type === 'folder' ? Folder : getFileIcon(item.name)?.type || FileIcon);
+        const itemColor = isGroup ? (item.color || '#0078d4') : (item.type === 'folder' ? '#fbbf24' : '#6b7280');
+        const getInitials = (n) => n.split(' ').map(c => c[0]).slice(0, 2).join('').toUpperCase();
+        const showAsCard = isGroup && currentPath.type === 'root';
+        const isDraggable = role !== 'worker';
+        const isDropTarget = (item.type === 'folder' || item.type === 'group');
+        const isDraggedOver = dragOverItem === item.id;
+
+        return (
+            <div
+                key={item.id}
+                draggable={isDraggable}
+                onDragStart={(e) => handleDragStart(e, item)}
+                onDragEnd={handleDragEnd}
+                onDragOver={isDropTarget ? (e) => handleDragOver(e, item) : undefined}
+                onDragLeave={isDropTarget ? handleDragLeave : undefined}
+                onDrop={isDropTarget ? (e) => handleDrop(e, item) : undefined}
+                className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col border
+                    ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}
+                    ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+                    ${isDraggable ? 'cursor-move' : ''}`}
+                style={{
+                    backgroundColor: isDraggedOver ? (isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff') : (isDark ? '#1f2937' : '#ffffff'),
+                    borderColor: isDraggedOver ? '#3b82f6' : theme.border
+                }}
+                onClick={() => handleNavigate(item)}
+            >
+                <button
+                    onMouseDown={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === item.id ? null : item.id); }}
+                    className="absolute top-2 right-2 p-1.5 rounded-full z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    style={{ backgroundColor: 'transparent' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#e5e7eb'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                    <MoreVertical size={16} color={theme.text} />
+                </button>
+                {activeMenu === item.id && (
+                    <div className="absolute right-2 top-8 w-44 shadow-xl rounded-lg z-[9999] overflow-hidden text-sm"
+                        style={{ backgroundColor: isDark ? '#1f2937' : '#ffffff', borderColor: isDark ? '#374151' : '#e5e7eb', borderWidth: '1px', borderStyle: 'solid', color: theme.text }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}>
+                        <button
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={() => { setActiveMenu(null); handleRename(item); }}
+                            className="w-full text-left px-4 py-2 flex items-center gap-2"
+                            style={{ backgroundColor: 'transparent' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            <Edit2 size={14} /> Renombrar
+                        </button>
+                        <button
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={() => { setActiveMenu(null); handleDelete(item); }}
+                            className="w-full text-left px-4 py-2 text-red-500 flex items-center gap-2"
+                            style={{ backgroundColor: 'transparent' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? 'rgba(127, 29, 29, 0.2)' : '#fef2f2'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                            <Trash2 size={14} /> Eliminar
+                        </button>
+                        {item.type !== 'group' && item.type !== 'site' && (
+                            <button
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={() => { setActiveMenu(null); handleCut(item); }}
+                                className="w-full text-left px-4 py-2 flex items-center gap-2"
+                                style={{ backgroundColor: 'transparent', borderTopWidth: '1px', borderTopColor: isDark ? '#374151' : '#f3f4f6' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                <Scissors size={14} /> Cortar
+                            </button>
+                        )}
+                    </div>
+                )}
+                {viewMode === 'grid' ? (
+                    showAsCard ? (
+                        <div className="flex flex-col h-full w-full">
+                            <div className="p-4 flex justify-between items-start">
+                                <div className="w-10 h-10 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none" style={{ backgroundColor: itemColor }}>
+                                    {getInitials(item.name)}
+                                </div>
+                                <LucideIcons.Star size={16} className="group-hover:block hidden" style={{ color: isDark ? '#4b5563' : '#d1d5db' }} />
+                            </div>
+                            <div className="px-4 pb-4 flex-1 flex flex-col justify-end">
+                                <h3 className="font-bold text-sm leading-tight line-clamp-2" style={{ color: isDark ? '#f3f4f6' : '#1f2937' }} title={item.name}>{item.name}</h3>
+                                <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide">Grupo</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center p-4 h-full relative group/icon">
+                            <div className="mb-3 transition-transform duration-200 group-hover/icon:scale-110">
+                                {item.type === 'folder' ? <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> :
+                                    isGroup ? <Icon size={40} color={itemColor} /> : <div className="scale-125">{getFileIcon(item.name)}</div>}
+                            </div>
+                            <p className="text-xs text-center font-medium px-2 w-full truncate" style={{ color: isDark ? '#d1d5db' : '#374151' }}>{item.name}</p>
+                            <p className="text-[10px] text-gray-400 mt-1">{isGroup ? 'Grupo' : new Date(item.lastModifiedDateTime).toLocaleDateString()}</p>
+                        </div>
+                    )
+                ) : (
+                    <>
+                        <div className="w-10 h-10 rounded text-white flex items-center justify-center font-bold" style={{ backgroundColor: isGroup ? itemColor : (item.type === 'folder' ? '#fbbf24' : 'transparent') }}>
+                            {isGroup ? getInitials(item.name) : (item.type === 'folder' ? <Folder size={20} className="text-white" /> : <div className="scale-75">{getFileIcon(item.name)}</div>)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
+                            <p className="text-[10px] opacity-60 m-0 p-0 line-clamp-1" style={{ color: theme.textSecondary }}>
+                                {isGroup ? 'Grupo de Trabajo' : `Modificado: ${new Date(item.lastModifiedDateTime).toLocaleDateString()}`}
+                            </p>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    }), [items, viewMode, activeMenu, dragOverItem, currentPath.type, isDark, theme, role,
+        handleDragStart, handleDragEnd, handleDragOver, handleDragLeave, handleDrop,
+        handleNavigate, handleRename, handleDelete, handleCut, getFileIcon]);
+    // --- End of renderedItems ---
+
     // Undo/Redo Handlers
     const addToUndoStack = (operation) => {
         setUndoStack(prev => [...prev, operation]);
@@ -851,7 +976,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
         if (inProgress !== 'none') {
             return (
                 <div
-                    className="flex flex-col items-center justify-center p-20 rounded-2xl border-2 border-dashed"
+                    className="flex flex-col items-center justify-center p-20 rounded-xl border-2 border-dashed"
                     style={{
                         backgroundColor: isDark ? 'rgba(17, 24, 39, 0.5)' : 'rgba(249, 250, 251, 0.5)',
                         borderColor: isDark ? '#1f2937' : '#e5e7eb'
@@ -873,7 +998,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
         return (
             <div
-                className="flex flex-col items-center justify-center p-10 rounded-2xl border-2 border-dashed transition-all hover:border-blue-500/50"
+                className="flex flex-col items-center justify-center p-10 rounded-xl border-2 border-dashed transition-all hover:border-blue-500/50"
                 style={{ background: theme.surface, borderColor: theme.border }}
             >
                 <div className="p-4 bg-blue-500/10 rounded-full mb-4">
@@ -897,8 +1022,8 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
     return (
         <div
-            className="rounded-xl shadow-lg overflow-hidden border"
-            style={{ background: theme.surface, borderColor: theme.border }}
+            className="rounded-xl shadow-lg border"
+            style={{ background: theme.surface, borderColor: theme.border, overflow: 'visible' }}
         >
             {/* Overlay for closing menu */}
             {activeMenu && <div className="fixed inset-0 z-30" onClick={() => setActiveMenu(null)} />}
@@ -1078,164 +1203,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                     </div>
                 ) : (
                     <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" : "flex flex-col gap-2"}>
-                        {items
-                            .map((item) => {
-                                // Determine Icon
-                                const isGroup = item.type === 'group' || item.type === 'site';
-                                const Icon = isGroup ? (LucideIcons[item.icon] || Folder) : (item.type === 'folder' ? Folder : getFileIcon(item.name)?.type || FileIcon);
-                                const itemColor = isGroup ? (item.color || '#0078d4') : (item.type === 'folder' ? '#fbbf24' : '#6b7280');
-
-                                const getInitials = (n) => n.split(' ').map(c => c[0]).slice(0, 2).join('').toUpperCase();
-
-                                // Only show "Card Style" if at Root AND it's a group/site
-                                const showAsCard = isGroup && currentPath.type === 'root';
-
-                                // Determine if this item can be dragged or is a drop target
-                                const isDraggable = role !== 'worker';
-                                const isDropTarget = (item.type === 'folder' || item.type === 'group');
-                                const isDraggedOver = dragOverItem === item.id;
-
-                                return (
-                                    <div
-                                        key={item.id}
-                                        draggable={isDraggable}
-                                        onDragStart={(e) => handleDragStart(e, item)}
-                                        onDragEnd={handleDragEnd}
-                                        onDragOver={isDropTarget ? (e) => handleDragOver(e, item) : undefined}
-                                        onDragLeave={isDropTarget ? handleDragLeave : undefined}
-                                        onDrop={isDropTarget ? (e) => handleDrop(e, item) : undefined}
-                                        className={`group relative transition-all duration-200 hover:shadow-lg cursor-pointer flex flex-col border
-                                        ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3 min-h-[64px] rounded-lg' : 'shadow-sm rounded-xl ' + (showAsCard ? 'h-40' : 'aspect-[4/3]')}
-                                        ${isDraggedOver ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-                                        ${isDraggable ? 'cursor-move' : ''}`}
-                                        style={{
-                                            backgroundColor: isDraggedOver ? (isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff') : (isDark ? '#1f2937' : '#ffffff'),
-                                            borderColor: isDraggedOver ? '#3b82f6' : theme.border
-                                        }}
-                                        onClick={() => handleNavigate(item)}
-                                    >
-                                        {/* Menu Trigger */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActiveMenu(activeMenu === item.id ? null : item.id);
-                                            }}
-                                            className="absolute top-2 right-2 p-1.5 rounded-full z-10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                            style={{ backgroundColor: 'transparent' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#e5e7eb'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                            <MoreVertical size={16} color={theme.text} />
-                                        </button>
-
-                                        {/* Context Menu Dropdown */}
-                                        {activeMenu === item.id && (
-                                            <div
-                                                className="absolute right-2 top-8 w-40 shadow-xl rounded-lg z-20 overflow-hidden text-sm"
-                                                style={{
-                                                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
-                                                    borderColor: isDark ? '#374151' : '#e5e7eb',
-                                                    borderWidth: '1px',
-                                                    borderStyle: 'solid',
-                                                    color: theme.text
-                                                }}
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                <button
-                                                    onClick={() => { setActiveMenu(null); handleRename(item); }}
-                                                    className="w-full text-left px-4 py-2 flex items-center gap-2"
-                                                    style={{ backgroundColor: 'transparent' }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                    <Edit2 size={14} /> Renombrar
-                                                </button>
-                                                <button
-                                                    onClick={() => { setActiveMenu(null); handleDelete(item); }}
-                                                    className="w-full text-left px-4 py-2 text-red-600 flex items-center gap-2"
-                                                    style={{ backgroundColor: 'transparent' }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? 'rgba(127, 29, 29, 0.2)' : '#fef2f2'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                    <Trash2 size={14} /> Eliminar
-                                                </button>
-                                                {item.type !== 'group' && item.type !== 'site' && (
-                                                    <button
-                                                        onClick={() => handleCut(item)}
-                                                        className="w-full text-left px-4 py-2 flex items-center gap-2"
-                                                        style={{
-                                                            backgroundColor: 'transparent',
-                                                            borderTopWidth: '1px',
-                                                            borderTopColor: isDark ? '#374151' : '#f3f4f6'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#374151' : '#f3f4f6'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                    >
-                                                        <Scissors size={14} /> Cortar
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {viewMode === 'grid' ? (
-                                            // GRID VIEW
-                                            showAsCard ? (
-                                                // SHAREPOINT CARD STYLE (Only at Root)
-                                                <div className="flex flex-col h-full w-full">
-                                                    {/* Header Color Strip / Initials */}
-                                                    <div className="p-4 flex justify-between items-start">
-                                                        <div
-                                                            className="w-10 h-10 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none"
-                                                            style={{ backgroundColor: itemColor }}
-                                                        >
-                                                            {getInitials(item.name)}
-                                                        </div>
-                                                        <LucideIcons.Star size={16} className="group-hover:block hidden" style={{ color: isDark ? '#4b5563' : '#d1d5db' }} />
-                                                    </div>
-
-                                                    {/* Content */}
-                                                    <div className="px-4 pb-4 flex-1 flex flex-col justify-end">
-                                                        <h3 className="font-bold text-sm leading-tight line-clamp-2" style={{ color: isDark ? '#f3f4f6' : '#1f2937' }} title={item.name}>
-                                                            {item.name}
-                                                        </h3>
-                                                        <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wide">Grupo</p>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // FILE / FOLDER / GROUP (internal navigation)
-                                                <div className="flex flex-col items-center justify-center p-4 h-full relative group/icon">
-                                                    <div className="mb-3 transition-transform duration-200 group-hover/icon:scale-110">
-                                                        {item.type === 'folder' ?
-                                                            <Folder size={48} className="text-yellow-400 fill-yellow-400/20" /> :
-                                                            isGroup ? <Icon size={40} color={itemColor} /> :
-                                                                <div className="scale-125">{getFileIcon(item.name)}</div>
-                                                        }
-                                                    </div>
-                                                    <p className="text-xs text-center font-medium px-2 w-full truncate" style={{ color: isDark ? '#d1d5db' : '#374151' }}>
-                                                        {item.name}
-                                                    </p>
-                                                    <p className="text-[10px] text-gray-400 mt-1">
-                                                        {isGroup ? 'Grupo' : new Date(item.lastModifiedDateTime).toLocaleDateString()}
-                                                    </p>
-                                                </div>
-                                            )
-                                        ) : (
-                                            // LIST VIEW
-                                            <>
-                                                <div className="w-10 h-10 rounded text-white flex items-center justify-center font-bold" style={{ backgroundColor: isGroup ? itemColor : (item.type === 'folder' ? '#fbbf24' : 'transparent') }}>
-                                                    {isGroup ? getInitials(item.name) : (item.type === 'folder' ? <Folder size={20} className="text-white" /> : <div className="scale-75">{getFileIcon(item.name)}</div>)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{item.name}</p>
-                                                    <p className="text-[10px] opacity-60 m-0 p-0 line-clamp-1" style={{ color: theme.textSecondary }}>
-                                                        {isGroup ? 'Grupo de Trabajo' : `Modificado: ${new Date(item.lastModifiedDateTime).toLocaleDateString()}`}
-                                                    </p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                )
-                            })}
+                        {renderedItems}
                     </div>
                 )}
             </div>

@@ -1,7 +1,7 @@
 export default function StatsCard({ number, label, bgColor = 'hsl(220, 55%, 48%)', icon }) {
   return (
     <div
-      className="group relative rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden"
+      className="group relative rounded-xl sm:rounded-xl p-4 sm:p-6 text-white shadow-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105 overflow-hidden"
       style={{
         background: `linear-gradient(135deg, ${bgColor} 0%, ${adjustColor(bgColor, -20)} 100%)`
       }}

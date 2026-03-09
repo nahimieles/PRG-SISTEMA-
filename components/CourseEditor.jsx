@@ -351,7 +351,7 @@ export default function CourseEditor({ onPreview }) {
             {/* HEADER */}
             <div
                 key={`header-${isDark ? 'dark' : 'light'}`}
-                className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 rounded-2xl border gap-4"
+                className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 rounded-xl border gap-4"
                 style={{
                     background: isDark ? '#111827' : '#ffffff',
                     borderColor: isDark ? '#374151' : '#e5e7eb'
@@ -473,10 +473,10 @@ export default function CourseEditor({ onPreview }) {
                                     <div
                                         key={folder}
                                         onClick={() => setCurrentFolder(folder)}
-                                        className="group relative p-6 sm:p-8 rounded-2xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900"
+                                        className="group relative p-6 sm:p-8 rounded-xl border transition-all hover:scale-[1.02] active:scale-100 cursor-pointer flex flex-col items-start gap-4 shadow-sm hover:shadow-xl hover:border-blue-500/30 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900"
                                         style={{ borderColor: theme.border, background: theme.surface }}
                                     >
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
+                                        <div className="w-14 h-14 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
                                             <Folder size={28} strokeWidth={2.5} />
                                         </div>
 
@@ -511,7 +511,7 @@ export default function CourseEditor({ onPreview }) {
 
                     {/* FOLDER CONTENT: FILE LIST / CARD VIEW ON MOBILE */}
                     {currentFolder && (
-                        <div className="rounded-2xl border overflow-hidden shadow-sm animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
+                        <div className="rounded-xl border overflow-hidden shadow-sm animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
                             {/* TABLE HEADER (Desktop Only) */}
                             <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b text-xs font-black uppercase tracking-widest opacity-50" style={{ borderColor: theme.border, color: theme.text }}>
                                 <div className="col-span-1 text-center">Icono</div>
@@ -600,7 +600,7 @@ export default function CourseEditor({ onPreview }) {
             {showFolderModal && (
                 <div key={`folder-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
                     <div
-                        className="w-full max-w-lg rounded-3xl shadow-2xl border flex flex-col max-h-[90vh] overflow-hidden scale-in-center"
+                        className="w-full max-w-lg rounded-2xl shadow-lg border flex flex-col max-h-[90vh] overflow-hidden scale-in-center"
                         style={{
                             backgroundColor: isDark ? '#111827' : '#ffffff',
                             borderColor: isDark ? '#374151' : '#e5e7eb'
@@ -640,7 +640,7 @@ export default function CourseEditor({ onPreview }) {
                                     </div>
                                     <input
                                         autoFocus type="text" required
-                                        className="w-full text-xl font-black p-4 border-2 rounded-2xl outline-none transition-all"
+                                        className="w-full text-xl font-black p-4 border-2 rounded-xl outline-none transition-all"
                                         style={{
                                             backgroundColor: isDark ? '#374151' : '#ffffff',
                                             borderColor: isDark ? '#4b5563' : '#e5e7eb',
@@ -774,7 +774,7 @@ export default function CourseEditor({ onPreview }) {
             {showCourseModal && (
                 <div key={`course-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
-                        className="w-full max-w-lg rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border scale-in-center flex flex-col max-h-[90vh] sm:max-h-[85vh] my-4 overflow-hidden"
+                        className="w-full max-w-lg rounded-xl sm:rounded-xl lg:rounded-2xl shadow-lg border scale-in-center flex flex-col max-h-[90vh] sm:max-h-[85vh] my-4 overflow-hidden"
                         style={{
                             backgroundColor: isDark ? '#111827' : '#ffffff',
                             borderColor: isDark ? '#374151' : '#e5e7eb'
@@ -817,7 +817,7 @@ export default function CourseEditor({ onPreview }) {
                                     </div>
                                     <input
                                         autoFocus type="text" required
-                                        className="w-full text-base sm:text-lg lg:text-xl font-black p-3 sm:p-4 border-2 rounded-xl sm:rounded-2xl outline-none transition-all"
+                                        className="w-full text-base sm:text-lg lg:text-xl font-black p-3 sm:p-4 border-2 rounded-xl sm:rounded-xl outline-none transition-all"
                                         style={{
                                             backgroundColor: isDark ? '#374151' : '#ffffff',
                                             borderColor: isDark ? '#4b5563' : '#e5e7eb',
@@ -839,7 +839,7 @@ export default function CourseEditor({ onPreview }) {
 
                                 {/* Parent Folder (Read Only) */}
                                 <div
-                                    className="p-4 rounded-2xl border-2 border-dashed flex items-center gap-4"
+                                    className="p-4 rounded-xl border-2 border-dashed flex items-center gap-4"
                                     style={{
                                         backgroundColor: isDark ? '#374151' : '#f9fafb',
                                         borderColor: isDark ? '#4b5563' : '#e5e7eb'
@@ -863,7 +863,7 @@ export default function CourseEditor({ onPreview }) {
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Archivo de Contenido</label>
                                     <label
-                                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-2xl cursor-pointer transition-all group"
+                                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-all group"
                                         style={{
                                             backgroundColor: isDark ? '#1f2937' : '#ffffff',
                                             borderColor: isDark ? '#4b5563' : '#e5e7eb'
@@ -950,7 +950,7 @@ export default function CourseEditor({ onPreview }) {
             {/* === MODAL: PREVIEW SELECTOR === */}
             {showPreviewModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
+                    <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800 shrink-0">
                             <div>
                                 <h3 className="font-black text-lg uppercase flex items-center gap-2">

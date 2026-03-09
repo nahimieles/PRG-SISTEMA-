@@ -28,7 +28,7 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
     return (
         <button
             onClick={onClick}
-            className="group relative flex flex-col w-full text-left rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
+            className="group relative flex flex-col w-full text-left rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
             style={{
                 background: theme.surface,
                 boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)',
@@ -66,7 +66,7 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
 
             {/* Floating Icon */}
             <div
-                className="absolute top-20 left-6 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 z-10"
+                className="absolute top-20 left-6 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 z-10"
                 style={{ background: theme.surface }}
             >
                 {group.image_url ? (

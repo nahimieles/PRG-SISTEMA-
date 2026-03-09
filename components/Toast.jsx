@@ -13,7 +13,7 @@ export default function Toast({ message, type = 'success', onClose }) {
 
     return (
         <div className="fixed bottom-6 right-6 z-[100] animate-toast-in">
-            <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border ${type === 'success'
+            <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 border ${type === 'success'
                 ? 'bg-[#151a25] border-blue-500/50 text-white'
                 : 'bg-red-900/90 border-red-500 text-white'}`}>
                 {type === 'success' ? (

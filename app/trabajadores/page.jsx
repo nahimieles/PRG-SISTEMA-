@@ -9,7 +9,8 @@ import ThemeToggle from '../../components/ThemeToggle';
 import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
-import { loginWorker, addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
+import { addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
+import { loginWorkerAction } from '../../lib/actions.js';
 import OneDriveContainer from '../../components/OneDriveContainer';
 
 export default function FuncionariosPage() {
@@ -92,7 +93,7 @@ export default function FuncionariosPage() {
   };
 
   const handleLogin = async (username, password) => {
-    const result = await loginWorker(username, password);
+    const result = await loginWorkerAction(username, password);
     if (result.success) {
       setCurrentWorker(result.worker);
       setIsAuthenticated(true);
@@ -250,7 +251,7 @@ export default function FuncionariosPage() {
           {/* Sección de Asistencia */}
           {activeTab === 'asistencia' && (
             <div
-              className="rounded-2xl shadow-2xl p-4 md:p-8 mb-6"
+              className="rounded-xl shadow-lg p-4 md:p-8 mb-6"
               style={{ background: theme.surface, borderLeft: `4px solid ${activeAttendance ? '#27ae60' : theme.primary}` }}
             >
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -359,7 +360,7 @@ export default function FuncionariosPage() {
           {/* Mis Actividades */}
           {activeTab === 'historial' && (
             <div
-              className="rounded-2xl shadow-2xl p-4 md:p-8"
+              className="rounded-xl shadow-lg p-4 md:p-8"
               style={{ background: theme.surface }}
             >
               <h3 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: theme.primary }}>
@@ -438,7 +439,7 @@ export default function FuncionariosPage() {
               onClick={() => setSelectedRecord(null)}
             >
               <div
-                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
+                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll"
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
               >

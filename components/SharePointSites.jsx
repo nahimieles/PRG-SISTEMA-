@@ -77,42 +77,43 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
 
             const name = normalize(site.displayName);
 
-            // 1. BLACKLIST: Exclude "C LTDA" or specific noise
-            if (name.includes('c ltda') || name.includes('cia. ltda')) return;
+            // 1. PRG AUDITORES: Check FIRST before any blacklist — the site name
+            //    includes "CIA LTDA" which would otherwise match the blacklist below.
+            if (name.includes('prg')) {
+                const isAdmin = role === 'admin' ||
+                    (currentUser?.username?.toLowerCase() === 'valeria');
+                if (isAdmin) {
+                    processed.push(site);
+                }
+                // Workers do not see PRG AUDITORES
+                return;
+            }
 
-            // 2. CONTABILIDAD: Group all "Contabilidad" sites (Restricted)
+            // 2. BLACKLIST: Exclude other noisy "C LTDA" / "CIA LTDA" sites
+            //    (only runs for non-PRG sites now)
+            if (name.includes('c ltda') || name.includes('cia ltda') || name.includes('cia. ltda')) return;
+
+            // 3. CONTABILIDAD: Group all "Contabilidad" sites (Restricted to admins)
             if (name.includes('contabilidad')) {
-                const username = currentUser?.username?.toLowerCase() || '';
-                const isAdmin = role === 'admin' || username === 'valeria';
-
+                const isAdmin = role === 'admin' ||
+                    (currentUser?.username?.toLowerCase() === 'valeria');
                 if (isAdmin) {
                     contabilidadGroup.subSites.push(site);
                 }
                 return;
             }
 
-            // 3. AUDITORIA: Restricted Access
+            // 4. AUDITORIA: Restricted to admins
             if (name.includes('auditoria')) {
-                // IMPORTANT: "PRG AUDITORES" does not contain "auditoria" (usually), 
-                // but if it did, we'd handle it. "AUDITORIA" is the target.
-                const username = currentUser?.username?.toLowerCase() || '';
-                const isAdmin = role === 'admin' || username === 'valeria';
-
+                const isAdmin = role === 'admin' ||
+                    (currentUser?.username?.toLowerCase() === 'valeria');
                 if (isAdmin) {
                     processed.push(site);
                 }
-                return; // Hide for everyone else
-            }
-
-            // 4. PRG AUDITORES: Main Site (Allow for everyone)
-            if (name.includes('prg')) {
-                processed.push(site);
                 return;
             }
 
-            // 5. OTHERS: Hide unknown sites to be safe (strict whitelist)
-            // Only PRG, Contabilidad, and Auditoria (if admin) are allowed.
-            // Anything else is considered noise and is skipped.
+            // 5. OTHERS: Strict whitelist — hide unknown sites
             return;
         });
 
@@ -277,7 +278,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                                 style={{ background: theme.surface, borderColor: theme.border }}
                             >
                                 <div className="relative">
-                                    <div className="w-16 h-16 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                                    <div className="w-16 h-16 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-xl">
                                         <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                     </div>
                                     {site.isGroup && (
@@ -315,7 +316,7 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                         onClick={() => setGroupSelection(null)}
                     >
                         <div
-                            className="rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
+                            className="rounded-xl shadow-lg w-full max-w-lg overflow-hidden"
                             style={{ background: theme.surface }}
                             onClick={e => e.stopPropagation()}
                         >

@@ -10,7 +10,8 @@ import ThemeToggle from '../../components/ThemeToggle';
 import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
-import { loginAdmin, getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, addCompany, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord, hashPassword } from '../../lib/auth.js';
+import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
+import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction } from '../../lib/actions.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
@@ -23,7 +24,7 @@ import { getAuditLogs } from '../../lib/audit'; // Added import
 // Dynamic imports for MSAL-dependent components to avoid SSR issues
 const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
 const SmartReportGenerator = dynamic(() => import('../../components/SmartReportGenerator'), { ssr: false });
-const BackupPanel = dynamic(() => import('../../components/BackupPanel'), { ssr: false });
+const RealTimeMonitor = dynamic(() => import('../../components/RealTimeMonitor'), { ssr: false });
 const CourseEditor = dynamic(() => import('../../components/CourseEditor'), { ssr: false });
 const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
 const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
@@ -46,7 +47,6 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [showBackupModal, setShowBackupModal] = useState(false);
 
   // Initialize activeTab from URL hash or default to 'dashboards'
   const [activeTab, setActiveTab] = useState('dashboards');
@@ -206,11 +206,13 @@ export default function AdminPage() {
   }, [isAuthenticated]);
 
   const handleLogin = async (username, password) => {
-    const result = await loginAdmin(username, password);
-    if (result.success) {
+    const result = await loginUnifiedAction(username, password);
+    if (result.success && result.role === 'admin') {
       setIsAuthenticated(true);
-      saveAdminSession(result.admin); // Guardar sesión
+      saveAdminSession(result.user); // Guardar sesión
       return { success: true };
+    } else if (result.success && result.role !== 'admin') {
+      return { success: false, message: 'No tienes permisos de administrador.' };
     }
     return result;
   };
@@ -229,6 +231,10 @@ export default function AdminPage() {
     const stats = await getRealTimeStats();
     setRealtimeStats(stats);
 
+    // Refresh file audit logs for dashboards
+    const fileActivityLogs = await getAuditLogs({ limit: 200 });
+    setFileLogs(fileActivityLogs);
+
     // Cargar estadísticas de asistencia
     const attStats = await getAttendanceStats();
     setAttendanceStats(attStats);
@@ -244,14 +250,10 @@ export default function AdminPage() {
       const recordsData = await getRecords();
       const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
       const companiesData = await getCompanies();
-      const fileActivityLogs = await getAuditLogs({ limit: 200 }); // Fetch recent logs for dashboard
 
       console.log('Registros cargados:', recordsData);
 
       setRecords(recordsData);
-      // We can store file logs in a new state or merge for specific charts
-      // Let's store them for the dashboard widgets
-      setFileLogs(fileActivityLogs);
 
       if (!workersData.error) setWorkers(workersData.data || []);
       setCompanies(companiesData);
@@ -276,48 +278,37 @@ export default function AdminPage() {
   const handleAddWorker = async (e) => {
     e.preventDefault();
     setMessage('');
-    if (!newWorker.username || !newWorker.password || !newWorker.full_name) {
-      setMessage('Completa todos los campos');
+    if (!newWorker.username || !newWorker.full_name) {
+      setMessage('Completa los campos obligatorios');
       return;
     }
 
-    // Hash de la contraseña antes de guardar
-    const hashedPassword = await hashPassword(newWorker.password);
-
     if (editingWorkerId) {
       // Actualizar trabajador existente
-      const { error } = await supabase
-        .from('workers')
-        .update({
-          username: newWorker.username,
-          password: hashedPassword,
-          full_name: newWorker.full_name,
-          email: newWorker.email
-        })
-        .eq('id', editingWorkerId);
+      if (!newWorker.password) {
+        setMessage('Debe ingresar una contraseña');
+        return;
+      }
 
-      if (error) {
-        setMessage('Error al actualizar usuario: ' + error.message);
+      const { success, error } = await updateWorkerAction(editingWorkerId, newWorker);
+
+      if (!success) {
+        setMessage('Error al actualizar usuario: ' + error);
         return;
       }
 
       setMessage('Usuario actualizado correctamente');
       setEditingWorkerId(null);
     } else {
-      // Crear nuevo trabajador con contraseña hasheada
-      const { data, error } = await supabase
-        .from('workers')
-        .insert([{
-          username: newWorker.username,
-          password: hashedPassword,
-          full_name: newWorker.full_name,
-          email: newWorker.email
-        }])
-        .select()
-        .single();
+      if (!newWorker.password) {
+        setMessage('Debe ingresar una contraseña');
+        return;
+      }
 
-      if (error) {
-        setMessage('Error al crear usuario: ' + error.message);
+      const { success, error } = await createWorkerAction(newWorker);
+
+      if (!success) {
+        setMessage('Error al crear usuario: ' + error);
         return;
       }
 
@@ -426,17 +417,14 @@ export default function AdminPage() {
 
     if (editingCompanyId) {
       // Actualizar empresa existente
-      const { error } = await supabase
-        .from('companies')
-        .update({
-          name: newCompany.name,
-          type: newCompany.type
-        })
-        .eq('id', editingCompanyId);
+      const result = await updateCompanyAction(editingCompanyId, {
+        name: newCompany.name,
+        type: newCompany.type
+      });
 
-      if (error) {
-        setMessage('Error al actualizar empresa: ' + error.message);
-        showToast('Error al actualizar empresa: ' + error.message, 'error');
+      if (!result.success) {
+        setMessage('Error al actualizar empresa: ' + result.error);
+        showToast('Error al actualizar empresa: ' + result.error, 'error');
         return;
       }
 
@@ -444,12 +432,12 @@ export default function AdminPage() {
       setEditingCompanyId(null);
     } else {
       // Crear nueva empresa
-      const result = await addCompany(newCompany.name, newCompany.type);
+      const result = await createCompanyAction({ name: newCompany.name, type: newCompany.type });
 
       if (result.success) {
         showToast('Empresa creada correctamente');
       } else {
-        showToast('Error al crear empresa', 'error');
+        showToast('Error al crear empresa: ' + result.error, 'error');
         return;
       }
     }
@@ -681,7 +669,7 @@ export default function AdminPage() {
 
                     {/* Panel */}
                     <div
-                      className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-full sm:mt-2 sm:w-80 rounded-xl shadow-2xl z-50 overflow-hidden toast-enter max-h-[70vh] overflow-y-auto"
+                      className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-full sm:mt-2 sm:w-80 rounded-xl shadow-lg z-50 overflow-hidden toast-enter max-h-[70vh] overflow-y-auto"
                       style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
                     >
                       {/* Header */}
@@ -787,7 +775,7 @@ export default function AdminPage() {
               className={`fixed top-4 right-4 z-50 max-w-sm ${closingAlerts ? 'toast-exit' : 'toast-enter'}`}
               style={{ marginRight: isSidebarExpanded ? '0' : '0' }}
             >
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-2xl flex items-center gap-3 backdrop-blur-sm">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-lg flex items-center gap-3 backdrop-blur-sm">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                   <AlertCircle className="w-5 h-5" />
                 </div>
@@ -844,13 +832,14 @@ export default function AdminPage() {
           </div>
 
           {/**************************************************************
-           * TAB: REPORTES (NUEVO SISTEMA AUTOMATIZADO)
+           * TAB: REPORTES (MONITOR DE ARCHIVOS)
            **************************************************************/}
           {activeTab === 'reportes' && (
             <div className="animate-fade-in">
-              <AuditLogsTable />
+              <RealTimeMonitor onLogsChanged={loadAlertsAndStats} />
             </div>
           )}
+
 
           {/* TAB: CURSOS */}
           {activeTab === 'cursos' && (
@@ -1201,7 +1190,7 @@ export default function AdminPage() {
                         style={{ background: theme.surface }}
                       >
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <Folder className="w-5 h-5" /> Movimientos por Empresa (OneDrive)
+                          <Folder className="w-5 h-5" /> Carpetas más activas
                         </h3>
                         {(() => {
                           // Inline calculation for file stats
@@ -1225,7 +1214,7 @@ export default function AdminPage() {
                                 <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
                                 <Tooltip
                                   contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                                  formatter={(value) => [`${value}`, 'Movimientos']}
+                                  formatter={(value) => [`${value}`, 'Cambios']}
                                 />
                                 <Bar dataKey="count" fill="#e67e22" radius={[0, 4, 4, 0]} />
                               </BarChart>
@@ -1501,40 +1490,8 @@ export default function AdminPage() {
           {/* Usamos display style para mantener el componente montado y no perder el progreso del respaldo */}
           <div style={{ display: activeTab === 'archivos' ? 'block' : 'none' }}>
             <div className="animate-fade-in space-y-6">
-              {/* Tooltip-like header for small backup button */}
-              <div className="flex justify-end pr-2">
-                <button
-                  onClick={() => setShowBackupModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
-                  style={{ background: theme.primary }}
-                >
-                  <TrendingUp size={16} /> Respaldo Cloud
-                </button>
-              </div>
-
               {/* OneDrive Container */}
               <OneDriveContainer />
-
-              {/* Backup Modal Overlay */}
-              {showBackupModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                  <div
-                    className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl relative animate-scale-up"
-                    style={{ background: theme.surface }}
-                  >
-                    <button
-                      onClick={() => setShowBackupModal(false)}
-                      className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
-                    >
-                      <X size={20} style={{ color: theme.textSecondary }} />
-                    </button>
-
-                    <div className="p-1">
-                      <BackupPanel currentUser={{ full_name: adminName }} />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div >
@@ -1548,7 +1505,7 @@ export default function AdminPage() {
               onClick={() => setSelectedRecord(null)}
             >
               <div
-                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-2xl shadow-2xl modal-scroll"
+                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll"
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -1675,7 +1632,7 @@ export default function AdminPage() {
         {/* Custom Confirmation Modal */}
         {confirmModal.show && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ zIndex: 110 }}>
-            <div className="bg-white dark:bg-[#1a1f2e] rounded-xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-[#1a1f2e] rounded-xl shadow-lg w-full max-w-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-bold mb-3" style={{ color: theme.text }}>Confirmación</h3>
               <p className="mb-6" style={{ color: theme.textSecondary }}>{confirmModal.title}</p>
               <div className="flex justify-end gap-3">

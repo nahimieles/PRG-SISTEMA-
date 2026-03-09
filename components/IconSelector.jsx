@@ -26,7 +26,7 @@ export default function IconSelector({ selectedIcon, onSelect }) {
 
     return (
         <div
-            className="border rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-sm"
+            className="border rounded-xl sm:rounded-xl p-3 sm:p-5 shadow-sm"
             style={{
                 backgroundColor: isDark ? '#1f2937' : '#ffffff',
                 borderColor: isDark ? '#374151' : '#e5e7eb'
@@ -49,7 +49,7 @@ export default function IconSelector({ selectedIcon, onSelect }) {
 
             <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
                 <div
-                    className="w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-600 transition-transform border shadow-inner flex-shrink-0"
+                    className="w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-xl flex items-center justify-center text-blue-600 transition-transform border shadow-inner flex-shrink-0"
                     style={{
                         backgroundColor: isDark ? '#374151' : '#ffffff',
                         borderColor: isDark ? '#4b5563' : '#e5e7eb'
