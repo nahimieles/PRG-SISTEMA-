@@ -42,19 +42,27 @@ export default function MsalWrapper({ children }) {
                     // Initialize the MSAL instance
                     await msalInstance.initialize();
 
-                    // Helper to silently refresh + expose token for background services
                     const refreshAccessToken = async (account) => {
                         try {
-                            const tokenResp = await msalInstance.acquireTokenSilent({
-                                scopes: GRAPH_SCOPES,
-                                account
-                            });
+                            const request = { scopes: GRAPH_SCOPES, account };
+                            let tokenResp;
+                            try {
+                                tokenResp = await msalInstance.acquireTokenSilent(request);
+                            } catch (err) {
+                                if (err.name === "InteractionRequiredAuthError" || err.errorCode === "monitor_window_timeout") {
+                                    console.warn("Silent token refresh failed, triggering popup fallback...", err);
+                                    tokenResp = await msalInstance.acquireTokenPopup(request);
+                                } else {
+                                    throw err;
+                                }
+                            }
+
                             if (typeof window !== 'undefined') {
                                 window.__msalAccessToken = tokenResp.accessToken;
                             }
                             return tokenResp.accessToken;
-                        } catch {
-                            // Silent token refresh failed — user may need to re-login
+                        } catch (err) {
+                            console.error("Token refresh completely failed:", err);
                             return null;
                         }
                     };

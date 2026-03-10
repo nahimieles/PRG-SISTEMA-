@@ -37,10 +37,11 @@ export const SharePointProvider = ({ children }) => {
 
             // Try to get token silently
             const response = await instance.acquireTokenSilent(request).catch(async (err) => {
-                console.warn("Silent token acquisition failed. Error:", err.errorCode);
-                // DO NOT trigger redirect automatically here to avoid infinite loops on localhost
-                // If silent fails, we simply won't load the sites automatically, 
-                // and the user will have to trigger a login manually if needed.
+                console.warn("Silent token acquisition failed. Error:", err.errorCode || err.name);
+                if (err.name === "InteractionRequiredAuthError" || err.errorCode === 'monitor_window_timeout') {
+                    console.log("Attempting acquireTokenPopup as fallback...");
+                    return await instance.acquireTokenPopup(request);
+                }
                 throw err;
             });
 

@@ -44,9 +44,17 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
         setLoading(true);
         try {
             const request = { ...loginRequest, account: accounts[0] };
-            const response = await instance.acquireTokenSilent(request).catch(async () => {
-                await instance.acquireTokenRedirect(request);
-            });
+            let response;
+            try {
+                response = await instance.acquireTokenSilent(request);
+            } catch (err) {
+                console.warn("Silent token acquisition failed in SharePointSites:", err);
+                if (err.name === "InteractionRequiredAuthError" || err.errorCode === 'monitor_window_timeout') {
+                    response = await instance.acquireTokenPopup(request);
+                } else {
+                    throw err;
+                }
+            }
 
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
@@ -165,9 +173,9 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
     };
 
     if (accounts.length === 0) {
-        const handleLogin = async () => { // Simplified handler for redirect
+        const handleLogin = async () => {
             try {
-                await instance.loginRedirect(loginRequest);
+                await instance.loginPopup(loginRequest);
             } catch (error) {
                 console.error("Login failed:", error);
             }

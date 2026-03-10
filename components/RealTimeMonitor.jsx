@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     Activity, Clock, FileText, User as UserIcon, Building2, FolderOpen,
-    Wifi, WifiOff, RefreshCw, Trash2, Trash, CheckSquare, Square, X
+    Wifi, WifiOff, RefreshCw, Trash2, Trash, CheckSquare, Square, X, Search, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
@@ -51,8 +51,10 @@ function shortenPath(path) {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function RealTimeMonitor({ onLogsChanged }) {
     const [events, setEvents] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedWorker, setSelectedWorker] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const eventsPerPage = 20;
+    const [itemsPerPage, setItemsPerPage] = useState(5);
 
     const [status, setStatus] = useState('connecting'); // 'connecting' | 'connected' | 'error'
     const [selected, setSelected] = useState(new Set()); // Set of event UIDs
@@ -63,6 +65,11 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     const retryRef = useRef(null);
     const esRef = useRef(null);
     const uidCounter = useRef(0);
+
+    // Reset pagination when filter or page size changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedWorker, itemsPerPage]);
 
     // ── SSE Connection ────────────────────────────────────────────────────────
     const connect = useCallback(() => {
@@ -102,7 +109,8 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         // Load initial history from database so it's not empty
         const loadHistory = async () => {
             try {
-                const logs = await getAuditLogs({ limit: 50 });
+                // Fetch up to 500 events so the local frontend search works deeply
+                const logs = await getAuditLogs({ limit: 500 });
                 if (logs && logs.length > 0) {
                     const mappedHistory = logs.map(log => {
                         let actionMsg = log.metadata?.changeType;
@@ -211,37 +219,75 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         }
     };
 
-    // ── Pagination variables ──────────────────────────────────────────────────
-    const totalPages = Math.ceil(events.length / eventsPerPage);
-    const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
-    if (currentPage !== validCurrentPage) {
+    // ── Filter and Pagination variables ───────────────────────────────────────
+
+    // Calculate unique workers for the dropdown
+    const uniqueWorkers = React.useMemo(() => {
+        const workers = events.map(ev => ev.user).filter(Boolean);
+        return [...new Set(workers)].sort();
+    }, [events]);
+
+    // 1. Filter the events
+    const filteredEvents = events.filter(ev => {
+        // Filter by worker
+        if (selectedWorker && ev.user !== selectedWorker) return false;
+
+        // Filter by search term
+        if (!searchTerm) return true;
+
+        const searchLower = searchTerm.toLowerCase();
+        const translatedAction = ACTION_STYLES[ev.action]?.label?.toLowerCase() || '';
+
+        return (
+            (ev.fileName && ev.fileName.toLowerCase().includes(searchLower)) ||
+            (ev.user && ev.user.toLowerCase().includes(searchLower)) ||
+            (ev.company && ev.company.toLowerCase().includes(searchLower)) ||
+            (ev.action && ev.action.toLowerCase().includes(searchLower)) ||
+            (translatedAction && translatedAction.includes(searchLower))
+        );
+    });
+
+    const totalPages = Math.max(1, Math.ceil(filteredEvents.length / itemsPerPage));
+    const validCurrentPage = Math.min(currentPage, totalPages);
+
+    // Render safety
+    if (currentPage !== validCurrentPage && filteredEvents.length > 0) {
         setCurrentPage(validCurrentPage);
     }
-    const startIndex = (validCurrentPage - 1) * eventsPerPage;
-    const paginatedEvents = events.slice(startIndex, startIndex + eventsPerPage);
 
-    // ── Status indicator ──────────────────────────────────────────────────────
-    const StatusDot = () => {
-        if (status === 'connected') return (
-            <div className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+    const startIndex = (validCurrentPage - 1) * itemsPerPage;
+    const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
+
+
+
+    const PaginationBlock = () => (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 mt-2 border-t px-3" style={{ borderColor: theme.border }}>
+            <span className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
+                Mostrando {filteredEvents.length === 0 ? 0 : startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredEvents.length)} de {filteredEvents.length} reportes
+            </span>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <span className="text-xs sm:text-sm font-medium mx-2" style={{ color: theme.text }}>
+                    Página {currentPage} de {totalPages}
                 </span>
-                En vivo
+                <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                >
+                    <ChevronRight size={16} />
+                </button>
             </div>
-        );
-        if (status === 'error') return (
-            <button onClick={connect} className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                <WifiOff className="w-3 h-3" /> Reconectando...
-            </button>
-        );
-        return (
-            <div className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                <RefreshCw className="w-3 h-3 animate-spin" /> Conectando...
-            </div>
-        );
-    };
+        </div>
+    );
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
@@ -260,21 +306,18 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     )}
                 </div>
 
-                {/* Action toolbar */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <StatusDot />
-
                     <button
                         onClick={handleManualSync}
                         disabled={isSyncing}
                         className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${isSyncing
-                                ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:bg-gray-900/50'
-                                : 'bg-white hover:bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/50'
+                            ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:bg-gray-900/50'
+                            : 'bg-white hover:bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/50'
                             }`}
-                        title="Buscar cambios nuevos ahora"
+                        title="Actualizar cambios"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Buscando...' : 'Sincronizar'}
+                        {isSyncing ? 'Actualizando...' : 'Actualizar'}
                     </button>
 
                     {events.length > 0 && (
@@ -317,6 +360,56 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                 </div>
             </div>
 
+            {/* ── Search & Filter Toolbar ── */}
+            <div className="p-3 border-b flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: theme.border, background: isDark ? '#151a26' : '#f1f5f9' }}>
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
+                    <div className="relative w-full sm:w-80">
+                        <input
+                            type="text"
+                            placeholder="Buscar por archivo, usuario, empresa..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            style={{
+                                background: theme.surface,
+                                color: theme.text,
+                                borderColor: theme.border
+                            }}
+                        />
+                        <Search className="absolute left-3 top-2 text-gray-400 w-4 h-4" />
+                    </div>
+
+                    <select
+                        value={selectedWorker}
+                        onChange={(e) => setSelectedWorker(e.target.value)}
+                        className="w-full sm:w-56 bg-transparent border rounded-lg text-sm px-3 py-1.5 cursor-pointer focus:outline-none"
+                        style={{ borderColor: theme.border, color: theme.text }}
+                    >
+                        <option value="">Todos los trabajadores</option>
+                        {uniqueWorkers.map(w => (
+                            <option key={w} value={w}>{w}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="w-full sm:w-auto flex items-center justify-end gap-2 text-sm" style={{ color: theme.text }}>
+                    <span className="opacity-70 text-xs">Mostrar:</span>
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                        className="bg-transparent border rounded-lg text-xs px-2 py-1.5 cursor-pointer focus:outline-none"
+                        style={{ borderColor: theme.border, color: theme.text }}
+                    >
+                        <option value={5}>5 resultados</option>
+                        <option value={10}>10 resultados</option>
+                        <option value={20}>20 resultados</option>
+                        <option value={50}>50 resultados</option>
+                    </select>
+                </div>
+            </div>
+
+            {events.length > 0 && <PaginationBlock />}
+
             {/* ── Select-all row (visible only in select mode) ── */}
             {selectMode && events.length > 0 && (
                 <div
@@ -350,7 +443,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                         </p>
                     </div>
                 ) : (
-                    events.map((ev, index) => {
+                    paginatedEvents.map((ev, index) => {
                         const path = shortenPath(ev.filePath);
                         const isSelected = selected.has(ev._uid);
 
@@ -453,6 +546,8 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     })
                 )}
             </div>
+
+            {events.length > 0 && <PaginationBlock />}
 
             <style>{`
                 @keyframes fadeSlideIn {

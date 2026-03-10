@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, RefreshCw, Upload, Trash2, Edit2, FolderPlus, Move, FileText, Clock, User } from 'lucide-react';
+import { Download, RefreshCw, Upload, Trash2, Edit2, FolderPlus, Move, FileText, Clock, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import { getAuditLogs } from '../lib/audit';
@@ -14,14 +14,16 @@ export default function AuditLogsTable() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Simplified Filter: Only Day Selection (defaults to today/recent)
-    // Removed complex multi-range filters for simplicity as requested.
+    // Filter and Pagination State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
 
     const loadLogs = async () => {
         setLoading(true);
         try {
-            // Fetch last 50 logs automatically
-            const data = await getAuditLogs({ limit: 50 });
+            // Fetch a bigger batch of logs so frontend search is useful
+            const data = await getAuditLogs({ limit: 500 });
             setLogs(data || []);
         } catch (error) {
             console.error('Error loading logs:', error);
@@ -36,6 +38,28 @@ export default function AuditLogsTable() {
         const interval = setInterval(loadLogs, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Derived State for Filtering and Pagination
+    const filteredLogs = logs.filter(log => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            (log.file_name && log.file_name.toLowerCase().includes(searchLower)) ||
+            (log.worker_name && log.worker_name.toLowerCase().includes(searchLower)) ||
+            (log.company_name && log.company_name.toLowerCase().includes(searchLower)) ||
+            (log.action_type && log.action_type.toLowerCase().includes(searchLower)) ||
+            (log.metadata?.description && log.metadata.description.toLowerCase().includes(searchLower))
+        );
+    });
+
+    const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+
+    // Reset to page 1 when search or items per page changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, itemsPerPage]);
 
     const getActionIcon = (type) => {
         const iconClass = "w-4 h-4 sm:w-5 sm:h-5";
@@ -66,38 +90,105 @@ export default function AuditLogsTable() {
         }
     };
 
+    const PaginationControls = () => (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 border-t mt-4" style={{ borderColor: theme.border }}>
+            <span className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
+                Mostrando {filteredLogs.length === 0 ? 0 : startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredLogs.length)} de {filteredLogs.length} reportes
+            </span>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                >
+                    <ChevronLeft size={18} />
+                </button>
+                <span className="text-xs sm:text-sm font-medium mx-2" style={{ color: theme.text }}>
+                    Página {currentPage} de {totalPages}
+                </span>
+                <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ borderColor: theme.border, color: theme.text }}
+                >
+                    <ChevronRight size={18} />
+                </button>
+            </div>
+        </div>
+    );
+
     return (
         <div className="animate-fade-in max-w-4xl mx-auto mb-6">
-            <div className="flex flex-row flex-wrap justify-between items-center gap-2 mb-4">
-                <div className="min-w-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <div className="min-w-0 flex-1">
                     <h3 className="text-base sm:text-lg lg:text-xl font-bold" style={{ color: theme.text }}>Actividad Reciente</h3>
                     <p className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>Últimos movimientos en archivos</p>
                 </div>
-                <div className="flex flex-row gap-1.5 sm:gap-2 flex-shrink-0">
-                    <button
-                        onClick={loadLogs}
-                        className="p-1.5 sm:p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
-                        title="Actualizar"
-                    >
-                        <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} style={{ color: theme.text }} />
-                    </button>
-                    <button
-                        onClick={() => exportToExcel(logs, 'Actividad_Reciente')}
-                        disabled={logs.length === 0}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition text-xs sm:text-sm"
-                    >
-                        <Download size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Excel</span>
-                    </button>
+
+                {/* Search and Items Per Page Setup */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                    <div className="relative w-full sm:w-64">
+                        <input
+                            type="text"
+                            placeholder="Buscar reporte..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            style={{
+                                background: theme.surface,
+                                color: theme.text,
+                                borderColor: theme.border
+                            }}
+                        />
+                        <SearchIcon className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                            className="bg-transparent border rounded-lg text-sm px-3 py-2 cursor-pointer focus:outline-none"
+                            style={{ borderColor: theme.border, color: theme.text }}
+                        >
+                            <option value={5}>5 por pág</option>
+                            <option value={10}>10 por pág</option>
+                            <option value={20}>20 por pág</option>
+                            <option value={50}>50 por pág</option>
+                        </select>
+
+                        <div className="flex flex-row gap-1.5 sm:gap-2 flex-shrink-0 ml-auto sm:ml-0">
+                            <button
+                                onClick={loadLogs}
+                                className="p-1.5 sm:p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
+                                title="Actualizar"
+                            >
+                                <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? 'animate-spin' : ''}`} style={{ color: theme.text }} />
+                            </button>
+                            <button
+                                onClick={() => exportToExcel(filteredLogs, 'Actividad_Reciente')}
+                                disabled={filteredLogs.length === 0}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition text-xs sm:text-sm"
+                            >
+                                <Download size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xl:inline">Excel</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="space-y-3">
-                {logs.length === 0 ? (
+            {filteredLogs.length > 0 && <PaginationControls />}
+
+            <div className="space-y-3 mt-4">
+                {paginatedLogs.length === 0 ? (
                     <div className="text-center py-8 sm:py-12 rounded-xl border border-dashed" style={{ borderColor: theme.border }}>
-                        <p className="text-sm" style={{ color: theme.textSecondary }}>No hay actividad registrada recientemente.</p>
+                        <p className="text-sm" style={{ color: theme.textSecondary }}>
+                            {searchTerm ? 'No se encontraron reportes que coincidan con tu búsqueda.' : 'No hay actividad registrada recientemente.'}
+                        </p>
                     </div>
                 ) : (
-                    logs.map((log) => (
+                    paginatedLogs.map((log) => (
                         <div
                             key={log.id}
                             className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl shadow-sm border transition-transform hover:scale-[1.01]"
@@ -118,12 +209,24 @@ export default function AuditLogsTable() {
                                             Drive ID: ...{log.metadata.driveId.slice(-6)}
                                         </span>
                                     )}
+                                    {log.metadata?.webUrl && (
+                                        <a
+                                            href={log.metadata.webUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] sm:text-xs text-blue-500 hover:text-blue-600 hover:underline flex items-center gap-1"
+                                        >
+                                            Abrir archivo
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
             </div>
+
+            {filteredLogs.length > 0 && <PaginationControls />}
         </div>
     );
 }
