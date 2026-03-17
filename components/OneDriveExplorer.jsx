@@ -14,6 +14,7 @@ import { useSharePointData } from "@/contexts/SharePointContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import SharePointSites from "./SharePointSites";
 import FilePreview from "./FilePreview";
+import RcloneBackupModal from "./RcloneBackupModal";
 
 // Helper to normalize strings
 const normalize = (str) => {
@@ -59,6 +60,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     const fileInputRef = useRef(null);
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
 
     // Upload State
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -1082,6 +1084,23 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                     <div className="h-6 w-px mx-1" style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}></div>
 
+                    {/* NEW: Backup Teams Admin Button */}
+                    {(role === 'admin' || currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'valeria') && currentPath.type === 'root' && (
+                        <button
+                            onClick={() => setIsBackupModalOpen(true)}
+                            className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer flex items-center gap-2"
+                            style={{
+                                backgroundColor: isDark ? 'rgba(219, 39, 119, 0.1)' : '#fdf2f8',
+                                color: isDark ? '#f472b6' : '#db2777',
+                                borderColor: isDark ? '#831843' : '#fbcfe8'
+                            }}
+                            title="Respaldo Masivo de Documentos en Teams"
+                        >
+                            <LucideIcons.Server size={16} />
+                            <span className="hidden sm:inline text-xs font-bold">Respaldo Teams</span>
+                        </button>
+                    )}
+
                     {/* Action Buttons */}
                     <button
                         onClick={() => loadContent()}
@@ -1209,6 +1228,12 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
             </div>
 
             {/* Modal de Vista Previa (Sin Blur Pesado) */}
+            <RcloneBackupModal 
+                isOpen={isBackupModalOpen} 
+                onClose={() => setIsBackupModalOpen(false)} 
+                groups={items.filter(i => i.type === 'group' || i.type === 'site')}
+            />
+
             {/* File Preview Modal */}
             {previewFile && (
                 <FilePreview
