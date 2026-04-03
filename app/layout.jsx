@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <head>
-        <title>PRG Sistemas</title>
+        <title>PRG</title>
         <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
       </head>
       <body className={inter.className}>

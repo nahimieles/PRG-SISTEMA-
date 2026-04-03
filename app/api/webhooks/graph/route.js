@@ -32,10 +32,12 @@ export async function POST(req) {
         return new NextResponse(null, { status: 202 });
     }
 
-    // Process asynchronously (do not await)
-    processNotifications(payload).catch((err) =>
-        console.error('[Webhook] Processing error:', err.message)
-    );
+    // Await process so Vercel Serverless doesn't terminate the lambda early
+    try {
+        await processNotifications(payload);
+    } catch (err) {
+        console.error('[Webhook] Processing error:', err.message);
+    }
 
     return new NextResponse(null, { status: 202 });
 }

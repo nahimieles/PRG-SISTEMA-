@@ -8,13 +8,11 @@ import { getGroupsByParent, createGroup, updateGroup, deleteGroup, hasPermission
 import { Folder, FileText, FileSpreadsheet, FileIcon, Download, Loader2, ArrowLeft, Search, RefreshCw, Trash2, FolderPlus, X, Edit2, Upload, MoreVertical, Scissors, ClipboardPaste, Plus, Image as ImageIcon, Settings } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { logAuditAction } from '@/lib/audit';
-import { initializeChangeDetection } from '@/lib/changeDetectionService';
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSharePointData } from "@/contexts/SharePointContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import SharePointSites from "./SharePointSites";
 import FilePreview from "./FilePreview";
-import RcloneBackupModal from "./RcloneBackupModal";
 
 // Helper to normalize strings
 const normalize = (str) => {
@@ -44,8 +42,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     // Auto-start change detection when entering a drive
     useEffect(() => {
         if (effectiveDriveId) {
-            console.log('Initializing change detection for drive:', effectiveDriveId);
-            initializeChangeDetection(effectiveDriveId);
+            console.log('Entered drive:', effectiveDriveId);
         }
     }, [effectiveDriveId]);
 
@@ -60,7 +57,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
     const fileInputRef = useRef(null);
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-    const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
 
     // Upload State
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -1084,22 +1080,7 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
 
                     <div className="h-6 w-px mx-1" style={{ backgroundColor: isDark ? '#374151' : '#d1d5db' }}></div>
 
-                    {/* NEW: Backup Teams Admin Button */}
-                    {(role === 'admin' || currentUser?.role === 'admin' || currentUser?.username?.toLowerCase() === 'valeria') && currentPath.type === 'root' && (
-                        <button
-                            onClick={() => setIsBackupModalOpen(true)}
-                            className="p-2 rounded-lg border hover:bg-opacity-50 transition cursor-pointer flex items-center gap-2"
-                            style={{
-                                backgroundColor: isDark ? 'rgba(219, 39, 119, 0.1)' : '#fdf2f8',
-                                color: isDark ? '#f472b6' : '#db2777',
-                                borderColor: isDark ? '#831843' : '#fbcfe8'
-                            }}
-                            title="Respaldo Masivo de Documentos en Teams"
-                        >
-                            <LucideIcons.Server size={16} />
-                            <span className="hidden sm:inline text-xs font-bold">Respaldo Teams</span>
-                        </button>
-                    )}
+
 
                     {/* Action Buttons */}
                     <button
@@ -1227,12 +1208,6 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 )}
             </div>
 
-            {/* Modal de Vista Previa (Sin Blur Pesado) */}
-            <RcloneBackupModal 
-                isOpen={isBackupModalOpen} 
-                onClose={() => setIsBackupModalOpen(false)} 
-                groups={items.filter(i => i.type === 'group' || i.type === 'site')}
-            />
 
             {/* File Preview Modal */}
             {previewFile && (

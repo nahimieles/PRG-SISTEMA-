@@ -7,6 +7,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getAuditLogs, deleteAuditLog, deleteMultipleAuditLogs, clearAllAuditLogs } from '@/lib/audit';
+import { supabase } from '@/lib/supabase';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_EVENTS = 100; // Maximum events kept in memory/UI
@@ -71,38 +72,46 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         setCurrentPage(1);
     }, [searchTerm, selectedWorker, itemsPerPage]);
 
-    // ── SSE Connection ────────────────────────────────────────────────────────
     const connect = useCallback(() => {
-        if (esRef.current) esRef.current.close();
+        if (esRef.current) supabase.removeChannel(esRef.current);
         setStatus('connecting');
 
-        const es = new EventSource('/api/realtime/stream');
-        esRef.current = es;
+        const channel = supabase
+            .channel('public:audit_logs')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' }, payload => {
+                const log = payload.new;
+                let actionMsg = log.metadata?.changeType;
+                if (!actionMsg) {
+                    actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
+                }
+                const data = {
+                    fileName: log.file_name,
+                    user: log.worker_name,
+                    company: log.company_name,
+                    action: actionMsg,
+                    date: log.timestamp,
+                    filePath: log.file_path,
+                    driveId: log.metadata?.driveId,
+                    fileId: log.metadata?.fileId,
+                    webUrl: log.metadata?.webUrl
+                };
 
-        es.onopen = () => {
-            setStatus('connected');
-            if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
-        };
-
-        es.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'connected') return;
-                if (!data.fileName && !data.action) return;
-
-                // Attach a stable unique ID for selection tracking
                 const uid = String(++uidCounter.current);
-                setEvents(prev => [{ ...data, _uid: uid }, ...prev].slice(0, MAX_EVENTS));
-            } catch { /* malformed */ }
-        };
+                setEvents(prev => [{ ...data, dbId: log.id, _uid: uid }, ...prev].slice(0, MAX_EVENTS));
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    setStatus('connected');
+                    if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    setStatus('error');
+                    esRef.current = null;
+                    const delay = Math.min(30_000, 2_000 * (1 + Math.random()));
+                    retryRef.current = setTimeout(connect, delay);
+                }
+            });
 
-        es.onerror = () => {
-            setStatus('error');
-            es.close();
-            esRef.current = null;
-            const delay = Math.min(30_000, 2_000 * (1 + Math.random()));
-            retryRef.current = setTimeout(connect, delay);
-        };
+        esRef.current = channel;
     }, []);
 
     useEffect(() => {
@@ -144,7 +153,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         });
 
         return () => {
-            if (esRef.current) esRef.current.close();
+            if (esRef.current) supabase.removeChannel(esRef.current);
             if (retryRef.current) clearTimeout(retryRef.current);
         };
     }, [connect]);
