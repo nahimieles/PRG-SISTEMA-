@@ -618,7 +618,7 @@ export default function AdminPage() {
           {/* Professional Header Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
             {/* Title Section */}
-            <div>
+            <div className={activeTab === 'reclutamiento' ? 'hidden' : 'block'}>
               <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
                 {activeTab === 'dashboards' && 'Panel de Control'}
                 {activeTab === 'reportes' && 'Actividad Reciente'}
@@ -626,7 +626,6 @@ export default function AdminPage() {
                 {activeTab === 'empresas' && 'Gestión de Empresas'}
                 {activeTab === 'archivos' && 'Archivos y Respaldos'}
                 {activeTab === 'cursos' && 'Gestión de Cursos'}
-                {activeTab === 'reclutamiento' && 'Encuestas'}
               </h1>
               <p className="text-xs sm:text-sm mt-0.5" style={{ color: theme.textSecondary }}>
                 {activeTab === 'dashboards' && 'Estadísticas y métricas en tiempo real'}
@@ -635,9 +634,9 @@ export default function AdminPage() {
                 {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
                 {activeTab === 'archivos' && 'Gestiona archivos de SharePoint'}
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
-                {activeTab === 'reclutamiento' && 'Administración de encuestas y revisión de candidatos'}
               </p>
             </div>
+            {activeTab === 'reclutamiento' && <div id="recruitment-header-portal" className="flex-1 w-full" />}
 
             {/* Right Section - Notification & User - ALWAYS horizontal */}
             <div className="flex flex-row items-center gap-2 flex-shrink-0">

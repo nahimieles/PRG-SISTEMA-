@@ -220,7 +220,8 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         try {
             // Note: Since SSE is active, any events discovered by this endpoint 
             // will be pushed back to this client via the SSE stream automatically.
-            await fetch('/api/graph/delta', { method: 'POST' });
+            await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
+            console.log('Sincronización manual forzada (no-store)');
         } catch (err) {
             console.error("Error manual sync:", err);
         } finally {

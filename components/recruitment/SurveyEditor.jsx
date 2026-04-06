@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft, Plus, GripVertical, Trash2, Save, AlignLeft, CheckSquare, GitCommit } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -9,7 +10,7 @@ import Toast from '../Toast';
 // Simple reordering without external libraries for now, using HTML5 Drag and Drop or just sort
 // since "no agregues nuevas features, arregla esto" - well, reordenar is requested.
 
-export default function SurveyEditor({ surveyId, onBack }) {
+export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
 
@@ -175,23 +176,34 @@ export default function SurveyEditor({ surveyId, onBack }) {
     <div className="space-y-6 animate-fade-in relative">
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
       
-      <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: theme.border }}>
-         <button 
-           onClick={onBack}
-           className="flex items-center gap-2 hover:opacity-70 transition font-medium text-sm"
-           style={{ color: theme.textSecondary }}
-         >
-           <ArrowLeft size={16} /> Volver
-         </button>
-         
-         <button 
-           onClick={handleSave}
-           disabled={saving}
-           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
-         >
-           <Save size={18} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
-         </button>
-      </div>
+      {headerPortalNode ? createPortal(
+         <div className="flex justify-between items-center w-full">
+           <button 
+             onClick={onBack}
+             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition font-medium text-sm"
+             style={{ color: theme.textSecondary }}
+           >
+             <ArrowLeft size={16} /> Volver
+           </button>
+           
+           <button 
+             onClick={handleSave}
+             disabled={saving}
+             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
+           >
+             <Save size={18} /> <span className="hidden sm:inline">{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
+           </button>
+         </div>
+      , headerPortalNode) : (
+         <div className="flex justify-between items-center border-b pb-4 mb-4" style={{ borderColor: theme.border }}>
+           <button onClick={onBack} className="flex items-center gap-2 hover:opacity-70 transition font-medium text-sm" style={{ color: theme.textSecondary }}>
+             <ArrowLeft size={16} /> Volver
+           </button>
+           <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm font-medium">
+             <Save size={18} /> {saving ? 'Guardando...' : 'Guardar Cambios'}
+           </button>
+         </div>
+      )}
 
       <div className="space-y-4 max-w-4xl">
         <div className="p-5 rounded-xl border space-y-4" style={{ borderColor: theme.border, background: theme.surface }}>

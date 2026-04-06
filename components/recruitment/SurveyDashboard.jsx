@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
-import { Users, Clock, CheckCircle2, XCircle, Search, Eye, Filter, ArrowDown, ArrowUp, ClipboardList } from 'lucide-react';
+import { Users, Clock, CheckCircle2, XCircle, Search, Eye, Filter, ArrowDown, ArrowUp, ClipboardList, ArrowLeft } from 'lucide-react';
 import Toast from '../Toast';
 
-export default function SurveyDashboard({ survey, onUpdate }) {
+export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortalNode }) {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
 
@@ -117,19 +118,38 @@ export default function SurveyDashboard({ survey, onUpdate }) {
     <div className="space-y-6 animate-fade-in">
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
 
+      {headerPortalNode && createPortal(
+         <div className="flex items-center gap-3">
+           <button 
+             onClick={onBack}
+             className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
+             style={{ color: theme.textSecondary }}
+             title="Volver"
+           >
+             <ArrowLeft size={18} />
+           </button>
+           <div>
+             <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
+               <ClipboardList className="w-5 h-5 text-blue-500" /> Resultados de Encuesta
+             </h2>
+           </div>
+         </div>
+      , headerPortalNode)}
+
       {/* Header Info */}
       <div className="p-6 rounded-xl shadow-sm border" style={{ borderColor: theme.border, background: theme.surface }}>
         <h2 className="text-2xl font-bold mb-2 text-blue-600">{survey.title}</h2>
         <p className="mb-6 max-w-3xl" style={{ color: theme.textSecondary }}>{survey.description}</p>
-        
-        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 flex align-center gap-4">
-           <div>
-             <p className="font-bold text-sm text-blue-800 dark:text-blue-200 mb-1">Enlace Público para Candidatos</p>
-             <code className="text-sm break-all selectable px-3 py-1.5 bg-white dark:bg-black/20 border border-blue-200 dark:border-blue-800 rounded-md select-all inline-block">
-               https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/encuesta/{survey.id}?token={survey.access_token}
-             </code>
+        <div className="p-4 rounded-lg flex align-center gap-4" style={{ background: theme.isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff', border: `1px solid ${theme.isDark ? 'rgba(30, 58, 138, 0.5)' : '#dbeafe'}` }}>
+           <div className="w-full">
+             <p className="font-bold text-sm mb-2" style={{ color: theme.isDark ? '#93c5fd' : '#1e3a8a' }}>Enlace Público para Candidatos</p>
+             <div className="flex w-full">
+               <code className="text-sm break-all px-4 py-2 rounded-md select-all w-full border font-mono" style={{ background: theme.isDark ? 'rgba(0,0,0,0.3)' : '#ffffff', borderColor: theme.isDark ? 'rgba(30, 58, 138, 0.5)' : '#bfdbfe', color: theme.text }}>
+                 https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/encuesta/{survey.id}?token={survey.access_token}
+               </code>
+             </div>
            </div>
-        </div>
+         </div>
       </div>      {/* Metricas */}
       <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl border flex flex-col items-center justify-center text-center" style={{ borderColor: theme.border, background: theme.surface }}>
@@ -255,20 +275,35 @@ export default function SurveyDashboard({ survey, onUpdate }) {
                      candidateResponses.map((resp, i) => {
                        // Find corresponding question for context
                        const q = questions.find(qu => qu.id === resp.question_id);
-                       // Values in JSONB
-                       let displayVal = resp.response_value;
-                       if (typeof displayVal === 'object') {
-                          displayVal = JSON.stringify(displayVal, null, 2);
-                       }
+                       const displayVal = resp.response_value;
+                       
+                       const renderValue = (val) => {
+                         if (!val) return <p className="text-gray-500 italic">Sin respuesta</p>;
+                         if (typeof val !== 'object') {
+                           return <p className="text-lg whitespace-pre-wrap font-medium" style={{ color: theme.text }}>{String(val)}</p>;
+                         }
+                         
+                         // Si es objeto (como preguntas de completar espacios u otros tipos compuestos)
+                         return (
+                           <div className="grid grid-cols-1 gap-2 mt-2">
+                             {Object.entries(val).map(([k, v]) => (
+                               <div key={k} className="flex max-sm:flex-col sm:items-center p-3 rounded-lg border gap-4" style={{ background: theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: theme.border }}>
+                                 <div className="font-bold text-sm min-w-[120px] shrink-0" style={{ color: theme.textSecondary }}>{k}</div>
+                                 <div className="font-semibold text-base break-all" style={{ color: theme.text }}>
+                                   {v ? String(v) : <span className="text-red-400 italic font-normal">Sin responder</span>}
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         );
+                       };
                        
                        return (
                          <div key={resp.id} className="rounded-xl border p-5 transition" style={{ borderColor: theme.border, background: theme.surface }}>
                            <p className="font-medium text-blue-600 dark:text-blue-400 mb-3 block border-b pb-2" style={{ borderColor: theme.border }}>
                              {i+1}. {q ? q.text : 'Pregunta desconocida (eliminada)'}
                            </p>
-                           <p className="text-lg whitespace-pre-wrap font-medium" style={{ color: theme.text }}>
-                             {displayVal}
-                           </p>
+                           {renderValue(displayVal)}
                          </div>
                        )
                      })

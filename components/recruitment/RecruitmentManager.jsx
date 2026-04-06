@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
@@ -25,6 +26,7 @@ export default function RecruitmentManager() {
   const [newSurveyTitle, setNewSurveyTitle] = useState('');
   const [newSurveyDesc, setNewSurveyDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [headerPortalNode, setHeaderPortalNode] = useState(null);
 
   const showToast = (text, type = 'success') => {
     setMessage({ text, type });
@@ -54,6 +56,7 @@ export default function RecruitmentManager() {
 
   useEffect(() => {
     loadSurveys();
+    setHeaderPortalNode(document.getElementById('recruitment-header-portal'));
   }, []);
 
   const handleCreateSurvey = async (e) => {
@@ -117,20 +120,13 @@ export default function RecruitmentManager() {
   };
 
   if (editingSurveyId) {
-     return <SurveyEditor surveyId={editingSurveyId} onBack={() => { setEditingSurveyId(null); loadSurveys(); }} />;
+     return <SurveyEditor surveyId={editingSurveyId} onBack={() => { setEditingSurveyId(null); loadSurveys(); }} headerPortalNode={headerPortalNode} />;
   }
 
   if (selectedSurvey) {
     return (
       <div className="space-y-4">
-        <button 
-          onClick={() => setSelectedSurvey(null)}
-          className="flex items-center gap-2 mb-4 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
-          style={{ color: theme.textSecondary }}
-        >
-          <ArrowLeft size={16} /> Volver a la lista de encuestas
-        </button>
-        <SurveyDashboard survey={selectedSurvey} onUpdate={loadSurveys} />
+        <SurveyDashboard survey={selectedSurvey} onUpdate={loadSurveys} onBack={() => setSelectedSurvey(null)} headerPortalNode={headerPortalNode} />
       </div>
     );
   }
@@ -139,31 +135,37 @@ export default function RecruitmentManager() {
     <div className="space-y-6">
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
 
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border" style={{ borderColor: theme.border, background: theme.surface }}>
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
-            <ClipboardList className="w-5 h-5 text-blue-500" /> Encuestas
-          </h2>
-          <p className="text-sm" style={{ color: theme.textSecondary }}>Gestión de encuestas y revisión de candidatos</p>
+      {/* Render the unified header via Portal into the layout's top bar */}
+      {headerPortalNode && createPortal(
+        <div className="flex justify-between items-center w-full">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
+              <ClipboardList className="w-5 h-5 text-blue-500" /> Encuestas
+            </h2>
+            <p className="text-sm" style={{ color: theme.textSecondary }}>Gestión de encuestas y revisión de candidatos</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={loadSurveys}
+              className="p-2 rounded-lg hover:opacity-80 transition"
+              style={{ border: `1px solid ${theme.border}`, color: theme.text }}
+              disabled={loading}
+              title="Refrescar"
+            >
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 shadow-sm transition"
+              style={{ background: '#3498db' }}
+            >
+              <Plus size={18} /> <span className="hidden sm:inline">Nueva Encuesta</span>
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={loadSurveys}
-            className="p-2 rounded-lg hover:opacity-80 transition"
-            style={{ border: `1px solid ${theme.border}`, color: theme.text }}
-            disabled={loading}
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 shadow-sm transition"
-            style={{ background: '#3498db' }}
-          >
-            <Plus size={18} /> Nueva Encuesta
-          </button>
-        </div>
-      </div>
+      , headerPortalNode)}
+
+
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
