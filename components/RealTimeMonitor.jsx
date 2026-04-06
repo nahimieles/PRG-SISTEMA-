@@ -148,13 +148,26 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         };
 
         loadHistory().then(() => {
-            // Then connect to live SSE stream
+            // Then connect to live Supabase Realtime stream
             connect();
+
+            // Trigger an initial delta scan on mount
+            fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' })
+                .then(() => console.log('[AutoSync] Initial scan triggered.'))
+                .catch(err => console.warn('[AutoSync] Initial scan failed:', err.message));
         });
+
+        // Auto-poll every 5 minutes to keep data fresh
+        const autoSyncInterval = setInterval(() => {
+            console.log('[AutoSync] Periodic scan triggered.');
+            fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' })
+                .catch(err => console.warn('[AutoSync] Periodic scan failed:', err.message));
+        }, 5 * 60 * 1000);
 
         return () => {
             if (esRef.current) supabase.removeChannel(esRef.current);
             if (retryRef.current) clearTimeout(retryRef.current);
+            clearInterval(autoSyncInterval);
         };
     }, [connect]);
 
