@@ -140,11 +140,11 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
       <div className="p-6 rounded-xl shadow-sm border" style={{ borderColor: theme.border, background: theme.surface }}>
         <h2 className="text-2xl font-bold mb-2 text-blue-600">{survey.title}</h2>
         <p className="mb-6 max-w-3xl" style={{ color: theme.textSecondary }}>{survey.description}</p>
-        <div className="p-4 rounded-lg flex align-center gap-4" style={{ background: theme.isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff', border: `1px solid ${theme.isDark ? 'rgba(30, 58, 138, 0.5)' : '#dbeafe'}` }}>
+        <div className="p-4 rounded-lg flex align-center gap-4" style={{ background: isDark ? 'rgba(30, 58, 138, 0.2)' : '#eff6ff', border: `1px solid ${isDark ? 'rgba(30, 58, 138, 0.5)' : '#dbeafe'}` }}>
            <div className="w-full">
-             <p className="font-bold text-sm mb-2" style={{ color: theme.isDark ? '#93c5fd' : '#1e3a8a' }}>Enlace Público para Candidatos</p>
+             <p className="font-bold text-sm mb-2" style={{ color: isDark ? '#93c5fd' : '#1e3a8a' }}>Enlace Público para Candidatos</p>
              <div className="flex w-full">
-               <code className="text-sm break-all px-4 py-2 rounded-md select-all w-full border font-mono" style={{ background: theme.isDark ? 'rgba(0,0,0,0.3)' : '#ffffff', borderColor: theme.isDark ? 'rgba(30, 58, 138, 0.5)' : '#bfdbfe', color: theme.text }}>
+               <code className="text-sm break-all px-4 py-2 rounded-md select-all w-full border font-mono" style={{ background: isDark ? 'rgba(0,0,0,0.3)' : '#ffffff', borderColor: isDark ? 'rgba(30, 58, 138, 0.5)' : '#bfdbfe', color: theme.text }}>
                  https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/encuesta/{survey.id}
                </code>
              </div>
@@ -200,7 +200,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
         {/* Candidate List */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm" style={{ color: theme.text }}>
-            <thead className="border-b" style={{ borderColor: theme.border, color: theme.textSecondary, background: theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
+            <thead className="border-b" style={{ borderColor: theme.border, color: theme.textSecondary, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
               <tr>
                 <th className="p-4 font-semibold">Candidato</th>
                 <th className="p-4 font-semibold">Email</th>
@@ -252,7 +252,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                  <button 
                    onClick={() => setSelectedCandidate(null)}
                    className="p-2 rounded-full transition hover:opacity-70"
-                   style={{ background: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: theme.textSecondary }}
+                   style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: theme.textSecondary }}
                  >
                    <XCircle size={20} />
                  </button>
@@ -287,7 +287,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                          return (
                            <div className="grid grid-cols-1 gap-2 mt-2">
                              {Object.entries(val).map(([k, v]) => (
-                               <div key={k} className="flex max-sm:flex-col sm:items-center p-3 rounded-lg border gap-4" style={{ background: theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: theme.border }}>
+                               <div key={k} className="flex max-sm:flex-col sm:items-center p-3 rounded-lg border gap-4" style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderColor: theme.border }}>
                                  <div className="font-bold text-sm min-w-[120px] shrink-0" style={{ color: theme.textSecondary }}>{k}</div>
                                  <div className="font-semibold text-base break-all" style={{ color: theme.text }}>
                                    {v ? String(v) : <span className="text-red-400 italic font-normal">Sin responder</span>}
