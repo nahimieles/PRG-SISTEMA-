@@ -8,14 +8,13 @@ export const fetchCache = 'force-no-store';
 /**
  * POST /api/graph/delta
  * Manually trigger a full delta scan across all SharePoint drives.
- * Useful for testing or as a cron endpoint.
  */
 export async function POST() {
     try {
         const result = await runDeltaScanAllDrives();
         return NextResponse.json({
             success: true,
-            scanned: true,
+            scanned: !result.skipped,
             drives: result.drives,
             eventsEmitted: result.eventsEmitted,
             timestamp: new Date().toISOString(),

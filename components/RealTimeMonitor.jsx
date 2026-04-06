@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-    Activity, Clock, FileText, User as UserIcon, Building2, FolderOpen,
-    Wifi, WifiOff, RefreshCw, Trash2, Trash, CheckSquare, Square, X, Search, ChevronLeft, ChevronRight
+    Clock, FileText, User as UserIcon, Building2, FolderOpen,
+    Wifi, WifiOff, RefreshCw, Trash2, Trash, CheckSquare, Square, X, Search, ChevronLeft, ChevronRight, Download
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
@@ -114,53 +114,49 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         esRef.current = channel;
     }, []);
 
-    useEffect(() => {
-        // Load initial history from database so it's not empty
-        const loadHistory = async () => {
-            try {
-                // Fetch up to 500 events so the local frontend search works deeply
-                const logs = await getAuditLogs({ limit: 500 });
-                if (logs && logs.length > 0) {
-                    const mappedHistory = logs.map(log => {
-                        let actionMsg = log.metadata?.changeType;
-                        if (!actionMsg) {
-                            actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
-                        }
-                        return {
-                            _uid: String(++uidCounter.current),
-                            dbId: log.id, // Keep reference to DB row for deletion
-                            fileName: log.file_name,
-                            user: log.worker_name,
-                            company: log.company_name,
-                            action: actionMsg,
-                            date: log.timestamp,
-                            filePath: log.file_path,
-                            driveId: log.metadata?.driveId,
-                            fileId: log.metadata?.fileId,
-                            webUrl: log.metadata?.webUrl
-                        };
-                    });
-                    setEvents(mappedHistory);
-                }
-            } catch (err) {
-                console.error("Failed to load initial history:", err);
+    // ── Reusable function to reload events from database ─────────────────────
+    const reloadFromDB = useCallback(async () => {
+        try {
+            const logs = await getAuditLogs({ limit: 500 });
+            if (logs && logs.length > 0) {
+                uidCounter.current = 0;
+                const mappedHistory = logs.map(log => {
+                    let actionMsg = log.metadata?.changeType;
+                    if (!actionMsg) {
+                        actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
+                    }
+                    return {
+                        _uid: String(++uidCounter.current),
+                        dbId: log.id,
+                        fileName: log.file_name,
+                        user: log.worker_name,
+                        company: log.company_name,
+                        action: actionMsg,
+                        date: log.timestamp,
+                        filePath: log.file_path,
+                        driveId: log.metadata?.driveId,
+                        fileId: log.metadata?.fileId,
+                        webUrl: log.metadata?.webUrl
+                    };
+                });
+                setEvents(mappedHistory);
             }
-        };
+        } catch (err) {
+            console.error('Failed to reload from DB:', err);
+        }
+    }, []);
 
-        loadHistory().then(() => {
-            // Then connect to live Supabase Realtime stream
+    useEffect(() => {
+        // Load initial data then connect to realtime
+        reloadFromDB().then(() => {
             connect();
-
-            // Trigger an initial delta scan on mount
-            fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' })
-                .then(() => console.log('[AutoSync] Initial scan triggered.'))
-                .catch(err => console.warn('[AutoSync] Initial scan failed:', err.message));
         });
 
         // Auto-poll every 5 minutes to keep data fresh
         const autoSyncInterval = setInterval(() => {
             console.log('[AutoSync] Periodic scan triggered.');
             fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' })
+                .then(() => reloadFromDB())
                 .catch(err => console.warn('[AutoSync] Periodic scan failed:', err.message));
         }, 5 * 60 * 1000);
 
@@ -169,7 +165,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             if (retryRef.current) clearTimeout(retryRef.current);
             clearInterval(autoSyncInterval);
         };
-    }, [connect]);
+    }, [connect, reloadFromDB]);
 
     // ── Selection helpers ─────────────────────────────────────────────────────
     const toggleSelect = (uid) => {
@@ -231,14 +227,66 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     const handleManualSync = async () => {
         setIsSyncing(true);
         try {
-            // Note: Since SSE is active, any events discovered by this endpoint 
-            // will be pushed back to this client via the SSE stream automatically.
-            await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
-            console.log('Sincronización manual forzada (no-store)');
+            const res = await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
+            const data = await res.json().catch(() => null);
+            console.log('[ManualSync] Scan result:', data);
+
+            // ALWAYS reload from database - don't rely on WebSocket
+            await reloadFromDB();
+            if (onLogsChanged) onLogsChanged();
         } catch (err) {
-            console.error("Error manual sync:", err);
+            console.error('Error manual sync:', err);
         } finally {
             setIsSyncing(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        if (!events || events.length === 0) return;
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Reportes Automáticos');
+
+            worksheet.columns = [
+                { header: 'Archivo', key: 'fileName', width: 40 },
+                { header: 'Acción', key: 'action', width: 15 },
+                { header: 'Responsable', key: 'user', width: 25 },
+                { header: 'Empresa', key: 'company', width: 30 },
+                { header: 'Fecha', key: 'date', width: 22 },
+                { header: 'Ruta', key: 'filePath', width: 50 },
+                { header: 'Enlace', key: 'webUrl', width: 50 }
+            ];
+
+            const headerRow = worksheet.getRow(1);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
+
+            const recordsToExport = filteredEvents || events;
+
+            recordsToExport.forEach(ev => {
+                worksheet.addRow({
+                    fileName: ev.fileName,
+                    action: ACTION_STYLES[ev.action]?.label || ev.action,
+                    user: ev.user,
+                    company: ev.company,
+                    date: new Date(ev.date).toLocaleString('es-EC'),
+                    filePath: ev.filePath,
+                    webUrl: ev.webUrl || ''
+                });
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Actividad_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error exporting to Excel:', err);
+            alert('Hubo un error al generar el Excel.');
         }
     };
 
@@ -318,15 +366,9 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             {/* ── Header ── */}
             <div className="p-3 border-b flex flex-wrap justify-between items-center gap-2" style={{ borderColor: theme.border }}>
                 <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-blue-500" />
                     <h3 className="font-bold tracking-tight text-sm" style={{ color: theme.text }}>
                         Reportes Automáticos
                     </h3>
-                    {events.length > 0 && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
-                            {events.length} totales
-                        </span>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -345,6 +387,17 @@ export default function RealTimeMonitor({ onLogsChanged }) {
 
                     {events.length > 0 && (
                         <>
+                            {/* Export to Excel */}
+                            <button
+                                onClick={handleExportExcel}
+                                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors bg-green-50 text-green-700 border-green-200 hover:bg-green-100 sm:font-medium dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                                title="Exportar reportes a Excel"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Exportar Excel</span>
+                                <span className="sm:hidden">Excel</span>
+                            </button>
+
                             {/* Toggle select mode */}
                             <button
                                 onClick={() => { setSelectMode(s => !s); clearSelection(); }}
@@ -364,7 +417,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                     title={`Eliminar ${selected.size} seleccionado(s)`}
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
-                                    Eliminar ({selected.size})
+                                    <span>Eliminar ({selected.size})</span>
                                 </button>
                             )}
 
@@ -376,7 +429,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                 title="Limpiar todos los reportes"
                             >
                                 <Trash className="w-3.5 h-3.5" />
-                                Limpiar todo
+                                <span className="hidden sm:inline">Limpiar todo</span>
                             </button>
                         </>
                     )}
@@ -384,7 +437,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             </div>
 
             {/* ── Search & Filter Toolbar ── */}
-            <div className="p-3 border-b flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: theme.border, background: isDark ? '#151a26' : '#f1f5f9' }}>
+            <div className="p-3 mb-4 rounded-b-xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm border-x border-b" style={{ borderColor: theme.border, background: isDark ? '#151a26' : '#f1f5f9' }}>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
                     <div className="relative w-full sm:w-80">
                         <input
