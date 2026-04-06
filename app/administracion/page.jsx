@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Bell, Edit2 } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Bell, Edit2, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -28,6 +28,7 @@ const RealTimeMonitor = dynamic(() => import('../../components/RealTimeMonitor')
 const CourseEditor = dynamic(() => import('../../components/CourseEditor'), { ssr: false });
 const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
 const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
+const RecruitmentManager = dynamic(() => import('../../components/recruitment/RecruitmentManager'), { ssr: false });
 
 export default function AdminPage() {
   const router = useRouter();
@@ -41,7 +42,8 @@ export default function AdminPage() {
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'archivos', label: 'Archivos', icon: FileText },
-    { id: 'cursos', label: 'Cursos', icon: MonitorPlay }
+    { id: 'cursos', label: 'Cursos', icon: MonitorPlay },
+    { id: 'reclutamiento', label: 'Encuestas', icon: ClipboardList }
 
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,7 +57,7 @@ export default function AdminPage() {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos'].includes(hash)) {
+      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos', 'reclutamiento'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -624,6 +626,7 @@ export default function AdminPage() {
                 {activeTab === 'empresas' && 'Gestión de Empresas'}
                 {activeTab === 'archivos' && 'Archivos y Respaldos'}
                 {activeTab === 'cursos' && 'Gestión de Cursos'}
+                {activeTab === 'reclutamiento' && 'Encuestas'}
               </h1>
               <p className="text-xs sm:text-sm mt-0.5" style={{ color: theme.textSecondary }}>
                 {activeTab === 'dashboards' && 'Estadísticas y métricas en tiempo real'}
@@ -632,6 +635,7 @@ export default function AdminPage() {
                 {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
                 {activeTab === 'archivos' && 'Gestiona archivos de SharePoint'}
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
+                {activeTab === 'reclutamiento' && 'Administración de encuestas y revisión de candidatos'}
               </p>
             </div>
 
@@ -852,6 +856,13 @@ export default function AdminPage() {
           {activeTab === 'empresas' && (
             <div className="animate-fade-in">
               <CompanyManager />
+            </div>
+          )}
+
+          {/* TAB: RECLUTAMIENTO */}
+          {activeTab === 'reclutamiento' && (
+            <div className="animate-fade-in">
+              <RecruitmentManager />
             </div>
           )}
 

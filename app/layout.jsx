@@ -16,19 +16,32 @@ const inter = Inter({
   weight: ['400', '500', '600'],
 })
 
+import { usePathname } from 'next/navigation'
+
 export default function RootLayout({ children }) {
+  const pathname = usePathname()
+  const isEncuesta = pathname?.startsWith('/encuesta')
+
   return (
     <html lang="es">
       <head>
-        <title>PRG</title>
-        <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
+        {!isEncuesta && (
+          <>
+            <title>PRG</title>
+            <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
+          </>
+        )}
       </head>
       <body className={inter.className}>
-        <MsalWrapper>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </MsalWrapper>
+        {isEncuesta ? (
+          children
+        ) : (
+          <MsalWrapper>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+          </MsalWrapper>
+        )}
       </body>
     </html>
   )
