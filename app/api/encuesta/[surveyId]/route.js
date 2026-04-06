@@ -43,23 +43,14 @@ const getSupabaseAdmin = () => {
 export async function GET(request, { params }) {
     const { surveyId } = await params;
     
-    // Extract token from URL
-    const url = new URL(request.url);
-    const token = url.searchParams.get('token');
-
-    if (!token || token.length < 32) {
-        return NextResponse.json({ error: 'Token inválido o faltante.' }, { status: 401 });
-    }
-
     const supabase = getSupabaseAdmin();
 
     try {
-        // 1. Validate Survey Exists, is Active, and Token Matches
+        // 1. Validate Survey Exists, is Active
         const { data: survey, error: surveyError } = await supabase
             .from('recruitment_surveys')
             .select('id, title, description, version, is_active')
             .eq('id', surveyId)
-            .eq('access_token', token)
             .single();
 
         if (surveyError || !survey) {
@@ -98,13 +89,6 @@ export async function POST(request, { params }) {
         return NextResponse.json({ error: 'Demasiadas solicitudes. Por favor, intenta más tarde.' }, { status: 429 });
     }
 
-    const url = new URL(request.url);
-    const token = url.searchParams.get('token');
-
-    if (!token || token.length < 32) {
-        return NextResponse.json({ error: 'Token inválido o faltante.' }, { status: 401 });
-    }
-
     try {
         const body = await request.json();
         const { candidate, responses } = body;
@@ -119,11 +103,11 @@ export async function POST(request, { params }) {
         // 1. Validar Encuesta
         const { data: survey } = await supabase
             .from('recruitment_surveys')
-            .select('id, version, is_active, access_token')
+            .select('id, version, is_active')
             .eq('id', surveyId)
             .single();
 
-        if (!survey || survey.access_token !== token || !survey.is_active) {
+        if (!survey || !survey.is_active) {
             return NextResponse.json({ error: 'Encuesta inválida o inactiva.' }, { status: 403 });
         }
 

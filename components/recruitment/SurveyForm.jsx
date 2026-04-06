@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function SurveyForm({ surveyId }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,15 +18,9 @@ export default function SurveyForm({ surveyId }) {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setError('Acceso denegado. Se requiere un enlace válido.');
-      setLoading(false);
-      return;
-    }
-
     const fetchSurvey = async () => {
       try {
-        const res = await fetch(`/api/encuesta/${surveyId}?token=${token}`);
+        const res = await fetch(`/api/encuesta/${surveyId}`);
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.error || 'Error al cargar la encuesta');
@@ -43,7 +35,7 @@ export default function SurveyForm({ surveyId }) {
     };
 
     fetchSurvey();
-  }, [surveyId, token]);
+  }, [surveyId]);
 
   const handleResponseChange = (questionId, value, isCheckbox = false) => {
     setResponses(prev => {
@@ -77,7 +69,7 @@ export default function SurveyForm({ surveyId }) {
     }));
 
     try {
-      const res = await fetch(`/api/encuesta/${surveyId}?token=${token}`, {
+      const res = await fetch(`/api/encuesta/${surveyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate, responses: formattedResponses })
