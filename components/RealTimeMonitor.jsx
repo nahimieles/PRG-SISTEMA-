@@ -81,18 +81,30 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     }, [searchTerm, selectedWorker, itemsPerPage]);
 
     const connect = useCallback(() => {
-        if (esRef.current) supabase.removeChannel(esRef.current);
+        if (esRef.current) {
+            supabase.removeChannel(esRef.current);
+        }
+        
         setStatus('connecting');
 
         const channel = supabase
-            .channel('public:audit_logs')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' }, payload => {
+            .channel('audit-logs-realtime')
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'audit_logs' 
+            }, payload => {
+                console.log('[RealTime] New log received:', payload.new);
                 const log = payload.new;
+                
                 let actionMsg = log.metadata?.changeType;
                 if (!actionMsg) {
                     actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
                 }
+                
                 const data = {
+                    dbId: log.id,
+                    _uid: `rt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                     fileName: log.file_name,
                     user: log.worker_name,
                     company: log.company_name,
@@ -104,10 +116,10 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     webUrl: log.metadata?.webUrl
                 };
 
-                const uid = String(++uidCounter.current);
-                setEvents(prev => [{ ...data, dbId: log.id, _uid: uid }, ...prev].slice(0, MAX_EVENTS));
+                setEvents(prev => [data, ...prev].slice(0, MAX_EVENTS));
             })
             .subscribe((status) => {
+                console.log('[RealTime] Channel status:', status);
                 if (status === 'SUBSCRIBED') {
                     setStatus('connected');
                     if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
@@ -404,9 +416,17 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         }}>
             {/* ── Header ── */}
             <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
-                <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
-                    Reportes Automáticos
-                </h3>
+                <div className="flex items-center gap-2.5">
+                    <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
+                        Reportes Automáticos
+                    </h3>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-40" style={{ color: theme.text }}>
+                            {status === 'connected' ? 'Live' : 'Connect...'}
+                        </span>
+                    </div>
+                </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
                     {/* Sync Button */}
