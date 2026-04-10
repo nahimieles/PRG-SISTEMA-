@@ -1,0 +1,26 @@
+name: Automated Reporting Sync
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    # Allows manual trigger from GitHub UI for testing
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Delta Scan
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "Error: APP_URL secret is not set. Please add it to your GitHub repository secrets."
+            exit 1
+          fi
+          
+          echo "Triggering scan on ${{ secrets.APP_URL }}..."
+          
+          curl -X POST "${{ secrets.APP_URL }}/api/graph/delta" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail

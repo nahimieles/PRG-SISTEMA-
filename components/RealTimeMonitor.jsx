@@ -68,6 +68,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     const [selected, setSelected] = useState(new Set()); // Set of event UIDs
     const [selectMode, setSelectMode] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
     const retryRef = useRef(null);
@@ -159,13 +160,23 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             connect();
         });
 
-        // Auto-poll every 5 minutes to keep data fresh
-        const autoSyncInterval = setInterval(() => {
-            console.log('[AutoSync] Periodic scan triggered.');
-            fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' })
-                .then(() => reloadFromDB())
-                .catch(err => console.warn('[AutoSync] Periodic scan failed:', err.message));
-        }, 5 * 60 * 1000);
+        const performAutoSync = async () => {
+            // Only sync if the tab is visible to avoid unnecessary background load
+            if (document.visibilityState !== 'visible') return;
+            
+            setIsBackgroundSyncing(true);
+            try {
+                await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
+                await reloadFromDB();
+            } catch (err) {
+                console.warn('[AutoSync] Background scan failed:', err.message);
+            } finally {
+                setIsBackgroundSyncing(false);
+            }
+        };
+
+        // Auto-poll every 2 minutes ("rapidito") to keep data fresh while active
+        const autoSyncInterval = setInterval(performAutoSync, 2 * 60 * 1000);
 
         return () => {
             if (esRef.current) supabase.removeChannel(esRef.current);
@@ -404,13 +415,13 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                         disabled={isSyncing}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
                         style={{
-                            background: isSyncing ? (isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6') : (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff'),
-                            color: isSyncing ? theme.textSecondary : '#3b82f6',
-                            border: `1px solid ${isSyncing ? theme.border : (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe')}`,
+                            color: (isSyncing || isBackgroundSyncing) ? '#3b82f6' : theme.textSecondary,
+                            border: `1px solid ${theme.border}`,
+                            background: (isSyncing || isBackgroundSyncing) ? (isDark ? 'rgba(59,130,246,0.1)' : '#f0f7ff') : 'transparent',
                         }}
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Escaneando...' : 'Actualizar'}
+                        <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} style={{ animationDuration: isBackgroundSyncing ? '3s' : '1s' }} />
+                        <span>Actualizar</span>
                     </button>
 
                     {events.length > 0 && (
