@@ -56,7 +56,7 @@ export default function RecruitmentManager() {
 
   useEffect(() => {
     loadSurveys();
-    setHeaderPortalNode(document.getElementById('recruitment-header-portal'));
+    setHeaderPortalNode(document.getElementById('interview-header-portal'));
   }, []);
 
   const handleCreateSurvey = async (e) => {

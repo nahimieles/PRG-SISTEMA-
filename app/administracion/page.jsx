@@ -43,7 +43,7 @@ export default function AdminPage() {
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'archivos', label: 'Archivos', icon: FileText },
     { id: 'cursos', label: 'Cursos', icon: MonitorPlay },
-    { id: 'reclutamiento', label: 'Entrevistas', icon: ClipboardList }
+    { id: 'entrevistas', label: 'Entrevistas', icon: ClipboardList }
 
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,7 +57,7 @@ export default function AdminPage() {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos', 'reclutamiento'].includes(hash)) {
+      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos', 'entrevistas'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -672,7 +672,7 @@ export default function AdminPage() {
           {/* Professional Header Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
             {/* Title Section */}
-            <div className={activeTab === 'reclutamiento' ? 'hidden' : 'block'}>
+            <div className={activeTab === 'entrevistas' ? 'hidden' : 'block'}>
               <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
                 {activeTab === 'dashboards' && 'Panel de Control'}
                 {activeTab === 'reportes' && 'Actividad Reciente'}
@@ -690,7 +690,7 @@ export default function AdminPage() {
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
               </p>
             </div>
-            {activeTab === 'reclutamiento' && <div id="recruitment-header-portal" className="flex-1 w-full" />}
+            {activeTab === 'entrevistas' && <div id="interview-header-portal" className="flex-1 w-full" />}
 
             {/* Right Section - User Profile */}
             <div className="flex flex-row items-center gap-2 flex-shrink-0">
@@ -809,8 +809,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* TAB: RECLUTAMIENTO */}
-          {activeTab === 'reclutamiento' && (
+          {/* TAB: ENTREVISTAS */}
+          {activeTab === 'entrevistas' && (
             <div className="animate-fade-in">
               <RecruitmentManager />
             </div>

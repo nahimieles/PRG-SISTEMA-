@@ -41,7 +41,7 @@ const getSupabaseAdmin = () => {
 };
 
 export async function GET(request, { params }) {
-    const { surveyId } = await params;
+    const { interviewId } = await params;
     
     const supabase = getSupabaseAdmin();
 
@@ -50,22 +50,22 @@ export async function GET(request, { params }) {
         const { data: survey, error: surveyError } = await supabase
             .from('recruitment_surveys')
             .select('id, title, description, version, is_active')
-            .eq('id', surveyId)
+            .eq('id', interviewId)
             .single();
 
         if (surveyError || !survey) {
-            return NextResponse.json({ error: 'Encuesta no encontrada o token inválido.' }, { status: 404 });
+            return NextResponse.json({ error: 'Entrevista no encontrada o token inválido.' }, { status: 404 });
         }
 
         if (!survey.is_active) {
-            return NextResponse.json({ error: 'La encuesta ya no está activa.' }, { status: 403 });
+            return NextResponse.json({ error: 'La entrevista ya no está activa.' }, { status: 403 });
         }
 
         // 2. Fetch Questions
         const { data: questions, error: questionsError } = await supabase
             .from('recruitment_questions')
             .select('id, text, type, options, is_required')
-            .eq('survey_id', surveyId)
+            .eq('survey_id', interviewId)
             .order('order_index', { ascending: true });
 
         if (questionsError) {
@@ -75,13 +75,13 @@ export async function GET(request, { params }) {
         return NextResponse.json({ survey, questions });
 
     } catch (error) {
-        console.error('API Encuesta GET Error:', error);
+        console.error('API Entrevista GET Error:', error);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
 
 export async function POST(request, { params }) {
-    const { surveyId } = await params;
+    const { interviewId } = await params;
     
     // IP Rate Limiting
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -104,18 +104,18 @@ export async function POST(request, { params }) {
         const { data: survey } = await supabase
             .from('recruitment_surveys')
             .select('id, version, is_active')
-            .eq('id', surveyId)
+            .eq('id', interviewId)
             .single();
 
         if (!survey || !survey.is_active) {
-            return NextResponse.json({ error: 'Encuesta inválida o inactiva.' }, { status: 403 });
+            return NextResponse.json({ error: 'Entrevista inválida o inactiva.' }, { status: 403 });
         }
 
         // 2. Cargar todas las preguntas para validar
         const { data: questions } = await supabase
             .from('recruitment_questions')
             .select('id, is_required, type')
-            .eq('survey_id', surveyId);
+            .eq('survey_id', interviewId);
 
         if (!questions) {
             return NextResponse.json({ error: 'No se encontraron preguntas.' }, { status: 404 });
@@ -149,7 +149,7 @@ export async function POST(request, { params }) {
             .from('recruitment_candidates')
             .insert({
                 id: newCandidateId,
-                survey_id: surveyId,
+                survey_id: interviewId,
                 survey_version: survey.version,
                 full_name: candidate.full_name,
                 email: candidate.email,
@@ -178,10 +178,10 @@ export async function POST(request, { params }) {
              return NextResponse.json({ error: 'Error BD (Respuestas): ' + responsesError.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, message: 'Encuesta completada exitosamente.' });
+        return NextResponse.json({ success: true, message: 'Entrevista completada exitosamente.' });
 
     } catch (error) {
-        console.error('API Encuesta POST Error:', error);
+        console.error('API Entrevista POST Error:', error);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }

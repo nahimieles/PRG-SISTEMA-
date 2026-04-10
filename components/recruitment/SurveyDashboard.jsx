@@ -109,7 +109,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
   if (loading) return <div className="p-10 text-center flex flex-col items-center">
      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-     <span>Cargando analíticas...</span>
+     <span>Cargando detalles de la entrevista...</span>
   </div>;
 
   if (error) return <div className="p-10 text-center text-red-500 bg-red-50 border border-red-200 rounded-xl m-4">{error}</div>;
@@ -145,7 +145,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
              <p className="font-bold text-sm mb-2" style={{ color: isDark ? '#93c5fd' : '#1e3a8a' }}>Enlace Público para Candidatos</p>
              <div className="flex w-full">
                <code className="text-sm break-all px-4 py-2 rounded-md select-all w-full border font-mono" style={{ background: isDark ? 'rgba(0,0,0,0.3)' : '#ffffff', borderColor: isDark ? 'rgba(30, 58, 138, 0.5)' : '#bfdbfe', color: theme.text }}>
-                 https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/encuesta/{survey.id}
+                 https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/entrevista/{survey.id}
                </code>
              </div>
            </div>

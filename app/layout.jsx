@@ -20,12 +20,12 @@ import { usePathname } from 'next/navigation'
 
 export default function RootLayout({ children }) {
   const pathname = usePathname()
-  const isEncuesta = pathname?.startsWith('/encuesta')
+  const isEntrevista = pathname?.startsWith('/entrevista')
 
   return (
     <html lang="es">
       <head>
-        {!isEncuesta && (
+        {!isEntrevista && (
           <>
             <title>PRG</title>
             <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
         )}
       </head>
       <body className={inter.className}>
-        {isEncuesta ? (
+        {isEntrevista ? (
           children
         ) : (
           <MsalWrapper>
