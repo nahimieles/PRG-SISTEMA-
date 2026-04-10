@@ -3,7 +3,7 @@ name: Automated Reporting Sync
 on:
   schedule:
     # Run every 10 minutes
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     # Allows manual trigger from GitHub UI for testing
 
