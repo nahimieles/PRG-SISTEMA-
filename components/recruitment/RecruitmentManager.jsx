@@ -48,7 +48,7 @@ export default function RecruitmentManager() {
       setSurveys(data || []);
     } catch (err) {
       console.error(err);
-      showToast('Error al cargar encuestas', 'error');
+      showToast('Error al cargar entrevistas', 'error');
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function RecruitmentManager() {
         
       if (!res.success) throw new Error(res.error);
       
-      showToast('Encuesta creada exitosamente.');
+      showToast('Entrevista creada exitosamente.');
       setShowCreateModal(false);
       setNewSurveyTitle('');
       setNewSurveyDesc('');
@@ -96,19 +96,19 @@ export default function RecruitmentManager() {
       if (!res.success) throw new Error(res.error);
       
       setSurveys(surveys.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
-      showToast(currentStatus ? 'Encuesta desactivada' : 'Encuesta activada');
+      showToast(currentStatus ? 'Entrevista desactivada' : 'Entrevista activada');
     } catch (err) {
       showToast('Error al actualizar: ' + err.message, 'error');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta encuesta y TODAS sus respuestas?')) return;
+    if (!confirm('¿Estás seguro de eliminar esta entrevista y TODAS sus respuestas?')) return;
     try {
       const res = await deleteSurveyAction(id);
       
       if (!res.success) throw new Error(res.error);
-      showToast('Encuesta eliminada');
+      showToast('Entrevista eliminada');
       setSurveys(surveys.filter(s => s.id !== id));
     } catch (err) {
       showToast('Error al eliminar: ' + err.message, 'error');
@@ -140,9 +140,9 @@ export default function RecruitmentManager() {
         <div className="flex justify-between items-center w-full">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
-              <ClipboardList className="w-5 h-5 text-blue-500" /> Encuestas
+              <ClipboardList className="w-5 h-5 text-blue-500" /> Entrevistas
             </h2>
-            <p className="text-sm" style={{ color: theme.textSecondary }}>Gestión de encuestas y revisión de candidatos</p>
+            <p className="text-sm" style={{ color: theme.textSecondary }}>Gestión de entrevistas y revisión de candidatos</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -159,7 +159,7 @@ export default function RecruitmentManager() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium hover:opacity-90 shadow-sm transition"
               style={{ background: '#3498db' }}
             >
-              <Plus size={18} /> <span className="hidden sm:inline">Nueva Encuesta</span>
+              <Plus size={18} /> <span className="hidden sm:inline">Nueva Entrevista</span>
             </button>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function RecruitmentManager() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
           <div className="rounded-xl max-w-md w-full p-6 shadow-xl animate-fade-in border" style={{ background: theme.surface, borderColor: theme.border }}>
-             <h3 className="text-xl font-bold mb-4" style={{ color: theme.text }}>Crear Nueva Encuesta</h3>
+             <h3 className="text-xl font-bold mb-4" style={{ color: theme.text }}>Crear Nueva Entrevista</h3>
              <form onSubmit={handleCreateSurvey} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1" style={{ color: theme.textSecondary }}>Título *</label>
@@ -209,7 +209,7 @@ export default function RecruitmentManager() {
                     disabled={creating}
                     className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
                   >
-                    {creating ? 'Creando...' : 'Crear Encuesta'}
+                    {creating ? 'Creando...' : 'Crear Entrevista'}
                   </button>
                 </div>
              </form>
@@ -219,10 +219,10 @@ export default function RecruitmentManager() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading && surveys.length === 0 ? (
-          <div className="col-span-full text-center py-10">Cargando encuestas...</div>
+          <div className="col-span-full text-center py-10">Cargando entrevistas...</div>
         ) : surveys.length === 0 ? (
           <div className="col-span-full text-center py-10" style={{ color: theme.textSecondary }}>
-            No hay encuestas creadas. ¡Comienza creando una!
+            No hay entrevistas creadas. ¡Comienza creando una!
           </div>
         ) : (
           surveys.map(survey => (
@@ -266,7 +266,7 @@ export default function RecruitmentManager() {
 
                   <button
                     onClick={() => handleEditConfig(survey.id)}
-                    title="Editar Encuesta"
+                    title="Editar Entrevista"
                     className={`p-1.5 rounded-md transition ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
                     style={{ color: theme.textSecondary }}
                   >
@@ -274,7 +274,7 @@ export default function RecruitmentManager() {
                   </button>
                   <button
                     onClick={() => handleDelete(survey.id)}
-                    title="Eliminar Encuesta"
+                    title="Eliminar Entrevista"
                     className="p-1.5 rounded-md hover:bg-red-100 hover:text-red-600 transition"
                     style={{ color: theme.textSecondary }}
                   >

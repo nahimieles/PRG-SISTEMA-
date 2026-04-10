@@ -130,7 +130,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
            </button>
            <div>
              <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
-               <ClipboardList className="w-5 h-5 text-blue-500" /> Resultados de Encuesta
+               <ClipboardList className="w-5 h-5 text-blue-500" /> Resultados de Entrevista
              </h2>
            </div>
          </div>
@@ -164,7 +164,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
               <ClipboardList size={20} className="text-purple-600" />
             </div>
             <p className="text-2xl font-black" style={{ color: theme.text }}>{stats.questions}</p>
-            <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: theme.textSecondary }}>Preguntas de Encuesta</p>
+            <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: theme.textSecondary }}>Preguntas de Entrevista</p>
           </div>
       </div>
 

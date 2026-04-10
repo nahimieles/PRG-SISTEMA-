@@ -17,12 +17,13 @@ export async function POST() {
             scanned: !result.skipped,
             drives: result.drives,
             eventsEmitted: result.eventsEmitted,
+            hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
             timestamp: new Date().toISOString(),
         });
     } catch (err) {
-        console.error('[Delta API] Error:', err.message);
+        console.error('[Delta API] Error:', err.message, err.stack);
         return NextResponse.json(
-            { success: false, error: err.message },
+            { success: false, error: err.message, hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY },
             { status: 500 }
         );
     }

@@ -8,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getAuditLogs, deleteAuditLog, deleteMultipleAuditLogs, clearAllAuditLogs } from '@/lib/audit';
 import { supabase } from '@/lib/supabase';
+import CustomSelect from './CustomSelect';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_EVENTS = 100; // Maximum events kept in memory/UI
@@ -44,9 +45,15 @@ function formatDate(dateStr) {
 
 function shortenPath(path) {
     if (!path || path === '/') return null;
-    return decodeURIComponent(path)
-        .replace(/^\/drives\/[^/]+\/root:\//i, '')
-        .replace(/^\/sites\/[^/]+\/[^/]+\//i, '') || null;
+    try {
+        return decodeURIComponent(path)
+            .replace(/^\/drives\/[^/]+\/root:\//i, '')
+            .replace(/^\/sites\/[^/]+\/[^/]+\//i, '') || null;
+    } catch {
+        return path
+            .replace(/^\/drives\/[^/]+\/root:\//i, '')
+            .replace(/^\/sites\/[^/]+\/[^/]+\//i, '') || null;
+    }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -292,10 +299,18 @@ export default function RealTimeMonitor({ onLogsChanged }) {
 
     // ── Filter and Pagination variables ───────────────────────────────────────
 
-    // Calculate unique workers for the dropdown
+    // System names to filter from dropdown (old DB entries)
+    const SYSTEM_NAME_FILTER = [
+        'sharepoint', 'microsoft office', 'pushchannel', 'system',
+        'desconocido', 'usuario desconocido', 'onedrive', 'app@sharepoint'
+    ];
+
+    // Calculate unique workers for the dropdown (filtering system names)
     const uniqueWorkers = React.useMemo(() => {
         const workers = events.map(ev => ev.user).filter(Boolean);
-        return [...new Set(workers)].sort();
+        return [...new Set(workers)]
+            .filter(name => !SYSTEM_NAME_FILTER.some(sys => name.toLowerCase().includes(sys)))
+            .sort();
     }, [events]);
 
     // 1. Filter the events
@@ -332,101 +347,123 @@ export default function RealTimeMonitor({ onLogsChanged }) {
 
 
     const PaginationBlock = () => (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 mt-2 border-t px-3" style={{ borderColor: theme.border }}>
-            <span className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
-                Mostrando {filteredEvents.length === 0 ? 0 : startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredEvents.length)} de {filteredEvents.length} reportes
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3 px-5" style={{ color: theme.textSecondary }}>
+            <span className="text-xs font-medium tracking-wide" style={{ letterSpacing: '0.02em' }}>
+                {filteredEvents.length === 0 ? 'Sin resultados' : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, filteredEvents.length)} de ${filteredEvents.length}`}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage <= 1}
-                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ borderColor: theme.border, color: theme.text }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full transition-all disabled:opacity-30"
+                    style={{ color: theme.text, background: currentPage > 1 ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent' }}
                 >
-                    <ChevronLeft size={16} />
+                    <ChevronLeft size={15} />
                 </button>
-                <span className="text-xs sm:text-sm font-medium mx-2" style={{ color: theme.text }}>
-                    Página {currentPage} de {totalPages}
+                <span className="text-xs font-semibold min-w-[4rem] text-center" style={{ color: theme.text }}>
+                    {currentPage} / {totalPages}
                 </span>
                 <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage >= totalPages}
-                    className="p-1.5 sm:p-2 rounded-lg border hover:bg-black/5 dark:hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ borderColor: theme.border, color: theme.text }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full transition-all disabled:opacity-30"
+                    style={{ color: theme.text, background: currentPage < totalPages ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent' }}
                 >
-                    <ChevronRight size={16} />
+                    <ChevronRight size={15} />
                 </button>
             </div>
         </div>
     );
 
+    // Action accent colors for left border
+    const ACTION_ACCENTS = {
+        CREATED: '#22c55e',
+        MODIFIED: '#3b82f6',
+        DELETED: '#ef4444',
+        RENAMED: '#f59e0b',
+        MOVED: '#a855f7',
+    };
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
+        <div className="rounded-2xl overflow-hidden" style={{
+            background: theme.surface,
+            border: `1px solid ${theme.border}`,
+            boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
+        }}>
             {/* ── Header ── */}
-            <div className="p-3 border-b flex flex-wrap justify-between items-center gap-2" style={{ borderColor: theme.border }}>
-                <div className="flex items-center gap-2">
-                    <h3 className="font-bold tracking-tight text-sm" style={{ color: theme.text }}>
-                        Reportes Automáticos
-                    </h3>
-                </div>
+            <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
+                    Reportes Automáticos
+                </h3>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* Sync Button */}
                     <button
                         onClick={handleManualSync}
                         disabled={isSyncing}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${isSyncing
-                            ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-500 bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:bg-gray-900/50'
-                            : 'bg-white hover:bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 dark:border-blue-800/50'
-                            }`}
-                        title="Actualizar cambios"
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                        style={{
+                            background: isSyncing ? (isDark ? 'rgba(255,255,255,0.04)' : '#f3f4f6') : (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff'),
+                            color: isSyncing ? theme.textSecondary : '#3b82f6',
+                            border: `1px solid ${isSyncing ? theme.border : (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe')}`,
+                        }}
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Actualizando...' : 'Actualizar'}
+                        {isSyncing ? 'Escaneando...' : 'Actualizar'}
                     </button>
 
                     {events.length > 0 && (
                         <>
-                            {/* Export to Excel */}
                             <button
                                 onClick={handleExportExcel}
-                                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors bg-green-50 text-green-700 border-green-200 hover:bg-green-100 sm:font-medium dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                                title="Exportar reportes a Excel"
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                                style={{
+                                    background: isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4',
+                                    color: '#16a34a',
+                                    border: `1px solid ${isDark ? 'rgba(34,197,94,0.25)' : '#bbf7d0'}`,
+                                }}
                             >
                                 <Download className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">Exportar Excel</span>
-                                <span className="sm:hidden">Excel</span>
                             </button>
 
-                            {/* Toggle select mode */}
                             <button
                                 onClick={() => { setSelectMode(s => !s); clearSelection(); }}
-                                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
-                                style={{ borderColor: theme.border, color: theme.textSecondary }}
-                                title={selectMode ? 'Cancelar selección' : 'Seleccionar eventos'}
+                                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                style={{
+                                    background: selectMode ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
+                                    color: selectMode ? '#3b82f6' : theme.textSecondary,
+                                    border: `1px solid ${selectMode ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
+                                }}
                             >
                                 <CheckSquare className="w-3.5 h-3.5" />
                                 {selectMode ? 'Cancelar' : 'Seleccionar'}
                             </button>
 
-                            {/* Delete selected (only in select mode) */}
                             {selectMode && selected.size > 0 && (
                                 <button
                                     onClick={deleteSelected}
-                                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800 transition-colors hover:bg-red-200 dark:hover:bg-red-900/50"
-                                    title={`Eliminar ${selected.size} seleccionado(s)`}
+                                    className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                                    style={{
+                                        background: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2',
+                                        color: '#dc2626',
+                                        border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'}`,
+                                    }}
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Eliminar ({selected.size})</span>
+                                    Eliminar ({selected.size})
                                 </button>
                             )}
 
-                            {/* Clear all */}
                             <button
                                 onClick={clearAll}
-                                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                                style={{ borderColor: theme.border, color: theme.textSecondary }}
-                                title="Limpiar todos los reportes"
+                                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                style={{
+                                    color: theme.textSecondary,
+                                    border: `1px solid ${theme.border}`,
+                                }}
+                                title="Limpiar todo"
                             >
                                 <Trash className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">Limpiar todo</span>
@@ -437,7 +474,10 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             </div>
 
             {/* ── Search & Filter Toolbar ── */}
-            <div className="p-3 mb-4 rounded-b-xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm border-x border-b" style={{ borderColor: theme.border, background: isDark ? '#151a26' : '#f1f5f9' }}>
+            <div className="px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3" style={{
+                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+                borderBottom: `1px solid ${theme.border}`,
+            }}>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
                     <div className="relative w-full sm:w-80">
                         <input
@@ -445,189 +485,225 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                             placeholder="Buscar por archivo, usuario, empresa..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border-none outline-none"
                             style={{
-                                background: theme.surface,
+                                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                                 color: theme.text,
-                                borderColor: theme.border
+                                letterSpacing: '-0.01em',
                             }}
                         />
-                        <Search className="absolute left-3 top-2 text-gray-400 w-4 h-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: theme.textSecondary, opacity: 0.5 }} />
                     </div>
 
-                    <select
+                    <CustomSelect
                         value={selectedWorker}
-                        onChange={(e) => setSelectedWorker(e.target.value)}
-                        className="w-full sm:w-56 bg-transparent border rounded-lg text-sm px-3 py-1.5 cursor-pointer focus:outline-none"
-                        style={{ borderColor: theme.border, color: theme.text }}
-                    >
-                        <option value="">Todos los trabajadores</option>
-                        {uniqueWorkers.map(w => (
-                            <option key={w} value={w}>{w}</option>
-                        ))}
-                    </select>
+                        onChange={setSelectedWorker}
+                        options={[
+                            { value: '', label: 'Todos los trabajadores' },
+                            ...uniqueWorkers.map(w => ({ value: w, label: w }))
+                        ]}
+                        className="w-full sm:w-52"
+                        size="md"
+                    />
                 </div>
 
-                <div className="w-full sm:w-auto flex items-center justify-end gap-2 text-sm" style={{ color: theme.text }}>
-                    <span className="opacity-70 text-xs">Mostrar:</span>
-                    <select
+                <div className="w-full sm:w-auto flex items-center justify-end gap-2 text-sm">
+                    <span className="text-xs font-medium" style={{ color: theme.textSecondary, opacity: 0.6 }}>Mostrar:</span>
+                    <CustomSelect
                         value={itemsPerPage}
-                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                        className="bg-transparent border rounded-lg text-xs px-2 py-1.5 cursor-pointer focus:outline-none"
-                        style={{ borderColor: theme.border, color: theme.text }}
-                    >
-                        <option value={5}>5 resultados</option>
-                        <option value={10}>10 resultados</option>
-                        <option value={20}>20 resultados</option>
-                        <option value={50}>50 resultados</option>
-                    </select>
+                        onChange={setItemsPerPage}
+                        options={[
+                            { value: 5, label: '5' },
+                            { value: 10, label: '10' },
+                            { value: 20, label: '20' },
+                            { value: 50, label: '50' }
+                        ]}
+                        className="w-20"
+                        size="sm"
+                    />
                 </div>
             </div>
 
+            {/* Top pagination */}
             {events.length > 0 && <PaginationBlock />}
 
-            {/* ── Select-all row (visible only in select mode) ── */}
+            {/* ── Select-all row ── */}
             {selectMode && events.length > 0 && (
-                <div
-                    className="px-3 py-2 flex items-center gap-2 border-b text-xs"
-                    style={{ background: isDark ? '#151a26' : '#f1f5f9', borderColor: theme.border }}
-                >
+                <div className="px-5 py-2 flex items-center gap-2 text-xs font-medium" style={{
+                    background: isDark ? 'rgba(59,130,246,0.06)' : '#f0f7ff',
+                    borderBottom: `1px solid ${theme.border}`,
+                    color: theme.textSecondary,
+                }}>
                     <button
                         onClick={allSelected ? clearSelection : selectAll}
-                        className="flex items-center gap-1.5 font-medium"
-                        style={{ color: theme.textSecondary }}
+                        className="flex items-center gap-1.5"
+                        style={{ color: '#3b82f6' }}
                     >
                         {allSelected
-                            ? <CheckSquare className="w-4 h-4 text-blue-500" />
+                            ? <CheckSquare className="w-4 h-4" />
                             : <Square className="w-4 h-4" />
                         }
-                        {allSelected ? 'Deseleccionar todos' : `Seleccionar todos (${events.length})`}
+                        {allSelected ? 'Deseleccionar todos' : `Seleccionar todos (${filteredEvents.length})`}
                     </button>
                 </div>
             )}
 
-            {/* ── Event List (Paginated) ── */}
-            <div className="max-h-[34rem] overflow-y-auto p-2 space-y-2">
+            {/* ── Event List ── */}
+            <div className="overflow-y-auto" style={{ maxHeight: '36rem' }}>
                 {paginatedEvents.length === 0 ? (
-                    <div className="text-center p-10 space-y-2">
-                        <Wifi className="w-10 h-10 mx-auto opacity-20" />
-                        <p className="font-medium" style={{ color: theme.textSecondary }}>
-                            Esperando eventos de SharePoint...
+                    <div className="text-center py-16 px-6">
+                        <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{
+                            background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                        }}>
+                            <Wifi className="w-7 h-7" style={{ color: theme.textSecondary, opacity: 0.3 }} />
+                        </div>
+                        <p className="font-semibold text-sm mb-1" style={{ color: theme.textSecondary, letterSpacing: '-0.01em' }}>
+                            Sin eventos detectados
                         </p>
-                        <p className="text-xs opacity-40">
-                            Los cambios detectados por Microsoft Graph aparecerán aquí
+                        <p className="text-xs" style={{ color: theme.textSecondary, opacity: 0.5 }}>
+                            Los cambios de SharePoint aparecerán aquí automáticamente
                         </p>
                     </div>
                 ) : (
-                    paginatedEvents.map((ev, index) => {
-                        const path = shortenPath(ev.filePath);
-                        const isSelected = selected.has(ev._uid);
+                    <div className="divide-y" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
+                        {paginatedEvents.map((ev, index) => {
+                            const path = shortenPath(ev.filePath);
+                            const isSelected = selected.has(ev._uid);
+                            const accentColor = ACTION_ACCENTS[ev.action] || '#6b7280';
+                            const actionStyle = ACTION_STYLES[ev.action] || ACTION_STYLES.MODIFIED;
 
-                        return (
-                            <div
-                                key={ev._uid}
-                                className={`p-3 rounded-xl border transition-all group ${isSelected ? 'ring-2 ring-blue-400 border-blue-400/50' : 'hover:shadow-md'
-                                    }`}
-                                style={{
-                                    background: isDark
-                                        ? (isSelected ? '#1e2a42' : '#1a1f2e')
-                                        : (isSelected ? '#eff6ff' : '#f8fbfc'),
-                                    borderColor: isSelected ? undefined : theme.border,
-                                    animation: index === 0 ? 'fadeSlideIn 0.3s ease' : undefined,
-                                }}
-                            >
-                                <div className="flex items-start gap-2">
-                                    {/* Checkbox (select mode) */}
-                                    {selectMode && (
-                                        <button
-                                            onClick={() => toggleSelect(ev._uid)}
-                                            className="mt-0.5 flex-shrink-0 text-blue-500"
-                                        >
-                                            {isSelected
-                                                ? <CheckSquare className="w-4 h-4" />
-                                                : <Square className="w-4 h-4 opacity-40" />
-                                            }
-                                        </button>
-                                    )}
+                            return (
+                                <div
+                                    key={ev._uid}
+                                    className="group relative transition-colors"
+                                    style={{
+                                        background: isSelected
+                                            ? (isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff')
+                                            : 'transparent',
+                                        animation: index === 0 ? 'rtmFadeIn 0.4s cubic-bezier(0.25,0.1,0.25,1)' : undefined,
+                                    }}
+                                >
+                                    {/* Left accent bar */}
+                                    <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: accentColor, opacity: 0.7 }} />
 
-                                    <div className="flex-1 min-w-0">
-                                        {/* File name + timestamp */}
-                                        <div className="flex justify-between items-start mb-1 gap-2">
-                                            <h4 className="font-semibold text-sm truncate flex items-center gap-1.5 min-w-0"
-                                                style={{ color: theme.primary }}>
-                                                <FileText className="w-4 h-4 flex-shrink-0" />
-                                                <span className="truncate">{ev.fileName}</span>
-                                                {ev.webUrl && (
-                                                    <a
-                                                        href={ev.webUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-800/60 inline-flex items-center gap-1 self-center shrink-0 border border-blue-200 dark:border-blue-800"
-                                                        title="Abrir en SharePoint/OneDrive"
-                                                    >
-                                                        Ver Archivo
-                                                    </a>
-                                                )}
-                                            </h4>
-                                            <span className="text-xs whitespace-nowrap opacity-50 flex items-center gap-1 flex-shrink-0">
-                                                <Clock className="w-3 h-3" />
-                                                {formatDate(ev.date)}
-                                            </span>
-                                        </div>
-
-                                        {/* Path */}
-                                        {path && (
-                                            <div className="flex items-center gap-1 mb-1.5 text-xs opacity-45" style={{ color: theme.text }}>
-                                                <FolderOpen className="w-3 h-3 flex-shrink-0" />
-                                                <span className="truncate">{path}</span>
-                                            </div>
+                                    <div className="flex items-start gap-3 pl-5 pr-4 py-3.5">
+                                        {/* Checkbox */}
+                                        {selectMode && (
+                                            <button
+                                                onClick={() => toggleSelect(ev._uid)}
+                                                className="mt-0.5 flex-shrink-0"
+                                                style={{ color: isSelected ? '#3b82f6' : theme.textSecondary }}
+                                            >
+                                                {isSelected
+                                                    ? <CheckSquare className="w-4 h-4" />
+                                                    : <Square className="w-4 h-4 opacity-30" />
+                                                }
+                                            </button>
                                         )}
 
-                                        {/* User + Company */}
-                                        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                                            <div className="flex items-center gap-1.5" style={{ color: theme.text }}>
-                                                <UserIcon className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
-                                                <span className="font-medium truncate">{ev.user}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5" style={{ color: theme.textSecondary }}>
-                                                <Building2 className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
-                                                <span className="truncate">{ev.company}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Action badge + old name */}
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <ActionBadge action={ev.action} />
-                                            {ev.oldName && (
-                                                <span className="text-xs opacity-40 italic truncate">
-                                                    antes: {ev.oldName}
+                                        <div className="flex-1 min-w-0">
+                                            {/* Row 1: File name + date */}
+                                            <div className="flex justify-between items-start gap-3 mb-1">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <FileText className="w-4 h-4 flex-shrink-0" style={{ color: accentColor, opacity: 0.8 }} />
+                                                    <h4 className="font-semibold text-[13px] truncate" style={{ color: theme.text, letterSpacing: '-0.01em' }}>
+                                                        {ev.fileName}
+                                                    </h4>
+                                                    {ev.webUrl && (
+                                                        <a
+                                                            href={ev.webUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-md transition-all"
+                                                            style={{
+                                                                background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff',
+                                                                color: '#3b82f6',
+                                                            }}
+                                                        >
+                                                            Abrir ↗
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] whitespace-nowrap flex-shrink-0 font-medium" style={{ color: theme.textSecondary, opacity: 0.5 }}>
+                                                    {formatDate(ev.date)}
                                                 </span>
-                                            )}
-                                        </div>
-                                    </div>
+                                            </div>
 
-                                    {/* Individual delete button (visible on hover or always in select mode) */}
-                                    {!selectMode && (
-                                        <button
-                                            onClick={() => deleteEvent(ev._uid)}
-                                            className="flex-shrink-0 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
-                                            title="Eliminar este evento"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
+                                            {/* Row 2: Path */}
+                                            {path && (
+                                                <div className="flex items-center gap-1.5 mb-2 ml-6 text-[11px]" style={{ color: theme.textSecondary, opacity: 0.45 }}>
+                                                    <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                                                    <span className="truncate">{path}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Row 3: User + Company + Badge */}
+                                            <div className="flex items-center gap-3 ml-6 flex-wrap">
+                                                <div className="flex items-center gap-1.5 text-xs" style={{ color: theme.text }}>
+                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: accentColor, opacity: 0.85 }}>
+                                                        {ev.user?.charAt(0)?.toUpperCase() || '?'}
+                                                    </div>
+                                                    <span className="font-medium">{ev.user}</span>
+                                                </div>
+
+                                                <div className="flex items-center gap-1 text-[11px]" style={{ color: theme.textSecondary }}>
+                                                    <Building2 className="w-3 h-3 opacity-40 flex-shrink-0" />
+                                                    <span className="truncate max-w-[160px]">{ev.company}</span>
+                                                </div>
+
+                                                <span
+                                                    className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider"
+                                                    style={{
+                                                        background: isDark
+                                                            ? `${accentColor}18`
+                                                            : `${accentColor}12`,
+                                                        color: accentColor,
+                                                        letterSpacing: '0.05em',
+                                                    }}
+                                                >
+                                                    {actionStyle.label}
+                                                </span>
+
+                                                {ev.oldName && (
+                                                    <span className="text-[11px] italic" style={{ color: theme.textSecondary, opacity: 0.4 }}>
+                                                        antes: {ev.oldName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Delete button */}
+                                        {!selectMode && (
+                                            <button
+                                                onClick={() => deleteEvent(ev._uid)}
+                                                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                                style={{
+                                                    color: '#ef4444',
+                                                    background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
+                                                }}
+                                                title="Eliminar"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })
+                            );
+                        })}
+                    </div>
                 )}
             </div>
 
-            {events.length > 0 && <PaginationBlock />}
+            {/* Bottom pagination */}
+            {events.length > 0 && (
+                <div style={{ borderTop: `1px solid ${theme.border}` }}>
+                    <PaginationBlock />
+                </div>
+            )}
 
             <style>{`
-                @keyframes fadeSlideIn {
-                    from { opacity: 0; transform: translateY(-6px); }
+                @keyframes rtmFadeIn {
+                    from { opacity: 0; transform: translateY(-4px); }
                     to   { opacity: 1; transform: translateY(0);    }
                 }
             `}</style>

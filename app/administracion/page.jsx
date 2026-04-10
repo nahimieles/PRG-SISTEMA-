@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Bell, Edit2, ClipboardList } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Edit2, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -11,7 +11,7 @@ import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
 import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
-import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction } from '../../lib/actions.js';
+import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction } from '../../lib/actions.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
@@ -43,7 +43,7 @@ export default function AdminPage() {
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'archivos', label: 'Archivos', icon: FileText },
     { id: 'cursos', label: 'Cursos', icon: MonitorPlay },
-    { id: 'reclutamiento', label: 'Encuestas', icon: ClipboardList }
+    { id: 'reclutamiento', label: 'Entrevistas', icon: ClipboardList }
 
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -151,7 +151,11 @@ export default function AdminPage() {
   // Estado para controlar la expansión del sidebar
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
-  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+
+  // Admin Profile Modal
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({ full_name: '', password: '', confirmPassword: '' });
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const openConfirm = (title, action) => {
     setConfirmModal({
@@ -201,8 +205,8 @@ export default function AdminPage() {
       loadAllData();
       loadAlertsAndStats();
 
-      // Actualizar estadísticas cada 30 segundos
-      const interval = setInterval(loadAlertsAndStats, 30000);
+      // Actualizar estadísticas cada 60 segundos
+      const interval = setInterval(loadAlertsAndStats, 60000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -334,7 +338,7 @@ export default function AdminPage() {
     setEditingWorkerId(worker.id);
     setNewWorker({
       username: worker.username,
-      password: worker.password,
+      password: '',
       full_name: worker.full_name,
       email: worker.email || ''
     });
@@ -590,6 +594,56 @@ export default function AdminPage() {
   const adminSession = getAdminSession();
   const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
 
+  // Admin Profile Modal handlers
+  const handleOpenProfile = () => {
+    setProfileForm({ full_name: adminSession?.full_name || '', password: '', confirmPassword: '' });
+    setShowProfileModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (profileForm.password && profileForm.password !== profileForm.confirmPassword) {
+      showToast('Las contraseñas no coinciden', 'error');
+      return;
+    }
+    if (profileForm.password && profileForm.password.length < 4) {
+      showToast('La contraseña debe tener al menos 4 caracteres', 'error');
+      return;
+    }
+
+    setProfileSaving(true);
+    try {
+      const payload = {};
+      if (profileForm.full_name && profileForm.full_name !== adminSession?.full_name) {
+        payload.full_name = profileForm.full_name;
+      }
+      if (profileForm.password) {
+        payload.password = profileForm.password;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        showToast('No hay cambios para guardar', 'error');
+        setProfileSaving(false);
+        return;
+      }
+
+      const result = await updateAdminAction(adminSession.id, payload);
+      if (result.success) {
+        // Update local session
+        const newSession = { ...adminSession };
+        if (payload.full_name) newSession.full_name = payload.full_name;
+        saveAdminSession(newSession);
+        showToast('Perfil actualizado correctamente');
+        setShowProfileModal(false);
+      } else {
+        showToast('Error: ' + result.error, 'error');
+      }
+    } catch (err) {
+      showToast('Error al guardar', 'error');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
 
   return (
     <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
@@ -638,126 +692,23 @@ export default function AdminPage() {
             </div>
             {activeTab === 'reclutamiento' && <div id="recruitment-header-portal" className="flex-1 w-full" />}
 
-            {/* Right Section - Notification & User - ALWAYS horizontal */}
+            {/* Right Section - User Profile */}
             <div className="flex flex-row items-center gap-2 flex-shrink-0">
-              {/* Notification Center */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowNotificationPanel(!showNotificationPanel)}
-                  className="relative p-1 rounded-lg transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: theme.surface,
-                    border: `1px solid ${theme.border}`,
-                    color: theme.textSecondary
-                  }}
-                >
-                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all duration-300 ${workersWithoutReports.length > 0 ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20' : ''}`}>
-                    <Bell size={18} />
-                  </div>
-                  {workersWithoutReports.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-[#1a1f2e] animate-pulse">
-                      {workersWithoutReports.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Notification Dropdown Panel */}
-                {showNotificationPanel && (
-                  <>
-                    {/* Backdrop */}
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowNotificationPanel(false)}
-                    />
-
-                    {/* Panel */}
-                    <div
-                      className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-full sm:mt-2 sm:w-80 rounded-xl shadow-lg z-50 overflow-hidden toast-enter max-h-[70vh] overflow-y-auto"
-                      style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                    >
-                      {/* Header */}
-                      <div className="p-3 border-b flex items-center justify-between sticky top-0" style={{ borderColor: theme.border, background: theme.surface }}>
-                        <div className="flex items-center gap-2">
-                          <Bell size={16} className="text-blue-500" />
-                          <h3 className="font-bold text-sm" style={{ color: theme.text }}>Notificaciones</h3>
-                        </div>
-                        <button
-                          onClick={() => setShowNotificationPanel(false)}
-                          className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-                          style={{ color: theme.textSecondary }}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      {/* Content */}
-                      <div className="max-h-60 overflow-y-auto">
-                        {workersWithoutReports.length > 0 ? (
-                          <div className="divide-y" style={{ borderColor: theme.border }}>
-                            {workersWithoutReports.map((worker, i) => (
-                              <div
-                                key={i}
-                                className="p-3 hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-2"
-                                onClick={() => {
-                                  setShowNotificationPanel(false);
-                                  handleTabChange('funcionarios');
-                                }}
-                              >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                                  {worker.name?.charAt(0)?.toUpperCase() || '?'}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm truncate" style={{ color: theme.text }}>{worker.name}</p>
-                                  <p className="text-xs" style={{ color: theme.textSecondary }}>
-                                    Sin reportes: <span className="font-semibold text-blue-500">{worker.days}d</span>
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-6 text-center">
-                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-500/10 flex items-center justify-center">
-                              <UserCheck size={24} className="text-green-500" />
-                            </div>
-                            <p className="font-medium text-sm" style={{ color: theme.text }}>¡Todo en orden!</p>
-                            <p className="text-xs mt-1" style={{ color: theme.textSecondary }}>Sin notificaciones</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Footer */}
-                      {workersWithoutReports.length > 0 && (
-                        <div className="p-2 border-t" style={{ borderColor: theme.border }}>
-                          <button
-                            onClick={() => {
-                              setShowNotificationPanel(false);
-                              handleTabChange('funcionarios');
-                            }}
-                            className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium text-xs hover:opacity-90 transition-opacity"
-                          >
-                            Ver todos
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* User Profile - Compact on mobile */}
-              <div
-                className="flex items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl"
+              {/* User Profile - Clickable */}
+              <button
+                onClick={handleOpenProfile}
+                className="flex items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl transition-all cursor-pointer"
                 style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+                title="Editar perfil"
               >
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                   {adminName?.charAt(0)?.toUpperCase() || 'A'}
                 </div>
-                <div className="hidden sm:block">
+                <div className="hidden sm:block text-left">
                   <p className="text-xs sm:text-sm font-medium leading-tight" style={{ color: theme.text }}>{adminName}</p>
                   <p className="text-[10px] sm:text-xs leading-tight" style={{ color: theme.textSecondary }}>Admin</p>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
@@ -1539,6 +1490,102 @@ export default function AdminPage() {
           </div>
         )}
       </main >
+
+      {/* Admin Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)}>
+          <div
+            className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 text-center" style={{ borderBottom: `1px solid ${theme.border}` }}>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3">
+                {adminName?.charAt(0)?.toUpperCase() || 'A'}
+              </div>
+              <h3 className="text-lg font-bold" style={{ color: theme.text, letterSpacing: '-0.02em' }}>Mi Perfil</h3>
+              <p className="text-xs mt-0.5" style={{ color: theme.textSecondary }}>{adminSession?.username}</p>
+            </div>
+
+            {/* Form */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Nombre completo</label>
+                <input
+                  type="text"
+                  value={profileForm.full_name}
+                  onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm rounded-xl border-none outline-none"
+                  style={{
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: theme.text,
+                  }}
+                  placeholder="Tu nombre"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>
+                  Nueva contraseña <span className="font-normal opacity-60">(dejar vacío para mantener)</span>
+                </label>
+                <input
+                  type="password"
+                  value={profileForm.password}
+                  onChange={(e) => setProfileForm(f => ({ ...f, password: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm rounded-xl border-none outline-none"
+                  style={{
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: theme.text,
+                  }}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {profileForm.password && (
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Confirmar contraseña</label>
+                  <input
+                    type="password"
+                    value={profileForm.confirmPassword}
+                    onChange={(e) => setProfileForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm rounded-xl border-none outline-none"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      color: theme.text,
+                    }}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${theme.border}` }}>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="px-4 py-2 text-sm font-medium rounded-xl transition-all"
+                style={{ color: theme.textSecondary }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={profileSaving}
+                className="px-5 py-2 text-sm font-semibold rounded-xl text-white transition-all"
+                style={{
+                  background: profileSaving ? '#93c5fd' : '#3b82f6',
+                  opacity: profileSaving ? 0.7 : 1,
+                }}
+              >
+                {profileSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

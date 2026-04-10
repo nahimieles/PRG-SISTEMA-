@@ -49,7 +49,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
         setQuestions(qData || []);
       } catch (err) {
         console.error("CRITICAL ERROR FETCHING SURVEY:", err);
-        showToast('Error cargando encuesta: ' + err.message, 'error');
+        showToast('Error cargando entrevista: ' + err.message, 'error');
       } finally {
         setLoading(false);
       }
@@ -153,7 +153,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
       }
 
       setSurvey({ ...survey, version: newVersion });
-      showToast('Encuesta y preguntas guardadas correctamente.');
+      showToast('Entrevista y preguntas guardadas correctamente.');
     } catch (err) {
       console.error(err);
       showToast('Error al guardar: ' + err.message, 'error');
@@ -164,11 +164,11 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
 
   if (loading) return <div className="p-10 flex flex-col items-center justify-center">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-    <span style={{ color: theme.textSecondary }}>Cargando editor de encuesta...</span>
+    <span style={{ color: theme.textSecondary }}>Cargando editor de entrevista...</span>
   </div>;
 
   if (!survey) return <div className="p-10 text-center text-red-500 bg-red-50 border border-red-200 rounded-xl m-4">
-    <h3 className="text-lg font-bold mb-2">Error Crítico: No se pudo cargar la encuesta</h3>
+    <h3 className="text-lg font-bold mb-2">Error Crítico: No se pudo cargar la entrevista</h3>
     <p className="text-sm text-gray-700">Verifica que haya conexion con la base de datos y que las politicas RLS permitan la lectura.</p>
   </div>;
 
@@ -208,7 +208,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
       <div className="space-y-4 max-w-4xl">
         <div className="p-5 rounded-xl border space-y-4" style={{ borderColor: theme.border, background: theme.surface }}>
            <div>
-             <label className="block text-sm font-bold mb-1" style={{ color: theme.textSecondary }}>Título de la Encuesta</label>
+             <label className="block text-sm font-bold mb-1" style={{ color: theme.textSecondary }}>Título de la Entrevista</label>
              <input 
                type="text" 
                className="w-full p-2 border rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-xl font-bold"

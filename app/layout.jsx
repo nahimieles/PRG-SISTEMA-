@@ -13,7 +13,7 @@ const MsalWrapper = dynamic(() => import('../components/MsalWrapper'), {
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['300', '400', '500', '600', '700'],
 })
 
 import { usePathname } from 'next/navigation'
