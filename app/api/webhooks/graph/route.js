@@ -34,6 +34,7 @@ export async function POST(req) {
 
     // Await process so Vercel Serverless doesn't terminate the lambda early
     try {
+        console.log('[Webhook] Received notification payload:', JSON.stringify(payload, null, 2));
         await processNotifications(payload);
     } catch (err) {
         console.error('[Webhook] Processing error:', err.message);

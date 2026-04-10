@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runDeltaScanAllDrives, discoverAllDrives, driveCompanyMap } from '@/lib/graphServerService';
+import { runDeltaScanAllDrives, discoverAllDrives, driveCompanyMap, manageGraphSubscriptions } from '@/lib/graphServerService';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,6 +29,9 @@ export async function POST(req) {
         }
 
         const result = await runDeltaScanAllDrives();
+        
+        // Also ensure all drives are subscribed for push notifications (Webhooks)
+        await manageGraphSubscriptions();
         return NextResponse.json({
             success: true,
             scanned: !result.skipped,
