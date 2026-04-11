@@ -509,7 +509,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                         </>
                     )}
                 </div>
-            </div>
+
 
             {/* ── Apple-style Filter Drawer ── */}
             {showFilters && (
