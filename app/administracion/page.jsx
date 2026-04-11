@@ -660,13 +660,15 @@ export default function AdminPage() {
 
       {/* Contenido Principal con margen dinámico */}
       <main
-        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-6 page-transition"
+        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-8 page-transition"
         style={{
           background: theme.background,
           color: theme.text,
-          marginLeft: isSidebarExpanded ? '256px' : '72px'
+          marginLeft: typeof window !== 'undefined' && window.innerWidth > 1024 ? (isSidebarExpanded ? '256px' : '72px') : '0',
+          paddingTop: typeof window !== 'undefined' && window.innerWidth <= 1024 ? '80px' : '32px'
         }}
       >
+
         <div className="max-w-7xl mx-auto">
 
           {/* Professional Header Bar */}
@@ -1034,281 +1036,168 @@ export default function AdminPage() {
             </div>
           )}
           {/* TAB: DASHBOARDS */}
+          {/* TAB: DASHBOARDS */}
           {activeTab === 'dashboards' && (
-            <div className="animate-fade-in">
-              {/* Colores para gráficos */}
+            <div className="animate-fade-in space-y-8">
               {(() => {
                 const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
-                // Calcular datos para gráficos
-                const hoursByCompany = {};
-                const hoursByWorker = {};
-                const hoursByType = { auditoria: 0, contabilidad: 0 };
-
-                records.forEach(r => {
-                  const hours = parseFloat(r.hours_worked || 0);
-
-                  // Por empresa
-                  if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
-                  hoursByCompany[r.company_name] += hours;
-
-                  // Por funcionario
-                  if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
-                  hoursByWorker[r.worker_name] += hours;
-                });
-
-                // Determinar tipo de empresa
-                companies.forEach(c => {
-                  const companyHours = hoursByCompany[c.name] || 0;
-                  if (c.type === 'auditoria') {
-                    hoursByType.auditoria += companyHours;
-                  } else {
-                    hoursByType.contabilidad += companyHours;
-                  }
-                });
-
-                const topCompanies = Object.entries(hoursByCompany)
-                  .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
-                  .sort((a, b) => b.horas - a.horas)
-                  .slice(0, 8);
-
-                const workerData = Object.entries(hoursByWorker)
-                  .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
-                  .sort((a, b) => b.horas - a.horas)
-                  .slice(0, 8);
-
-                const pieData = [
-                  { name: 'Auditoría', value: parseFloat(hoursByType.auditoria.toFixed(2)) },
-                  { name: 'Contabilidad', value: parseFloat(hoursByType.contabilidad.toFixed(2)) }
-                ];
-
+                // Get Recent Activities (Database Reports)
                 const recentActivities = [...records]
                   .sort((a, b) => new Date(b.created_at || b.start_datetime) - new Date(a.created_at || a.start_datetime))
-                  .slice(0, 8);
+                  .slice(0, 5);
+
+                // Get Recent File Logs (Real-time pulses)
+                const recentFilePulses = [...fileLogs]
+                  .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                  .slice(0, 10);
 
                 return (
-                  <div className="space-y-6">
-                    {/* Top Empresas y Productividad por Funcionario */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Top Empresas */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <Building2 className="w-5 h-5" /> Top Empresas por Horas
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* Active Workers Pulse (Last 1h) */}
+                    <div className="xl:col-span-1 space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                          <TrendingUp size={14} /> Pulso de Trabajo
                         </h3>
-                        {topCompanies.length === 0 ? (
-                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={topCompanies} layout="vertical" margin={{ left: 20, right: 20 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                              <XAxis type="number" stroke={theme.textSecondary} />
-                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                              <Tooltip
-                                contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                                formatter={(value) => [`${value}h`, 'Horas']}
-                              />
-                              <Bar dataKey="horas" fill="#3498db" radius={[0, 4, 4, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] font-bold text-green-600 uppercase">Activo</span>
+                        </div>
                       </div>
 
-                      {/* Productividad por Funcionario */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <TrendingUp className="w-5 h-5" /> Productividad por Funcionario
-                        </h3>
-                        {workerData.length === 0 ? (
-                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={workerData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                              <XAxis type="number" stroke={theme.textSecondary} />
-                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                              <Tooltip
-                                contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                                formatter={(value) => [`${value}h`, 'Horas']}
-                              />
-                              <Bar dataKey="horas" fill="#27ae60" radius={[0, 4, 4, 0]} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* NUEVO: Estadísticas de Actividad de Archivos (OneDrive) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Top Empresas por Archivos */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <Folder className="w-5 h-5" /> Carpetas más activas
-                        </h3>
+                      <div className="space-y-3">
                         {(() => {
-                          // Inline calculation for file stats
-                          const filesByCompany = {};
+                          const activeUsers = {};
+                          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                          
                           fileLogs.forEach(log => {
-                            const company = log.company_name || 'Desconocido/Sin Empresa';
-                            filesByCompany[company] = (filesByCompany[company] || 0) + 1;
+                            const date = new Date(log.timestamp);
+                            if (date > oneHourAgo) {
+                              if (!activeUsers[log.worker_name] || new Date(activeUsers[log.worker_name].timestamp) < date) {
+                                activeUsers[log.worker_name] = log;
+                              }
+                            }
                           });
-                          const topFilesCompany = Object.entries(filesByCompany)
-                            .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, count, fullName: name }))
-                            .sort((a, b) => b.count - a.count)
-                            .slice(0, 8);
 
-                          return topFilesCompany.length === 0 ? (
-                            <p style={{ color: theme.textSecondary }}>No hay actividad de archivos</p>
+                          const activeList = Object.values(activeUsers);
+
+                          return activeList.length === 0 ? (
+                            <div className="p-8 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                              <p className="text-xs opacity-40">Sin actividad reciente en la última hora</p>
+                            </div>
                           ) : (
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={topFilesCompany} layout="vertical" margin={{ left: 20, right: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                                <XAxis type="number" stroke={theme.textSecondary} />
-                                <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                                <Tooltip
-                                  contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                                  formatter={(value) => [`${value}`, 'Cambios']}
-                                />
-                                <Bar dataKey="count" fill="#e67e22" radius={[0, 4, 4, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Top Funcionarios por Archivos */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <Users className="w-5 h-5" /> Actividad por Funcionario (OneDrive)
-                        </h3>
-                        {(() => {
-                          const filesByWorker = {};
-                          fileLogs.forEach(log => {
-                            const worker = log.worker_name || 'Desconocido';
-                            filesByWorker[worker] = (filesByWorker[worker] || 0) + 1;
-                          });
-                          const topFilesWorker = Object.entries(filesByWorker)
-                            .map(([name, count]) => ({ name, count }))
-                            .sort((a, b) => b.count - a.count)
-                            .slice(0, 8);
-
-                          return topFilesWorker.length === 0 ? (
-                            <p style={{ color: theme.textSecondary }}>No hay actividad de archivos</p>
-                          ) : (
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={topFilesWorker} layout="vertical" margin={{ left: 20, right: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke={theme.border} />
-                                <XAxis type="number" stroke={theme.textSecondary} />
-                                <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 12 }} />
-                                <Tooltip
-                                  contentStyle={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                                  formatter={(value) => [`${value}`, 'Movimientos']}
-                                />
-                                <Bar dataKey="count" fill="#9b59b6" radius={[0, 4, 4, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* Distribución y Actividades Recientes */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Distribución por Tipo */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <BarChart3 className="w-5 h-5" /> Distribución por Tipo
-                        </h3>
-                        {pieData.every(d => d.value === 0) ? (
-                          <p style={{ color: theme.textSecondary }}>No hay datos disponibles</p>
-                        ) : (
-                          <ResponsiveContainer width="100%" height={300}>
-                            <RechartsPie>
-                              <Pie
-                                data={pieData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={100}
-                                paddingAngle={5}
-                                dataKey="value"
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                              >
-                                {pieData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip formatter={(value) => [`${value}h`, 'Horas']} />
-                              <Legend />
-                            </RechartsPie>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-
-                      {/* Actividades Recientes */}
-                      <div
-                        className="rounded-xl shadow-lg p-6"
-                        style={{ background: theme.surface }}
-                      >
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primary }}>
-                          <Clock className="w-5 h-5" /> Actividades Recientes
-                        </h3>
-                        {recentActivities.length === 0 ? (
-                          <p style={{ color: theme.textSecondary }}>No hay actividades recientes</p>
-                        ) : (
-                          <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                            {recentActivities.map((activity, index) => (
-                              <div
-                                key={activity.id}
-                                className="flex items-start gap-3 p-3 rounded-lg"
-                                style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
-                              >
-                                <div
-                                  className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                                  style={{ background: COLORS[index % COLORS.length] }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex justify-between items-start gap-2">
-                                    <p className="font-semibold text-sm truncate">{activity.worker_name}</p>
-                                    <span
-                                      className="text-xs px-2 py-1 rounded-full text-white flex-shrink-0"
-                                      style={{ background: theme.primary }}
-                                    >
-                                      {activity.hours_worked}h
-                                    </span>
+                            activeList.map((pulse, idx) => (
+                              <div key={idx} className="p-4 rounded-2xl transition-all hover:scale-[1.02] shadow-sm border" style={{ background: theme.surface, borderColor: theme.border }}>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm" style={{ background: COLORS[idx % COLORS.length] }}>
+                                    {pulse.worker_name?.charAt(0)}
                                   </div>
-                                  <p className="text-xs truncate" style={{ color: theme.textSecondary }}>
-                                    {activity.company_name}
-                                  </p>
-                                  <p className="text-xs" style={{ color: theme.textSecondary }}>
-                                    {new Date(activity.start_datetime).toLocaleDateString('es-ES')}
-                                  </p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate">{pulse.worker_name}</p>
+                                    <p className="text-[10px] opacity-50 truncate flex items-center gap-1">
+                                      <FileText size={10} /> {pulse.file_name}
+                                    </p>
+                                  </div>
+                                  <span className="text-[10px] font-medium opacity-40">
+                                    {Math.floor((Date.now() - new Date(pulse.timestamp)) / 60000)}m ago
+                                  </span>
                                 </div>
                               </div>
-                            ))}
+                            ))
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Recent Activities (Main Feed) */}
+                    <div className="xl:col-span-2 space-y-4">
+                      <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-2">
+                        <Clock size={14} /> Actividades Recientes
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {recentActivities.length === 0 ? (
+                          <div className="md:col-span-2 p-12 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                            <p className="text-sm opacity-40">No hay registros de actividades registrados hoy</p>
                           </div>
+                        ) : (
+                          recentActivities.map((activity, index) => (
+                            <div 
+                              key={activity.id} 
+                              className="group p-5 rounded-2xl transition-all hover:shadow-xl border relative overflow-hidden"
+                              style={{ 
+                                background: theme.surface, 
+                                borderColor: theme.border,
+                              }}
+                            >
+                              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <FileText size={48} />
+                              </div>
+                              
+                              <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: theme.primary }}>
+                                      {activity.worker_name?.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-sm truncate">{activity.worker_name}</p>
+                                      <p className="text-[10px] opacity-50">{activity.company_name}</p>
+                                    </div>
+                                  </div>
+                                  <div className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-[10px] font-bold">
+                                    {activity.hours_worked}h
+                                  </div>
+                                </div>
+
+                                <div className="mt-2">
+                                  <p className="text-xs line-clamp-2 opacity-70 italic">"{activity.description || 'Sin descripción'}"</p>
+                                </div>
+
+                                <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed border-gray-100 dark:border-gray-800">
+                                  <span className="text-[10px] font-medium opacity-40">
+                                    {new Date(activity.start_datetime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                  <button 
+                                    onClick={() => setSelectedRecord(activity)}
+                                    className="text-[10px] font-bold text-blue-500 hover:underline"
+                                  >
+                                    Ver detalle →
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
                         )}
+                      </div>
+
+                      {/* Quick Snapshot Metrics */}
+                      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Total Horas hoy</p>
+                          <p className="text-xl font-black">{records.filter(r => new Date(r.start_datetime).toDateString() === new Date().toDateString()).reduce((acc, r) => acc + parseFloat(r.hours_worked), 0).toFixed(1)}h</p>
+                        </div>
+                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Empresas Activas</p>
+                          <p className="text-xl font-black">{new Set(records.map(r => r.company_name)).size}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Funcionarios</p>
+                          <p className="text-xl font-black">{workers.length}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Archivos Hoy</p>
+                          <p className="text-xl font-black">{fileLogs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
               })()}
             </div>
-          )
+          )}
+
           }
 
           {/* TAB: REPORTES */}

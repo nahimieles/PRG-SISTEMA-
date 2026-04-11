@@ -63,6 +63,9 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     const [selectedWorker, setSelectedWorker] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [dateRange, setDateRange] = useState({ from: '', to: '' });
+    const [showFilters, setShowFilters] = useState(false);
+
 
     const [status, setStatus] = useState('connecting'); // 'connecting' | 'connected' | 'error'
     const [selected, setSelected] = useState(new Set()); // Set of event UIDs
@@ -78,7 +81,8 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     // Reset pagination when filter or page size changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedWorker, itemsPerPage]);
+    }, [searchTerm, selectedWorker, itemsPerPage, dateRange]);
+
 
     const connect = useCallback(() => {
         if (esRef.current) {
@@ -137,7 +141,12 @@ export default function RealTimeMonitor({ onLogsChanged }) {
     // ── Reusable function to reload events from database ─────────────────────
     const reloadFromDB = useCallback(async () => {
         try {
-            const logs = await getAuditLogs({ limit: 500 });
+            const logs = await getAuditLogs({ 
+                limit: 500,
+                startDate: dateRange.from ? new Date(dateRange.from).toISOString() : null,
+                endDate: dateRange.to ? new Date(dateRange.to).toISOString() : null
+            });
+
             if (logs && logs.length > 0) {
                 uidCounter.current = 0;
                 const mappedHistory = logs.map(log => {
@@ -195,7 +204,8 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             if (retryRef.current) clearTimeout(retryRef.current);
             clearInterval(autoSyncInterval);
         };
-    }, [connect, reloadFromDB]);
+    }, [connect, reloadFromDB, dateRange]);
+
 
     // ── Selection helpers ─────────────────────────────────────────────────────
     const toggleSelect = (uid) => {
@@ -415,36 +425,31 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
         }}>
             {/* ── Header ── */}
-            <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
                 <div className="flex items-center gap-2.5">
                     <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
                         Reportes Automáticos
                     </h3>
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-40" style={{ color: theme.text }}>
-                            {status === 'connected' ? 'Live' : 'Connect...'}
-                        </span>
+                    <div className="flex items-center" title={status === 'connected' ? 'En línea' : 'Conectando...'}>
+                        <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Sync Button */}
+
                     <button
-                        onClick={handleManualSync}
-                        disabled={isSyncing}
+                        onClick={() => setShowFilters(!showFilters)}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
                         style={{
-                            color: (isSyncing || isBackgroundSyncing) ? '#3b82f6' : theme.textSecondary,
-                            border: `1px solid ${theme.border}`,
-                            background: (isSyncing || isBackgroundSyncing) ? (isDark ? 'rgba(59,130,246,0.1)' : '#f0f7ff') : 'transparent',
+                            background: showFilters ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
+                            color: showFilters ? '#3b82f6' : theme.textSecondary,
+                            border: `1px solid ${showFilters ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
                         }}
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} style={{ animationDuration: isBackgroundSyncing ? '3s' : '1s' }} />
-                        <span>Actualizar</span>
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Filtros</span>
                     </button>
 
                     {events.length > 0 && (
+
                         <>
                             <button
                                 onClick={handleExportExcel}
@@ -504,56 +509,86 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                 </div>
             </div>
 
-            {/* ── Search & Filter Toolbar ── */}
-            <div className="px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3" style={{
-                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
-                borderBottom: `1px solid ${theme.border}`,
-            }}>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
-                    <div className="relative w-full sm:w-80">
-                        <input
-                            type="text"
-                            placeholder="Buscar por archivo, usuario, empresa..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border-none outline-none"
-                            style={{
-                                background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                                color: theme.text,
-                                letterSpacing: '-0.01em',
-                            }}
-                        />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: theme.textSecondary, opacity: 0.5 }} />
+            {/* ── Apple-style Filter Drawer ── */}
+            {showFilters && (
+                <div className="px-5 py-4 space-y-4 animate-fade-in" style={{
+                    background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)',
+                    borderBottom: `1px solid ${theme.border}`,
+                }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Búsqueda</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Archivo, usuario..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border-none outline-none transition-all focus:ring-2 focus:ring-blue-500/20"
+                                    style={{
+                                        background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                                        border: `1px solid ${theme.border}`,
+                                        color: theme.text,
+                                    }}
+                                />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Rango de Fechas</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={dateRange.from}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                                    className="flex-1 px-3 py-2 text-xs rounded-xl border-none outline-none"
+                                    style={{
+                                        background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                                        border: `1px solid ${theme.border}`,
+                                        color: theme.text,
+                                    }}
+                                />
+                                <span className="opacity-30">—</span>
+                                <input
+                                    type="date"
+                                    value={dateRange.to}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                                    className="flex-1 px-3 py-2 text-xs rounded-xl border-none outline-none"
+                                    style={{
+                                        background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
+                                        border: `1px solid ${theme.border}`,
+                                        color: theme.text,
+                                    }}
+                                />
+                                {(dateRange.from || dateRange.to) && (
+                                    <button 
+                                        onClick={() => setDateRange({ from: '', to: '' })}
+                                        className="p-1.5 rounded-full hover:bg-red-500/10 text-red-500 transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Trabajador</label>
+                            <CustomSelect
+                                value={selectedWorker}
+                                onChange={setSelectedWorker}
+                                options={[
+                                    { value: '', label: 'Todos los trabajadores' },
+                                    ...uniqueWorkers.map(w => ({ value: w, label: w }))
+                                ]}
+                                className="w-full"
+                                size="md"
+                            />
+                        </div>
                     </div>
-
-                    <CustomSelect
-                        value={selectedWorker}
-                        onChange={setSelectedWorker}
-                        options={[
-                            { value: '', label: 'Todos los trabajadores' },
-                            ...uniqueWorkers.map(w => ({ value: w, label: w }))
-                        ]}
-                        className="w-full sm:w-52"
-                        size="md"
-                    />
                 </div>
+            )}
 
-                <div className="w-full sm:w-auto flex items-center justify-end gap-2 text-sm">
-                    <span className="text-xs font-medium" style={{ color: theme.textSecondary, opacity: 0.6 }}>Mostrar:</span>
-                    <CustomSelect
-                        value={itemsPerPage}
-                        onChange={setItemsPerPage}
-                        options={[
-                            { value: 5, label: '5' },
-                            { value: 10, label: '10' },
-                            { value: 20, label: '20' },
-                            { value: 50, label: '50' }
-                        ]}
-                        className="w-20"
-                        size="sm"
-                    />
-                </div>
-            </div>
 
             {/* Top pagination */}
             {events.length > 0 && <PaginationBlock />}
@@ -597,12 +632,6 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
-                        {paginatedEvents.map((ev, index) => {
-                            const path = shortenPath(ev.filePath);
-                            const isSelected = selected.has(ev._uid);
-                            const accentColor = ACTION_ACCENTS[ev.action] || '#6b7280';
-                            const actionStyle = ACTION_STYLES[ev.action] || ACTION_STYLES.MODIFIED;
-
                             return (
                                 <div
                                     key={ev._uid}
@@ -615,9 +644,25 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                     }}
                                 >
                                     {/* Left accent bar */}
-                                    <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: accentColor, opacity: 0.7 }} />
+                                    <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full hidden sm:block" style={{ background: accentColor, opacity: 0.7 }} />
 
-                                    <div className="flex items-start gap-3 pl-5 pr-4 py-3.5">
+                                    <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 pl-4 sm:pl-5 pr-4 py-3 sm:py-3.5">
+                                        {/* Header area for mobile (name + badge) */}
+                                        <div className="flex sm:hidden w-full justify-between items-center mb-1">
+                                            <span
+                                                className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
+                                                style={{
+                                                    background: isDark
+                                                        ? `${accentColor}18`
+                                                        : `${accentColor}12`,
+                                                    color: accentColor,
+                                                }}
+                                            >
+                                                {actionStyle.label}
+                                            </span>
+                                            <span className="text-[10px] opacity-40 font-medium">{formatDate(ev.date).split(',')[0]}</span>
+                                        </div>
+
                                         {/* Checkbox */}
                                         {selectMode && (
                                             <button
@@ -637,39 +682,25 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                             <div className="flex justify-between items-start gap-3 mb-1">
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <FileText className="w-4 h-4 flex-shrink-0" style={{ color: accentColor, opacity: 0.8 }} />
-                                                    <h4 className="font-semibold text-[13px] truncate" style={{ color: theme.text, letterSpacing: '-0.01em' }}>
+                                                    <h4 className="font-bold text-[13px] sm:text-[14px] truncate" style={{ color: theme.text, letterSpacing: '-0.01em' }}>
                                                         {ev.fileName}
                                                     </h4>
-                                                    {ev.webUrl && (
-                                                        <a
-                                                            href={ev.webUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-md transition-all"
-                                                            style={{
-                                                                background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff',
-                                                                color: '#3b82f6',
-                                                            }}
-                                                        >
-                                                            Abrir ↗
-                                                        </a>
-                                                    )}
                                                 </div>
-                                                <span className="text-[11px] whitespace-nowrap flex-shrink-0 font-medium" style={{ color: theme.textSecondary, opacity: 0.5 }}>
+                                                <span className="hidden sm:inline text-[11px] whitespace-nowrap flex-shrink-0 font-medium" style={{ color: theme.textSecondary, opacity: 0.5 }}>
                                                     {formatDate(ev.date)}
                                                 </span>
                                             </div>
 
                                             {/* Row 2: Path */}
                                             {path && (
-                                                <div className="flex items-center gap-1.5 mb-2 ml-6 text-[11px]" style={{ color: theme.textSecondary, opacity: 0.45 }}>
+                                                <div className="flex items-center gap-1.5 mb-2 sm:ml-6 text-[11px]" style={{ color: theme.textSecondary, opacity: 0.45 }}>
                                                     <FolderOpen className="w-3 h-3 flex-shrink-0" />
                                                     <span className="truncate">{path}</span>
                                                 </div>
                                             )}
 
                                             {/* Row 3: User + Company + Badge */}
-                                            <div className="flex items-center gap-3 ml-6 flex-wrap">
+                                            <div className="flex items-center gap-y-2 gap-x-3 sm:ml-6 flex-wrap">
                                                 <div className="flex items-center gap-1.5 text-xs" style={{ color: theme.text }}>
                                                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: accentColor, opacity: 0.85 }}>
                                                         {ev.user?.charAt(0)?.toUpperCase() || '?'}
@@ -679,11 +710,11 @@ export default function RealTimeMonitor({ onLogsChanged }) {
 
                                                 <div className="flex items-center gap-1 text-[11px]" style={{ color: theme.textSecondary }}>
                                                     <Building2 className="w-3 h-3 opacity-40 flex-shrink-0" />
-                                                    <span className="truncate max-w-[160px]">{ev.company}</span>
+                                                    <span className="truncate max-w-[120px] sm:max-w-[160px]">{ev.company}</span>
                                                 </div>
 
                                                 <span
-                                                    className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider"
+                                                    className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider"
                                                     style={{
                                                         background: isDark
                                                             ? `${accentColor}18`
@@ -695,19 +726,40 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                                     {actionStyle.label}
                                                 </span>
 
-                                                {ev.oldName && (
-                                                    <span className="text-[11px] italic" style={{ color: theme.textSecondary, opacity: 0.4 }}>
-                                                        antes: {ev.oldName}
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                                                    {ev.webUrl && (
+                                                        <a
+                                                            href={ev.webUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                                                            style={{
+                                                                background: isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff',
+                                                                color: '#3b82f6',
+                                                                border: `1px solid ${isDark ? 'rgba(59,130,246,0.2)' : '#dbeafe'}`
+                                                            }}
+                                                        >
+                                                            Abrir ↗
+                                                        </a>
+                                                    )}
+                                                    
+                                                    {!selectMode && (
+                                                        <button
+                                                            onClick={() => deleteEvent(ev._uid)}
+                                                            className="flex sm:hidden p-1.5 rounded-lg text-red-500 bg-red-500/10"
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Delete button */}
+                                        {/* Desktop Delete button */}
                                         {!selectMode && (
                                             <button
                                                 onClick={() => deleteEvent(ev._uid)}
-                                                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                                className="hidden sm:flex flex-shrink-0 w-7 h-7 items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                                                 style={{
                                                     color: '#ef4444',
                                                     background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
@@ -720,6 +772,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                     </div>
                                 </div>
                             );
+
                         })}
                     </div>
                 )}

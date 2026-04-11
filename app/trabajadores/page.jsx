@@ -238,14 +238,16 @@ export default function FuncionariosPage() {
 
       {/* Contenido Principal */}
       <main
-        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-6 page-transition scroll-smooth"
+        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-8 page-transition"
         style={{
           background: theme.background,
           color: theme.text,
-          marginLeft: isSidebarExpanded ? '256px' : '72px',
+          marginLeft: typeof window !== 'undefined' && window.innerWidth > 1024 ? (isSidebarExpanded ? '256px' : '72px') : '0',
+          paddingTop: typeof window !== 'undefined' && window.innerWidth <= 1024 ? '80px' : '32px',
           minHeight: '100vh'
         }}
       >
+
         <div className="max-w-4xl mx-auto">
 
           {/* Sección de Asistencia */}
