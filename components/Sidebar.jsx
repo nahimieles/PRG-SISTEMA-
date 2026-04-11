@@ -190,7 +190,7 @@ export default function Sidebar({
                     >
                         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
-                    <LoginLogo className="w-24 h-auto brightness-200 contrast-150" />
+                    <LoginLogo className="w-24 h-auto" />
                 </div>
                 
                 <div className="flex items-center gap-3">

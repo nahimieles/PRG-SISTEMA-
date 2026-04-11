@@ -1041,23 +1041,76 @@ export default function AdminPage() {
               {(() => {
                 const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
-                // Get Recent Activities (Database Reports)
-                const recentActivities = [...records]
-                  .sort((a, b) => new Date(b.created_at || b.start_datetime) - new Date(a.created_at || a.start_datetime))
+                // CALCULAR DATOS PARA GRÁFICOS
+                const hoursByCompany = {};
+                const hoursByWorker = {};
+                
+                records.forEach(r => {
+                  const hours = parseFloat(r.hours_worked || 0);
+
+                  // Por empresa
+                  if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
+                  hoursByCompany[r.company_name] += hours;
+
+                  // Por funcionario
+                  if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
+                  hoursByWorker[r.worker_name] += hours;
+                });
+
+                const topCompanies = Object.entries(hoursByCompany)
+                  .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
+                  .sort((a, b) => b.horas - a.horas)
                   .slice(0, 5);
 
-                // Get Recent File Logs (Real-time pulses)
-                const recentFilePulses = [...fileLogs]
-                  .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                  .slice(0, 10);
+                const workerData = Object.entries(hoursByWorker)
+                  .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
+                  .sort((a, b) => b.horas - a.horas)
+                  .slice(0, 5);
 
                 return (
-                  <div className="grid grid-cols-1 gap-8">
-                    {/* Actividades Recientes (Real-time pulses) */}
+                  <div className="flex flex-col gap-8">
+                    {/* Gráficos Principales */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Top Empresas */}
+                      <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-6">
+                          <Building2 size={14} /> Top Empresas (Horas)
+                        </h3>
+                        <div className="h-[250px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={topCompanies} layout="vertical" margin={{ left: -20, right: 20 }}>
+                              <XAxis type="number" hide />
+                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }} />
+                              <Bar dataKey="horas" fill={theme.primary} radius={[0, 10, 10, 0]} barSize={20} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* Productividad Funcionario */}
+                      <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-6">
+                          <TrendingUp size={14} /> Productividad por Funcionario
+                        </h3>
+                        <div className="h-[250px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={workerData} layout="vertical" margin={{ left: -20, right: 20 }}>
+                              <XAxis type="number" hide />
+                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }} />
+                              <Bar dataKey="horas" fill="#27ae60" radius={[0, 10, 10, 0]} barSize={20} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actividades Recientes (Real-time pulses) - MOVED BELOW */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <TrendingUp size={14} /> Actividades Recientes
+                          <Clock size={14} /> Actividades Recientes (Pulsos)
                         </h3>
                       </div>
 
@@ -1104,27 +1157,8 @@ export default function AdminPage() {
                         })()}
                       </div>
                     </div>
-
-                    {/* Quick Snapshot Metrics */}
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Total Horas hoy</p>
-                        <p className="text-xl font-black">{records.filter(r => new Date(r.start_datetime).toDateString() === new Date().toDateString()).reduce((acc, r) => acc + parseFloat(r.hours_worked), 0).toFixed(1)}h</p>
-                      </div>
-                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Empresas Activas</p>
-                        <p className="text-xl font-black">{new Set(records.map(r => r.company_name)).size}</p>
-                      </div>
-                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Funcionarios</p>
-                        <p className="text-xl font-black">{workers.length}</p>
-                      </div>
-                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Archivos Hoy</p>
-                        <p className="text-xl font-black">{fileLogs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}</p>
-                      </div>
-                    </div>
                   </div>
+
                 );
               })()}
             </div>

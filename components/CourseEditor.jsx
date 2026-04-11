@@ -446,13 +446,13 @@ export default function CourseEditor({ onPreview }) {
                                 <div className="flex flex-row gap-2 w-full">
                                     <button
                                         onClick={() => handleOpenFolderModal(currentFolder)}
-                                        className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-lg sm:rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all border dark:border-gray-700 text-xs sm:text-sm"
+                                        className="flex-1 sm:flex-initial px-3 sm:px-4 py-3 sm:py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all border dark:border-gray-700 text-xs sm:text-sm shadow-sm"
                                     >
                                         <Settings size={14} className="sm:w-[18px] sm:h-[18px]" /> <span>CONFIGURAR</span>
                                     </button>
                                     <button
                                         onClick={() => handleOpenCourseModal()}
-                                        className="flex-1 sm:flex-initial px-3 sm:px-6 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg sm:rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-xs sm:text-sm"
+                                        className="flex-[1.5] sm:flex-initial px-3 sm:px-6 py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-xs sm:text-sm"
                                     >
                                         <Plus size={14} className="sm:w-[18px] sm:h-[18px]" /> <span>NUEVA CLASE</span>
                                     </button>
@@ -568,21 +568,21 @@ export default function CourseEditor({ onPreview }) {
                                                             </div>
                                                         </div>
 
-                                                        {/* Actions Button Bar - Compact on mobile */}
-                                                        <div className="w-full md:col-span-2 flex justify-center sm:justify-end gap-1.5 sm:gap-2 mt-2 md:mt-0 pt-2 sm:pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
+                                                        {/* Actions Button Bar - Professional on mobile */}
+                                                        <div className="w-full md:col-span-2 flex justify-between gap-2 mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
                                                             <button
                                                                 onPointerDown={(e) => e.stopPropagation()}
                                                                 onClick={() => handleOpenCourseModal(course)}
-                                                                className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2.5 md:p-2 bg-blue-50 md:bg-transparent text-blue-500 hover:bg-blue-100 rounded-lg sm:rounded-xl transition-all font-bold text-[10px] sm:text-xs"
+                                                                className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 md:p-2 bg-blue-500/10 md:bg-transparent text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all font-bold text-xs"
                                                             >
-                                                                <Edit2 size={12} className="sm:w-4 sm:h-4" /> <span className="md:hidden">Editar</span>
+                                                                <Edit2 size={14} /> <span>Editar</span>
                                                             </button>
                                                             <button
                                                                 onPointerDown={(e) => e.stopPropagation()}
                                                                 onClick={() => handleDeleteCourse(course.id)}
-                                                                className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2.5 md:p-2 bg-red-50 md:bg-transparent text-red-500 hover:bg-red-100 rounded-lg sm:rounded-xl transition-all font-bold text-[10px] sm:text-xs"
+                                                                className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 md:p-2 bg-red-500/10 md:bg-transparent text-red-600 dark:text-red-400 hover:bg-red-100 rounded-xl transition-all font-bold text-xs"
                                                             >
-                                                                <Trash2 size={12} className="sm:w-4 sm:h-4" /> <span className="md:hidden">Eliminar</span>
+                                                                <Trash2 size={14} /> <span>Eliminar</span>
                                                             </button>
                                                         </div>
                                                     </div>
