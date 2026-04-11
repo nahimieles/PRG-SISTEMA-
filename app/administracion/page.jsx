@@ -1146,7 +1146,7 @@ export default function AdminPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <Clock size={14} /> Monitor de Actividad (Pulsos)
+                          <Clock size={14} /> ACTIVIDADES RECIENTES
                         </h3>
                       </div>
 

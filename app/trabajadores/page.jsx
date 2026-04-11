@@ -366,9 +366,12 @@ export default function FuncionariosPage() {
               className="rounded-xl shadow-lg p-4 md:p-8"
               style={{ background: theme.surface }}
             >
-              <h3 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: theme.primary }}>
+              <h3 className="text-2xl md:text-3xl font-bold mb-1" style={{ color: theme.primary }}>
                 Mis Actividades Registradas
               </h3>
+              <p className="text-sm mb-6 opacity-60" style={{ color: theme.textSecondary }}>
+                Historial de reportes y horas que has registrado manualmente en el sistema.
+              </p>
               {myRecords.length === 0 ? (
                 <p className="text-center py-8" style={{ color: theme.textSecondary }}>
                   Aún no tienes actividades registradas

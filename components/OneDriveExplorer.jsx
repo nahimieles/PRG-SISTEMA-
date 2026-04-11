@@ -317,6 +317,9 @@ const OneDriveExplorer = ({ driveId: propDriveId, siteName = "", currentUser, ro
                 if (isAdmin) processed.push(site);
                 return;
             }
+
+            // 5. STANDARD SITES (e.g. FREDDY, DANNY) — allow for everyone with access
+            processed.push(site);
         });
         return processed;
     };
