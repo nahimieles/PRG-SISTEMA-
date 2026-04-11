@@ -425,10 +425,12 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
         }}>
             {/* ── Header ── */}
+            <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
                 <div className="flex items-center gap-2.5">
                     <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
                         Reportes Automáticos
                     </h3>
+
                     <div className="flex items-center" title={status === 'connected' ? 'En línea' : 'Conectando...'}>
                         <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
                     </div>

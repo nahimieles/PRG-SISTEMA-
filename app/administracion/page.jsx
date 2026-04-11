@@ -1198,7 +1198,6 @@ export default function AdminPage() {
             </div>
           )}
 
-          }
 
           {/* TAB: REPORTES */}
           {
