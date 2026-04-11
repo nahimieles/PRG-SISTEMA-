@@ -249,7 +249,7 @@ export default function FuncionariosPage() {
         }}
       >
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
 
           {/* Sección de Asistencia */}
           {activeTab === 'asistencia' && (
@@ -428,11 +428,14 @@ export default function FuncionariosPage() {
           )}
 
           {/* Tab: Archivos OneDrive */}
-          {activeTab === 'archivos' && (
-            <div className="animate-fade-in">
-              <OneDriveContainer />
+          <div style={{ display: activeTab === 'archivos' ? 'block' : 'none' }}>
+            <div className="animate-fade-in space-y-6">
+              <div className="rounded-[2.5rem] shadow-xl overflow-hidden border transition-all duration-500 hover:shadow-2xl" 
+                   style={{ background: theme.surface, borderColor: theme.border }}>
+                <OneDriveContainer />
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Modal de detalle de registro */}
           {selectedRecord && (

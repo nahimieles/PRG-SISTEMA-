@@ -1097,7 +1097,6 @@ export default function AdminPage() {
                            <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
                             <Building2 size={14} /> Top Empresas{labelSuffix}
                           </h3>
-                          {!isUsingReports && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 animate-pulse">Live</span>}
                         </div>
                         <div className="h-[250px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1106,7 +1105,9 @@ export default function AdminPage() {
                               <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                               <Tooltip 
                                 cursor={{ fill: 'transparent' }} 
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
+                                labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
+                                itemStyle={{ color: theme.text }}
                                 formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                               />
                               <Bar dataKey={dataKey} fill={theme.primary} radius={[0, 10, 10, 0]} barSize={20} />
@@ -1121,7 +1122,6 @@ export default function AdminPage() {
                           <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
                              <TrendingUp size={14} /> Productividad{labelSuffix}
                           </h3>
-                          {!isUsingReports && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 animate-pulse">Live</span>}
                         </div>
                         <div className="h-[250px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
@@ -1130,7 +1130,9 @@ export default function AdminPage() {
                               <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                               <Tooltip 
                                 cursor={{ fill: 'transparent' }} 
-                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
+                                labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
+                                itemStyle={{ color: theme.text }}
                                 formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                               />
                               <Bar dataKey={dataKey} fill="#27ae60" radius={[0, 10, 10, 0]} barSize={20} />
