@@ -151,7 +151,8 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
            </div>
          </div>
       </div>      {/* Metricas */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+      {/* Metricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl border flex flex-col items-center justify-center text-center" style={{ borderColor: theme.border, background: theme.surface }}>
             <div className="p-3 rounded-full bg-blue-100 mb-3">
               <Users size={20} className="text-blue-600" />
@@ -167,6 +168,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
             <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: theme.textSecondary }}>Preguntas de Entrevista</p>
           </div>
       </div>
+
 
       {/* Candidate Table Controls */}
       <div className="rounded-xl shadow-sm border overflow-hidden" style={{ borderColor: theme.border, background: theme.surface }}>
@@ -199,7 +201,8 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
         {/* Candidate List */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm" style={{ color: theme.text }}>
+          {/* Desktop Table View */}
+          <table className="w-full text-left text-sm hidden sm:table" style={{ color: theme.text }}>
             <thead className="border-b" style={{ borderColor: theme.border, color: theme.textSecondary, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
               <tr>
                 <th className="p-4 font-semibold">Candidato</th>
@@ -234,7 +237,35 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
               )}
             </tbody>
           </table>
+
+          {/* Mobile Card View */}
+          <div className="sm:hidden divide-y" style={{ borderColor: theme.border }}>
+            {filteredCandidates.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No se encontraron candidatos.</div>
+            ) : (
+              filteredCandidates.map(cand => (
+                <div key={cand.id} className="p-4 flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold" style={{ color: theme.text }}>{cand.full_name}</p>
+                      <p className="text-xs opacity-60">{cand.email}</p>
+                    </div>
+                    <span className="text-[10px] opacity-40 font-medium">
+                       {new Date(cand.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => openCandidateDetail(cand)}
+                    className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold shadow-sm"
+                  >
+                    Ver Respuestas
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
+
       </div>
 
       {/* Detaill Modal (Slide Over simulation or Modal) */}

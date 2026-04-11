@@ -1052,20 +1052,16 @@ export default function AdminPage() {
                   .slice(0, 10);
 
                 return (
-                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    {/* Active Workers Pulse (Last 1h) */}
-                    <div className="xl:col-span-1 space-y-4">
+                  <div className="grid grid-cols-1 gap-8">
+                    {/* Actividades Recientes (Real-time pulses) */}
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <TrendingUp size={14} /> Pulso de Trabajo
+                          <TrendingUp size={14} /> Actividades Recientes
                         </h3>
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                          <span className="text-[10px] font-bold text-green-600 uppercase">Activo</span>
-                        </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {(() => {
                           const activeUsers = {};
                           const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -1082,7 +1078,7 @@ export default function AdminPage() {
                           const activeList = Object.values(activeUsers);
 
                           return activeList.length === 0 ? (
-                            <div className="p-8 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                            <div className="col-span-full p-8 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
                               <p className="text-xs opacity-40">Sin actividad reciente en la última hora</p>
                             </div>
                           ) : (
@@ -1109,86 +1105,23 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Recent Activities (Main Feed) */}
-                    <div className="xl:col-span-2 space-y-4">
-                      <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-2">
-                        <Clock size={14} /> Actividades Recientes
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {recentActivities.length === 0 ? (
-                          <div className="md:col-span-2 p-12 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
-                            <p className="text-sm opacity-40">No hay registros de actividades registrados hoy</p>
-                          </div>
-                        ) : (
-                          recentActivities.map((activity, index) => (
-                            <div 
-                              key={activity.id} 
-                              className="group p-5 rounded-2xl transition-all hover:shadow-xl border relative overflow-hidden"
-                              style={{ 
-                                background: theme.surface, 
-                                borderColor: theme.border,
-                              }}
-                            >
-                              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FileText size={48} />
-                              </div>
-                              
-                              <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: theme.primary }}>
-                                      {activity.worker_name?.charAt(0)}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="font-bold text-sm truncate">{activity.worker_name}</p>
-                                      <p className="text-[10px] opacity-50">{activity.company_name}</p>
-                                    </div>
-                                  </div>
-                                  <div className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-500 text-[10px] font-bold">
-                                    {activity.hours_worked}h
-                                  </div>
-                                </div>
-
-                                <div className="mt-2">
-                                  <p className="text-xs line-clamp-2 opacity-70 italic">"{activity.description || 'Sin descripción'}"</p>
-                                </div>
-
-                                <div className="flex justify-between items-center mt-3 pt-3 border-t border-dashed border-gray-100 dark:border-gray-800">
-                                  <span className="text-[10px] font-medium opacity-40">
-                                    {new Date(activity.start_datetime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                                  </span>
-                                  <button 
-                                    onClick={() => setSelectedRecord(activity)}
-                                    className="text-[10px] font-bold text-blue-500 hover:underline"
-                                  >
-                                    Ver detalle →
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
+                    {/* Quick Snapshot Metrics */}
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Total Horas hoy</p>
+                        <p className="text-xl font-black">{records.filter(r => new Date(r.start_datetime).toDateString() === new Date().toDateString()).reduce((acc, r) => acc + parseFloat(r.hours_worked), 0).toFixed(1)}h</p>
                       </div>
-
-                      {/* Quick Snapshot Metrics */}
-                      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Total Horas hoy</p>
-                          <p className="text-xl font-black">{records.filter(r => new Date(r.start_datetime).toDateString() === new Date().toDateString()).reduce((acc, r) => acc + parseFloat(r.hours_worked), 0).toFixed(1)}h</p>
-                        </div>
-                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Empresas Activas</p>
-                          <p className="text-xl font-black">{new Set(records.map(r => r.company_name)).size}</p>
-                        </div>
-                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Funcionarios</p>
-                          <p className="text-xl font-black">{workers.length}</p>
-                        </div>
-                        <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
-                          <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Archivos Hoy</p>
-                          <p className="text-xl font-black">{fileLogs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}</p>
-                        </div>
+                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Empresas Activas</p>
+                        <p className="text-xl font-black">{new Set(records.map(r => r.company_name)).size}</p>
+                      </div>
+                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Funcionarios</p>
+                        <p className="text-xl font-black">{workers.length}</p>
+                      </div>
+                      <div className="p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
+                        <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Archivos Hoy</p>
+                        <p className="text-xl font-black">{fileLogs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length}</p>
                       </div>
                     </div>
                   </div>

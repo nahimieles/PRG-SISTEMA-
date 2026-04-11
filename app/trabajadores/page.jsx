@@ -10,7 +10,7 @@ import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { addRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
-import { loginWorkerAction } from '../../lib/actions.js';
+import { loginUnifiedAction } from '../../lib/actions.js';
 import OneDriveContainer from '../../components/OneDriveContainer';
 
 export default function FuncionariosPage() {
@@ -93,13 +93,14 @@ export default function FuncionariosPage() {
   };
 
   const handleLogin = async (username, password) => {
-    const result = await loginWorkerAction(username, password);
-    if (result.success) {
-      setCurrentWorker(result.worker);
+    const result = await loginUnifiedAction(username, password);
+    if (result.success && result.role === 'worker') {
+      const worker = result.user;
+      setCurrentWorker(worker);
       setIsAuthenticated(true);
-      saveWorkerSession(result.worker); // Guardar sesión
-      loadMyRecords(result.worker.id);
-      loadAttendanceData(result.worker.id); // Cargar asistencia al login
+      saveWorkerSession(worker); // Guardar sesión
+      loadMyRecords(worker.id);
+      loadAttendanceData(worker.id); // Cargar asistencia al login
       const companiesData = await getCompanies();
       setCompanies(companiesData);
       return { success: true };

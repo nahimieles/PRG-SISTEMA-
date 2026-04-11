@@ -180,19 +180,27 @@ export default function Sidebar({
 
             {/* Mobile Header */}
             <div
-                className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3"
+                className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b border-white/5"
                 style={{ background: sidebarBg }}
             >
-                <div className="flex items-center gap-3">
-                    <LoginLogo className="w-24 h-auto" />
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="text-white p-1.5 rounded-lg hover:bg-gray-700/50 cursor-pointer"
+                    >
+                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
+                    <LoginLogo className="w-24 h-auto brightness-200 contrast-150" />
                 </div>
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="text-white p-2 rounded-lg hover:bg-gray-700/50 cursor-pointer"
-                >
-                    {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
+                
+                <div className="flex items-center gap-3">
+                    {/* Mobile User Avatar */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg border border-white/20">
+                        {userName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                </div>
             </div>
+
 
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (

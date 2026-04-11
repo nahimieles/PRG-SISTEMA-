@@ -415,22 +415,23 @@ export default function CourseEditor({ onPreview }) {
                     {/* BREADCRUMBS & ACTIONS */}
                     <div className="flex flex-col gap-4">
                         {/* Breadcrumb Row */}
-                        <div className="flex items-center flex-wrap gap-2 text-base sm:text-lg md:text-xl font-bold overflow-hidden" style={{ color: theme.text }}>
+                        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-sm sm:text-lg md:text-xl font-bold overflow-hidden" style={{ color: theme.text }}>
                             <button
                                 onClick={() => setCurrentFolder(null)}
                                 className={`hover:text-blue-500 transition-colors flex items-center gap-1.5 flex-shrink-0 ${!currentFolder ? 'text-blue-600 cursor-default' : 'text-gray-400'}`}
                             >
-                                <Layers size={20} /> <span className="hidden sm:inline">Módulos</span><span className="sm:hidden">Mód.</span>
+                                <Layers size={18} className="sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Módulos</span><span className="sm:hidden">Módulos</span>
                             </button>
                             {currentFolder && (
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    <ChevronLeft size={16} className="text-gray-300 rotate-180 flex-shrink-0" />
-                                    <span className="text-blue-600 flex items-center gap-1.5 truncate">
-                                        <Folder size={20} className="flex-shrink-0" /> <span className="truncate max-w-[120px] sm:max-w-[200px]">{currentFolder}</span>
+                                    <ChevronLeft size={14} className="text-gray-300 rotate-180 flex-shrink-0" />
+                                    <span className="text-blue-600 flex items-center gap-1.5 min-w-0">
+                                        <Folder size={18} className="flex-shrink-0 sm:w-5 sm:h-5" /> <span className="truncate max-w-[150px] sm:max-w-none">{currentFolder}</span>
                                     </span>
                                 </div>
                             )}
                         </div>
+
 
                         {/* Action Buttons Row */}
                         <div className="w-full">
