@@ -417,6 +417,15 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         MOVED: '#a855f7',
     };
 
+    const ACTION_STYLES = {
+        CREATED: { label: 'Creado', color: '#22c55e' },
+        MODIFIED: { label: 'Modificado', color: '#3b82f6' },
+        DELETED: { label: 'Eliminado', color: '#ef4444' },
+        RENAMED: { label: 'Renombrado', color: '#f59e0b' },
+        MOVED: { label: 'Movido', color: '#a855f7' },
+    };
+
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="rounded-2xl overflow-hidden" style={{
@@ -634,6 +643,12 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     </div>
                 ) : (
                     <div className="divide-y" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
+                        {paginatedEvents.map((ev, index) => {
+                            const isSelected = selected.has(ev._uid);
+                            const accentColor = ACTION_ACCENTS[ev.action_type] || '#3b82f6';
+                            const actionStyle = ACTION_STYLES[ev.action_type] || ACTION_STYLES.MODIFIED;
+                            const path = ev.folderPath || ev.parentPath || '';
+
                             return (
                                 <div
                                     key={ev._uid}
@@ -774,7 +789,6 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                     </div>
                                 </div>
                             );
-
                         })}
                     </div>
                 )}

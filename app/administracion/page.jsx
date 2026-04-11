@@ -1035,8 +1035,7 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-          {/* TAB: DASHBOARDS */}
-          {/* TAB: DASHBOARDS */}
+
           {activeTab === 'dashboards' && (
             <div className="animate-fade-in space-y-8">
               {(() => {
