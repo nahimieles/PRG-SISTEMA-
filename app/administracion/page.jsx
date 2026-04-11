@@ -1041,31 +1041,51 @@ export default function AdminPage() {
               {(() => {
                 const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
-                // CALCULAR DATOS PARA GRÁFICOS
+                // LOGICA HIBRIDA DE DATOS
+                const isUsingReports = records && records.length > 0;
                 const hoursByCompany = {};
                 const hoursByWorker = {};
                 
-                records.forEach(r => {
-                  const hours = parseFloat(r.hours_worked || 0);
+                if (isUsingReports) {
+                  // Caso A: Tenemos reportes de horas
+                  records.forEach(r => {
+                    const company = r.company_name || 'Sin Empresa';
+                    const worker = r.worker_name || 'Sin Nombre';
+                    const hours = parseFloat(r.hours_worked || 0);
 
-                  // Por empresa
-                  if (!hoursByCompany[r.company_name]) hoursByCompany[r.company_name] = 0;
-                  hoursByCompany[r.company_name] += hours;
-
-                  // Por funcionario
-                  if (!hoursByWorker[r.worker_name]) hoursByWorker[r.worker_name] = 0;
-                  hoursByWorker[r.worker_name] += hours;
-                });
+                    hoursByCompany[company] = (hoursByCompany[company] || 0) + hours;
+                    hoursByWorker[worker] = (hoursByWorker[worker] || 0) + hours;
+                  });
+                } else {
+                  // Caso B: Fallback a Pulsos (para que no se vea vacío)
+                  fileLogs.forEach(log => {
+                    const company = log.company_name || 'Sin Empresa';
+                    const worker = log.worker_name || 'Sin Nombre';
+                    
+                    hoursByCompany[company] = (hoursByCompany[company] || 0) + 1;
+                    hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
+                  });
+                }
 
                 const topCompanies = Object.entries(hoursByCompany)
-                  .map(([name, hours]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, horas: parseFloat(hours.toFixed(2)), fullName: name }))
-                  .sort((a, b) => b.horas - a.horas)
+                  .map(([name, val]) => ({ 
+                    name: name.length > 15 ? name.substring(0, 15) + '...' : name, 
+                    value: parseFloat(val.toFixed(2)), 
+                    fullName: name 
+                  }))
+                  .sort((a, b) => b.value - a.value)
                   .slice(0, 5);
 
                 const workerData = Object.entries(hoursByWorker)
-                  .map(([name, hours]) => ({ name, horas: parseFloat(hours.toFixed(2)) }))
-                  .sort((a, b) => b.horas - a.horas)
+                  .map(([name, val]) => ({ 
+                    name, 
+                    value: parseFloat(val.toFixed(2)) 
+                  }))
+                  .sort((a, b) => b.value - a.value)
                   .slice(0, 5);
+
+                const labelSuffix = isUsingReports ? ' (Horas)' : ' (Actividad)';
+                const dataKey = 'value';
 
                 return (
                   <div className="flex flex-col gap-8">
@@ -1073,16 +1093,23 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Top Empresas */}
                       <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-6">
-                          <Building2 size={14} /> Top Empresas (Horas)
-                        </h3>
+                        <div className="flex items-center justify-between mb-6">
+                           <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                            <Building2 size={14} /> Top Empresas{labelSuffix}
+                          </h3>
+                          {!isUsingReports && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 animate-pulse">Live</span>}
+                        </div>
                         <div className="h-[250px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={topCompanies} layout="vertical" margin={{ left: -20, right: 20 }}>
                               <XAxis type="number" hide />
                               <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }} />
-                              <Bar dataKey="horas" fill={theme.primary} radius={[0, 10, 10, 0]} barSize={20} />
+                              <Tooltip 
+                                cursor={{ fill: 'transparent' }} 
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
+                              />
+                              <Bar dataKey={dataKey} fill={theme.primary} radius={[0, 10, 10, 0]} barSize={20} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -1090,27 +1117,34 @@ export default function AdminPage() {
 
                       {/* Productividad Funcionario */}
                       <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2 mb-6">
-                          <TrendingUp size={14} /> Productividad por Funcionario
-                        </h3>
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                             <TrendingUp size={14} /> Productividad{labelSuffix}
+                          </h3>
+                          {!isUsingReports && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 animate-pulse">Live</span>}
+                        </div>
                         <div className="h-[250px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={workerData} layout="vertical" margin={{ left: -20, right: 20 }}>
                               <XAxis type="number" hide />
                               <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }} />
-                              <Bar dataKey="horas" fill="#27ae60" radius={[0, 10, 10, 0]} barSize={20} />
+                              <Tooltip 
+                                cursor={{ fill: 'transparent' }} 
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
+                              />
+                              <Bar dataKey={dataKey} fill="#27ae60" radius={[0, 10, 10, 0]} barSize={20} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
                       </div>
                     </div>
 
-                    {/* Actividades Recientes (Real-time pulses) - MOVED BELOW */}
+                    {/* Actividades Recientes (Real-time pulses) */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <Clock size={14} /> Actividades Recientes (Pulsos)
+                          <Clock size={14} /> Monitor de Actividad (Pulsos)
                         </h3>
                       </div>
 
@@ -1158,6 +1192,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+
 
                 );
               })()}
