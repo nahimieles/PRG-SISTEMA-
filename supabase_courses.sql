@@ -37,9 +37,6 @@ USING (auth.role() = 'service_role' OR EXISTS (
 )); -- Nota: Esto asume que usas Supabase Auth o tu propio auth. 
 -- Si usas tu propio auth simple en 'admin_users' y no Supabase Auth real,
 -- estas policies no aplicarán automáticamente si no usas JWT de Supabase.
--- Dado el código actual (localStorage session), probablemente no estemos usando RLS de Supabase Auth.
--- Por compatibilidad con el código existente que usa 'suapbase-js' client anon key:
--- Vamos a dejarlo abierto o manejado por lógica de aplicación, 
 -- pero es buena práctica definirlas si migramos a Auth real.
 
 -- Asumiendo que el cliente es público por ahora y filtramos en frontend/backend logic como en el resto de la app:

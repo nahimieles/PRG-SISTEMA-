@@ -21,11 +21,13 @@ import { usePathname } from 'next/navigation'
 export default function RootLayout({ children }) {
   const pathname = usePathname()
   const isEntrevista = pathname?.startsWith('/entrevista')
+  const isDocs = pathname?.startsWith('/docs')
+  const isPublicRoute = isEntrevista || isDocs
 
   return (
     <html lang="es">
       <head>
-        {!isEntrevista && (
+        {!isPublicRoute && (
           <>
             <title>PRG</title>
             <meta name="description" content="Sistema de gestión de trabajos y auditorías" />
@@ -33,7 +35,7 @@ export default function RootLayout({ children }) {
         )}
       </head>
       <body className={inter.className}>
-        {isEntrevista ? (
+        {isPublicRoute ? (
           children
         ) : (
           <MsalWrapper>
