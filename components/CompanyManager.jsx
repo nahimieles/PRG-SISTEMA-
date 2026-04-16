@@ -147,6 +147,12 @@ export default function CompanyManager() {
                 } else {
                     // Create Company
                     console.log('[DEBUG] Action: createCompanyAction');
+                    result = await createCompanyAction({
+                        name: formData.name,
+                        type: formData.type,
+                        username: formData.username,
+                        password: formData.password,
+                        groupId: formData.groupId,
                         logo_url: formData.avatar_url || null
                     }, requesterId);
                 }

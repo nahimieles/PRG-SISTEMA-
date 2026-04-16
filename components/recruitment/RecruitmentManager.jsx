@@ -69,6 +69,10 @@ export default function RecruitmentManager() {
     setCreating(true);
     try {
       const token = 'tkn_' + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9);
+      const res = await createSurveyAction({ 
+          title: newSurveyTitle, 
+          description: newSurveyDesc, 
+          access_token: token,
           is_active: true
       }, getAdminSession()?.id);
         
