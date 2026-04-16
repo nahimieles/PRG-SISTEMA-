@@ -11,7 +11,7 @@ import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import StatsCard from '../../components/StatsCard';
 import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
-import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction } from '../../lib/actions.js';
+import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction, deleteWorkerAction, deleteAuditRecordAction } from '../../lib/actions.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
@@ -296,7 +296,7 @@ export default function AdminPage() {
         return;
       }
 
-      const { success, error } = await updateWorkerAction(editingWorkerId, newWorker);
+      const { success, error } = await updateWorkerAction(editingWorkerId, newWorker, adminSession.id);
 
       if (!success) {
         setMessage('Error al actualizar usuario: ' + error);
@@ -311,7 +311,7 @@ export default function AdminPage() {
         return;
       }
 
-      const { success, error } = await createWorkerAction(newWorker);
+      const { success, error } = await createWorkerAction(newWorker, adminSession.id);
 
       if (!success) {
         setMessage('Error al crear usuario: ' + error);
@@ -328,9 +328,13 @@ export default function AdminPage() {
 
   const handleDeleteWorker = (id) => {
     openConfirm('¿Eliminar este usuario y todas sus actividades?', async () => {
-      await supabase.from('audit_records').delete().eq('worker_id', id);
-      await supabase.from('workers').delete().eq('id', id);
-      loadAllData();
+      const { success, error } = await deleteWorkerAction(id, adminSession.id);
+      if (!success) {
+        showToast('Error al eliminar usuario: ' + error, 'error');
+      } else {
+        showToast('Usuario eliminado correctamente');
+        loadAllData();
+      }
     });
   };
 
@@ -347,14 +351,17 @@ export default function AdminPage() {
 
   const handleDeleteRecord = (id) => {
     openConfirm('¿Eliminar este registro?', async () => {
-      const success = await deleteRecord(id);
+      const { success, error } = await deleteAuditRecordAction(id, adminSession.id);
       if (success) {
+        showToast('Registro eliminado correctamente');
         loadAllData();
         setSelectedRecords(prev => {
           const newSet = new Set(prev);
           newSet.delete(id);
           return newSet;
         });
+      } else {
+        showToast('Error al eliminar registro: ' + error, 'error');
       }
     });
   };
@@ -426,7 +433,7 @@ export default function AdminPage() {
       const result = await updateCompanyAction(editingCompanyId, {
         name: newCompany.name,
         type: newCompany.type
-      });
+      }, adminSession.id);
 
       if (!result.success) {
         setMessage('Error al actualizar empresa: ' + result.error);
@@ -438,7 +445,7 @@ export default function AdminPage() {
       setEditingCompanyId(null);
     } else {
       // Crear nueva empresa
-      const result = await createCompanyAction({ name: newCompany.name, type: newCompany.type });
+      const result = await createCompanyAction({ name: newCompany.name, type: newCompany.type }, adminSession.id);
 
       if (result.success) {
         showToast('Empresa creada correctamente');
@@ -626,7 +633,7 @@ export default function AdminPage() {
         return;
       }
 
-      const result = await updateAdminAction(adminSession.id, payload);
+      const result = await updateAdminAction(adminSession.id, payload, adminSession.id);
       if (result.success) {
         // Update local session
         const newSession = { ...adminSession };

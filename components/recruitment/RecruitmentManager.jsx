@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { Plus, Settings, Eye, Trash2, ClipboardList, Users, ArrowLeft, RefreshCw, Settings2 } from 'lucide-react';
 import Toast from '../Toast';
+import { getAdminSession } from '../../lib/auth';
 import SurveyDashboard from './SurveyDashboard';
 import SurveyEditor from './SurveyEditor';
 import { createSurveyAction, updateSurveyStatusAction, deleteSurveyAction } from '../../lib/actions';
@@ -68,12 +69,8 @@ export default function RecruitmentManager() {
     setCreating(true);
     try {
       const token = 'tkn_' + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9) + Math.random().toString(36).substr(2, 9);
-      const res = await createSurveyAction({
-          title: newSurveyTitle.trim(),
-          description: newSurveyDesc.trim(),
-          access_token: token,
           is_active: true
-      });
+      }, getAdminSession()?.id);
         
       if (!res.success) throw new Error(res.error);
       
@@ -92,7 +89,7 @@ export default function RecruitmentManager() {
 
   const handleToggleActive = async (id, currentStatus) => {
     try {
-      const res = await updateSurveyStatusAction(id, !currentStatus);
+      const res = await updateSurveyStatusAction(id, !currentStatus, getAdminSession()?.id);
       if (!res.success) throw new Error(res.error);
       
       setSurveys(surveys.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
@@ -103,9 +100,8 @@ export default function RecruitmentManager() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta entrevista y TODAS sus respuestas?')) return;
     try {
-      const res = await deleteSurveyAction(id);
+      const res = await deleteSurveyAction(id, getAdminSession()?.id);
       
       if (!res.success) throw new Error(res.error);
       showToast('Entrevista eliminada');

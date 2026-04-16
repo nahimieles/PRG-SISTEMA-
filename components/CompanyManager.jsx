@@ -6,13 +6,14 @@ import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, Chev
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import {
-    getCompanies, deleteCompany,
-    getCompanyGroups, deleteCompanyGroup,
-    uploadFile
+    getCompanies, 
+    getCompanyGroups,
+    uploadFile, getAdminSession
 } from '../lib/auth';
 import {
     createCompanyAction, updateCompanyAction,
-    createCompanyGroupAction, updateCompanyGroupAction
+    createCompanyGroupAction, updateCompanyGroupAction,
+    deleteCompanyAction, deleteCompanyGroupAction
 } from '../lib/actions';
 
 export default function CompanyManager() {
@@ -108,6 +109,8 @@ export default function CompanyManager() {
         console.log('[DEBUG] editingItem:', editingItem);
 
         try {
+            const admin = getAdminSession();
+            const requesterId = admin?.id;
             let result;
 
             // The most reliable way to tell if we are saving a company or a group is 
@@ -140,18 +143,12 @@ export default function CompanyManager() {
                         console.log('[DEBUG] No updates detected, returning');
                         setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
                     }
-                    result = await updateCompanyAction(editingItem.id, updates);
+                    result = await updateCompanyAction(editingItem.id, updates, requesterId);
                 } else {
                     // Create Company
                     console.log('[DEBUG] Action: createCompanyAction');
-                    result = await createCompanyAction({
-                        name: formData.name,
-                        type: formData.type,
-                        username: formData.username,
-                        password: formData.password,
-                        groupId: formData.group_id || null,
                         logo_url: formData.avatar_url || null
-                    });
+                    }, requesterId);
                 }
             } else {
                 // SAVING GROUP
@@ -167,10 +164,10 @@ export default function CompanyManager() {
 
                 if (editingItem) {
                     console.log('[DEBUG] Action: updateCompanyGroupAction');
-                    result = await updateCompanyGroupAction(editingItem.id, groupData);
+                    result = await updateCompanyGroupAction(editingItem.id, groupData, requesterId);
                 } else {
                     console.log('[DEBUG] Action: createCompanyGroupAction');
-                    result = await createCompanyGroupAction(groupData);
+                    result = await createCompanyGroupAction(groupData, requesterId);
                 }
             }
 
@@ -198,12 +195,22 @@ export default function CompanyManager() {
 
     const handleDelete = (id, isGroup = false) => {
         openConfirm('¿Estás seguro de eliminar este elemento?', async () => {
-            let success;
-            if (!isGroup) success = await deleteCompany(id);
-            else success = await deleteCompanyGroup(id);
+            const admin = getAdminSession();
+            const requesterId = admin?.id;
+            let result;
 
-            if (success) { showToast('Eliminado correctamente'); loadData(); }
-            else showToast('Error al eliminar', 'error');
+            if (!isGroup) {
+                result = await deleteCompanyAction(id, requesterId);
+            } else {
+                result = await deleteCompanyGroupAction(id, requesterId);
+            }
+
+            if (result.success) { 
+                showToast('Eliminado correctamente'); 
+                loadData(); 
+            } else { 
+                showToast('Error al eliminar: ' + result.error, 'error'); 
+            }
         });
     };
 
