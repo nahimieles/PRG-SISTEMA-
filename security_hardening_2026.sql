@@ -35,6 +35,8 @@ CREATE POLICY "Public Read Questions" ON public.recruitment_questions FOR SELECT
 );
 CREATE POLICY "Public Selective Read Records" ON public.audit_records FOR SELECT USING (true);
 CREATE POLICY "Public Selective Read Attendance" ON public.attendance_records FOR SELECT USING (true);
+CREATE POLICY "Public Selective Read Candidates" ON public.recruitment_candidates FOR SELECT USING (true);
+CREATE POLICY "Public Selective Read Responses" ON public.recruitment_responses FOR SELECT USING (true);
 
 -- 5. POLÍTICAS DE ACCIÓN RESTRINGIDA (Escritura segura desde el cliente)
 CREATE POLICY "Worker Insert Audit Records" ON public.audit_records FOR INSERT WITH CHECK (true);

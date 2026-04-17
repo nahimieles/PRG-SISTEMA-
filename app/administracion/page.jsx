@@ -93,6 +93,7 @@ export default function AdminPage() {
   // Estado para funcionarios
   const [workers, setWorkers] = useState([]);
   const [showPasswordsSet, setShowPasswordsSet] = useState({});
+  const [showNewWorkerPassword, setShowNewWorkerPassword] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingWorkerId, setEditingWorkerId] = useState(null);
   const [newWorker, setNewWorker] = useState({
@@ -863,18 +864,28 @@ export default function AdminPage() {
                         color: theme.text,
                       }}
                     />
-                    <input
-                      type="password"
-                      placeholder="Contraseña"
-                      value={newWorker.password}
-                      onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
-                      className="input-professional focus:outline-none"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewWorkerPassword ? "text" : "password"}
+                        placeholder="Contraseña"
+                        value={newWorker.password}
+                        onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
+                        className="input-professional focus:outline-none w-full pr-10"
+                        style={{
+                          borderColor: theme.border,
+                          background: isDark ? '#0f1419' : '#fff',
+                          color: theme.text,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewWorkerPassword(!showNewWorkerPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
+                        style={{ color: theme.text }}
+                      >
+                        {showNewWorkerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <input
                       type="text"
                       placeholder="Nombre completo"
@@ -946,11 +957,16 @@ export default function AdminPage() {
                               <td className="px-4 py-3">{worker.full_name}</td>
                               <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
                               <td className="px-4 py-3 flex items-center gap-2">
-                                <span className="font-mono text-xs">{showPasswordsSet[worker.id] ? worker.password : '••••••••'}</span>
+                                <span className="font-mono text-xs">
+                                  {showPasswordsSet[worker.id] 
+                                    ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
+                                    : '••••••••'}
+                                </span>
                                 <button
                                   onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
                                   className="hover:opacity-70"
                                   style={{ color: theme.primary }}
+                                  title={worker.password.startsWith('$2') ? "Esta contraseña está encriptada y no se puede visualizar" : "Ver contraseña"}
                                 >
                                   {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -1005,7 +1021,11 @@ export default function AdminPage() {
                             <div className="p-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
                               <p className="opacity-50 text-[10px] uppercase font-bold mb-0.5">Contraseña</p>
                               <div className="flex items-center gap-1">
-                                <span className="font-mono truncate">{showPasswordsSet[worker.id] ? worker.password : '••••••'}</span>
+                                <span className="font-mono truncate">
+                                  {showPasswordsSet[worker.id] 
+                                    ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
+                                    : '••••••'}
+                                </span>
                                 <button
                                   onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
                                   className="hover:opacity-70 flex-shrink-0"
