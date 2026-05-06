@@ -28,7 +28,7 @@ export default function Sidebar({
     onTabChange,
     userName = '',
     onLogout,
-
+    onProfileClick,
     showBackButton = true,
     onHoverChange // Add this
 }) {
@@ -46,8 +46,7 @@ export default function Sidebar({
         empresas: Building2,
         dashboards: PieChart,
         reportes: Calendar,
-        dashboard: LayoutDashboard,
-        archivos: FileText
+        dashboard: LayoutDashboard
     };
 
     const sidebarBg = isDark ? '#0d1117' : '#0f172a';
@@ -110,9 +109,29 @@ export default function Sidebar({
             <div className={`${expanded ? 'px-3' : 'px-2'} pb-4 space-y-2`}>
                 {/* Usuario */}
                 {userName && expanded && (
-                    <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
-                        <p className="text-white font-medium text-sm truncate">Hola, {userName}</p>
-                    </div>
+                    <button
+                        onClick={onProfileClick}
+                        className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 flex items-center gap-2.5 hover:from-blue-500/20 hover:to-purple-500/20 transition-all cursor-pointer text-left"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                            {userName?.charAt(0)?.toUpperCase() || 'A'}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-white font-medium text-sm truncate">{userName}</p>
+                            <p className="text-[10px] text-gray-400">Admin</p>
+                        </div>
+                    </button>
+                )}
+                {userName && !expanded && (
+                    <button
+                        onClick={onProfileClick}
+                        className="w-full flex justify-center py-2 cursor-pointer"
+                        title={userName}
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                            {userName?.charAt(0)?.toUpperCase() || 'A'}
+                        </div>
+                    </button>
                 )}
 
                 {/* Tema */}

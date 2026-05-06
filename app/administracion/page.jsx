@@ -29,6 +29,8 @@ const CourseEditor = dynamic(() => import('../../components/CourseEditor'), { ss
 const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
 const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
 const RecruitmentManager = dynamic(() => import('../../components/recruitment/RecruitmentManager'), { ssr: false });
+const TaxCalendar2026 = dynamic(() => import('../../components/TaxCalendar2026'), { ssr: false });
+const ActivityLogger = dynamic(() => import('../../components/ActivityLogger'), { ssr: false });
 
 export default function AdminPage() {
   const router = useRouter();
@@ -38,13 +40,10 @@ export default function AdminPage() {
   // Menú de navegación del sidebar
   const sidebarItems = [
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
-    { id: 'reportes', label: 'Reportes', icon: Calendar },
     { id: 'funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
-    { id: 'archivos', label: 'Archivos', icon: FileText },
     { id: 'cursos', label: 'Cursos', icon: MonitorPlay },
     { id: 'entrevistas', label: 'Entrevistas', icon: ClipboardList }
-
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -57,7 +56,7 @@ export default function AdminPage() {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'reportes', 'funcionarios', 'empresas', 'archivos', 'cursos', 'entrevistas'].includes(hash)) {
+      if (hash && ['dashboards', 'funcionarios', 'empresas', 'cursos', 'entrevistas'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -664,6 +663,7 @@ export default function AdminPage() {
         onLogout={handleLogout}
         showBackButton={false}
         onHoverChange={setIsSidebarExpanded}
+        onProfileClick={handleOpenProfile}
       />
 
       {/* Contenido Principal con margen dinámico */}
@@ -682,27 +682,24 @@ export default function AdminPage() {
           {/* Professional Header Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
             {/* Title Section */}
-            <div className={activeTab === 'entrevistas' ? 'hidden' : 'block'}>
+            <div className={activeTab === 'entrevistas' || activeTab === 'empresas' ? 'hidden' : 'block'}>
               <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
                 {activeTab === 'dashboards' && 'Panel de Control'}
-                {activeTab === 'reportes' && 'Actividad Reciente'}
                 {activeTab === 'funcionarios' && 'Gestión de Funcionarios'}
                 {activeTab === 'empresas' && 'Gestión de Empresas'}
-                {activeTab === 'archivos' && 'Archivos y Respaldos'}
                 {activeTab === 'cursos' && 'Gestión de Cursos'}
               </h1>
               <p className="text-xs sm:text-sm mt-0.5" style={{ color: theme.textSecondary }}>
-                {activeTab === 'dashboards' && 'Estadísticas y métricas en tiempo real'}
-                {activeTab === 'reportes' && 'Últimos movimientos y acciones registradas'}
+                {activeTab === 'dashboards' && 'Estadísticas, informes y métricas en tiempo real'}
                 {activeTab === 'funcionarios' && 'Administra usuarios y permisos'}
                 {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
-                {activeTab === 'archivos' && 'Gestiona archivos de SharePoint'}
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
               </p>
             </div>
             {activeTab === 'entrevistas' && <div id="interview-header-portal" className="flex-1 w-full" />}
 
-            {/* Right Section - User Profile */}
+            {/* Right Section - User Profile (hidden on empresas tab) */}
+            {activeTab !== 'empresas' && (
             <div className="flex flex-row items-center gap-2 flex-shrink-0">
               {/* User Profile - Clickable */}
               <button
@@ -720,6 +717,7 @@ export default function AdminPage() {
                 </div>
               </button>
             </div>
+            )}
           </div>
 
           {/* Toast Notification */}
@@ -795,14 +793,6 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/**************************************************************
-           * TAB: REPORTES (MONITOR DE ARCHIVOS)
-           **************************************************************/}
-          {activeTab === 'reportes' && (
-            <div className="animate-fade-in">
-              <RealTimeMonitor onLogsChanged={loadAlertsAndStats} />
-            </div>
-          )}
 
 
           {/* TAB: CURSOS */}
@@ -1068,40 +1058,58 @@ export default function AdminPage() {
               {(() => {
                 const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
+                // ─── Name correction map for productivity chart ──────────
+                const NAME_CORRECTIONS = {
+                  'Valeria Almeida': 'Eddy Campuzano',
+                };
+                const EMAIL_NAMES = {
+                  'manager@prg.com.ec': 'Paul Rodríguez García',
+                  'account1@prg.com.ec': 'Danny Suárez',
+                  'administracion@prg.com.ec': 'Maria Teresa Fernández Bravo',
+                  'prg.audex@gmail.com': 'Eddy Campuzano',
+                  'audex2@prg.com.ec': 'Eddy Campuzano',
+                  'account3@prg.com.ec': 'Sebastián Morales',
+                  'account2@prg.com.ec': 'Lisbeth',
+                };
+
+                function correctName(name) {
+                  if (!name) return 'Sin Nombre';
+                  return NAME_CORRECTIONS[name] || name;
+                }
+
                 // LOGICA HIBRIDA DE DATOS
                 const isUsingReports = records && records.length > 0;
-                const hoursByCompany = {};
+                const hoursByCompanyPRG = {};
                 const hoursByWorker = {};
                 
                 if (isUsingReports) {
-                  // Caso A: Tenemos reportes de horas
                   records.forEach(r => {
                     const company = r.company_name || 'Sin Empresa';
-                    const worker = r.worker_name || 'Sin Nombre';
+                    const worker = correctName(r.worker_name || 'Sin Nombre');
                     const hours = parseFloat(r.hours_worked || 0);
 
-                    hoursByCompany[company] = (hoursByCompany[company] || 0) + hours;
+                    // PRG billing: only PRG company data
+                    hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + hours;
                     hoursByWorker[worker] = (hoursByWorker[worker] || 0) + hours;
                   });
                 } else {
-                  // Caso B: Fallback a Pulsos (para que no se vea vacío)
                   fileLogs.forEach(log => {
                     const company = log.company_name || 'Sin Empresa';
-                    const worker = log.worker_name || 'Sin Nombre';
+                    const worker = correctName(log.worker_name || 'Sin Nombre');
                     
-                    hoursByCompany[company] = (hoursByCompany[company] || 0) + 1;
+                    hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + 1;
                     hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
                   });
                 }
 
-                const topCompanies = Object.entries(hoursByCompany)
+                const topCompanies = Object.entries(hoursByCompanyPRG)
                   .map(([name, val]) => ({ 
-                    name: name.length > 15 ? name.substring(0, 15) + '...' : name, 
+                    name: name.length > 18 ? name.substring(0, 18) + '...' : name, 
                     value: parseFloat(val.toFixed(2)), 
                     fullName: name 
                   }))
                   .sort((a, b) => b.value - a.value)
-                  .slice(0, 5);
+                  .slice(0, 6);
 
                 const workerData = Object.entries(hoursByWorker)
                   .map(([name, val]) => ({ 
@@ -1109,135 +1117,111 @@ export default function AdminPage() {
                     value: parseFloat(val.toFixed(2)) 
                   }))
                   .sort((a, b) => b.value - a.value)
-                  .slice(0, 5);
+                  .slice(0, 6);
 
                 const labelSuffix = isUsingReports ? ' (Horas)' : ' (Actividad)';
-                const dataKey = 'value';
 
                 return (
                   <div className="flex flex-col gap-8">
-                    {/* Gráficos Principales */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Top Empresas */}
-                      <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <div className="flex items-center justify-between mb-6">
-                           <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                            <Building2 size={14} /> Top Empresas{labelSuffix}
-                          </h3>
-                        </div>
-                        <div className="h-[250px] w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={topCompanies} layout="vertical" margin={{ left: -20, right: 20 }}>
-                              <XAxis type="number" hide />
-                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                              <Tooltip 
-                                cursor={{ fill: 'transparent' }} 
-                                contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
-                                labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
-                                itemStyle={{ color: theme.text }}
-                                formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
-                              />
-                              <Bar dataKey={dataKey} fill={theme.primary} radius={[0, 10, 10, 0]} barSize={20} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
 
-                      {/* Productividad Funcionario */}
-                      <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                             <TrendingUp size={14} /> Productividad{labelSuffix}
-                          </h3>
-                        </div>
-                        <div className="h-[250px] w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={workerData} layout="vertical" margin={{ left: -20, right: 20 }}>
-                              <XAxis type="number" hide />
-                              <YAxis dataKey="name" type="category" width={100} stroke={theme.textSecondary} tick={{ fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                              <Tooltip 
-                                cursor={{ fill: 'transparent' }} 
-                                contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
-                                labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
-                                itemStyle={{ color: theme.text }}
-                                formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
-                              />
-                              <Bar dataKey={dataKey} fill="#27ae60" radius={[0, 10, 10, 0]} barSize={20} />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actividades Recientes (Real-time pulses) */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between mb-2">
+                    {/* ════════════════════════════════════════════════════
+                        SECTION 1: FACTURACIÓN PRG
+                    ════════════════════════════════════════════════════ */}
+                    <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
+                      <div className="flex items-center justify-between mb-6">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <Clock size={14} /> ACTIVIDADES RECIENTES
+                          <Building2 size={14} /> Facturación PRG{labelSuffix}
                         </h3>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff',
+                            color: '#3b82f6',
+                          }}
+                        >
+                          Top {topCompanies.length} empresas
+                        </span>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {(() => {
-                          const activeUsers = {};
-                          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                          
-                          fileLogs.forEach(log => {
-                            const date = new Date(log.timestamp);
-                            if (date > oneHourAgo) {
-                              if (!activeUsers[log.worker_name] || new Date(activeUsers[log.worker_name].timestamp) < date) {
-                                activeUsers[log.worker_name] = log;
-                              }
-                            }
-                          });
-
-                          const activeList = Object.values(activeUsers);
-
-                          return activeList.length === 0 ? (
-                            <div className="col-span-full p-8 text-center rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
-                              <p className="text-xs opacity-40">Sin actividad reciente en la última hora</p>
-                            </div>
-                          ) : (
-                            activeList.map((pulse, idx) => (
-                              <div key={idx} className="p-4 rounded-2xl transition-all hover:scale-[1.02] shadow-sm border" style={{ background: theme.surface, borderColor: theme.border }}>
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm" style={{ background: COLORS[idx % COLORS.length] }}>
-                                    {pulse.worker_name?.charAt(0)}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-sm truncate">{pulse.worker_name}</p>
-                                    <p className="text-[10px] opacity-50 truncate flex items-center gap-1">
-                                      <FileText size={10} /> {pulse.file_name}
-                                    </p>
-                                  </div>
-                                  <span className="text-[10px] font-medium opacity-40">
-                                    {Math.floor((Date.now() - new Date(pulse.timestamp)) / 60000)}m ago
-                                  </span>
-                                </div>
-                              </div>
-                            ))
-                          );
-                        })()}
+                      <div className="h-[280px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={topCompanies} layout="vertical" margin={{ left: -10, right: 30 }}>
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={120} stroke={theme.textSecondary} tick={{ fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <Tooltip 
+                              cursor={{ fill: 'transparent' }} 
+                              contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
+                              labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
+                              itemStyle={{ color: theme.text }}
+                              formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
+                            />
+                            <Bar dataKey="value" fill={theme.primary} radius={[0, 10, 10, 0]} barSize={22}>
+                              {topCompanies.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
                     </div>
+
+                    {/* ════════════════════════════════════════════════════
+                        SECTION 2: GESTIÓN DE COLABORADORES (PRODUCTIVIDAD)
+                    ════════════════════════════════════════════════════ */}
+                    <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
+                          <TrendingUp size={14} /> Gestión de Colaboradores{labelSuffix}
+                        </h3>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            background: isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4',
+                            color: '#16a34a',
+                          }}
+                        >
+                          {workerData.length} colaboradores
+                        </span>
+                      </div>
+                      <div className="h-[280px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={workerData} layout="vertical" margin={{ left: -10, right: 30 }}>
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={140} stroke={theme.textSecondary} tick={{ fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <Tooltip 
+                              cursor={{ fill: 'transparent' }} 
+                              contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
+                              labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
+                              itemStyle={{ color: theme.text }}
+                              formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
+                            />
+                            <Bar dataKey="value" fill="#27ae60" radius={[0, 10, 10, 0]} barSize={22}>
+                              {workerData.map((entry, index) => (
+                                <Cell key={`cell-w-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* ════════════════════════════════════════════════════
+                        SECTION 3: INFORMES (unified)
+                    ════════════════════════════════════════════════════ */}
+                    <RealTimeMonitor onLogsChanged={loadAlertsAndStats} />
+
+                    {/* ════════════════════════════════════════════════════
+                        SECTION 4: CALENDARIO TRIBUTARIO 2026
+                    ════════════════════════════════════════════════════ */}
+                    <div className="space-y-4">
+                      <TaxCalendar2026 />
+                    </div>
+
                   </div>
-
-
                 );
               })()}
             </div>
           )}
 
 
-          {/* TAB: REPORTES */}
-          {
-            activeTab === 'reportes' && (
-              <div className="animate-fade-in">
 
-
-              </div>
-            )
-          }
 
           {/* TAB: ARCHIVOS ONEDRIVE */}
           {/* TAB: ARCHIVOS ONEDRIVE */}

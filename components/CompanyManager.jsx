@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Toast from './Toast';
-import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, ChevronLeft, Upload, Image as ImageIcon, CheckCircle, X, Layers } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, ChevronLeft, Upload, Image as ImageIcon, CheckCircle, X, Layers, ExternalLink, ChevronDown, BarChart3, TrendingUp, FileBarChart } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import {
@@ -15,6 +15,7 @@ import {
     createCompanyGroupAction, updateCompanyGroupAction,
     deleteCompanyAction, deleteCompanyGroupAction
 } from '../lib/actions';
+import { supabase } from '../lib/supabase';
 
 export default function CompanyManager() {
     // V3.12.0 - Groups Integration
@@ -79,7 +80,16 @@ export default function CompanyManager() {
     const [message, setMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
+    const [showAddMenu, setShowAddMenu] = useState(false);
+    const addMenuRef = useRef(null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+    // Document upload modal state
+    const [docModal, setDocModal] = useState(null); // { company, type: 'financieros'|'impuestos'|'informes' }
+    const [docFile, setDocFile] = useState(null);
+    const [docUploading, setDocUploading] = useState(false);
+    const [docDragging, setDocDragging] = useState(false);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         loadData();
@@ -292,30 +302,175 @@ export default function CompanyManager() {
         (company.group_name && company.group_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
+    // SharePoint — auto-discover folder via Graph API
+    const [archivosLoading, setArchivosLoading] = useState(null); // companyId while loading
+    const handleOpenArchivos = async (company) => {
+        if (company.sharepoint_folder_url) {
+            window.open(company.sharepoint_folder_url, '_blank');
+            return;
+        }
+
+        const companyId = company.id;
+        setArchivosLoading(companyId);
+        try {
+            const type = (company.type || '').toLowerCase();
+            const res = await fetch(`/api/graph/find-folder?company=${encodeURIComponent(company.name)}&type=${type}&_t=${Date.now()}`);
+            const data = await res.json();
+            
+            if (data.url) {
+                window.open(data.url, '_blank');
+                
+                // Guardar la URL en la DB si la encontró con éxito para que sea instantáneo la próxima vez
+                if (data.found) {
+                    const admin = getAdminSession();
+                    const requesterId = admin?.id;
+                    if (requesterId) {
+                        await updateCompanyAction(companyId, { sharepoint_folder_url: data.url }, requesterId);
+                        loadData(); // Recargar para actualizar el UI
+                    }
+                }
+            }
+            if (!data.found && data.message) {
+                setMessage({ text: data.message, type: 'warning' });
+            }
+        } catch (err) {
+            console.error('Error finding folder:', err);
+            setMessage({ text: 'Error al buscar carpeta en SharePoint', type: 'error' });
+        } finally {
+            setArchivosLoading(null);
+        }
+    };
+
+    // Document upload handler
+    const DOC_TYPE_LABELS = {
+        financieros: 'Estados Financieros',
+        impuestos: 'Declaración de Impuestos',
+        informes: 'Informes Analíticos'
+    };
+
+    const handleDocUpload = async () => {
+        if (!docFile || !docModal) return;
+        setDocUploading(true);
+        try {
+            const ext = docFile.name.split('.').pop();
+            const path = `company-docs/${docModal.company.id}/${docModal.type}-${Date.now()}.${ext}`;
+            const { data, error } = await supabase.storage
+                .from('audit-files')
+                .upload(path, docFile, { cacheControl: '3600', upsert: true });
+
+            if (error) throw error;
+
+            const { data: urlData } = supabase.storage
+                .from('audit-files')
+                .getPublicUrl(path);
+
+            const metaKey = `${docModal.type}_url`;
+            const admin = getAdminSession();
+            const requesterId = admin?.id;
+            const updateRes = await updateCompanyAction(docModal.company.id, { [metaKey]: urlData.publicUrl }, requesterId);
+            if (!updateRes.success) throw new Error(updateRes.error || 'Error al guardar URL en la base de datos');
+
+            setMessage({ text: `${DOC_TYPE_LABELS[docModal.type]} subido correctamente`, type: 'success' });
+            setDocModal(null);
+            setDocFile(null);
+            loadData();
+        } catch (err) {
+            console.error('Upload error:', err);
+            setMessage({ text: 'Error al subir archivo: ' + (err.message || ''), type: 'error' });
+        } finally {
+            setDocUploading(false);
+        }
+    };
+
+    const handleDocDelete = async () => {
+        if (!docModal) return;
+        setDocUploading(true);
+        try {
+            const metaKey = `${docModal.type}_url`;
+            const admin = getAdminSession();
+            const requesterId = admin?.id;
+            const updateRes = await updateCompanyAction(docModal.company.id, { [metaKey]: null }, requesterId);
+            if (!updateRes.success) throw new Error(updateRes.error || 'Error al eliminar URL en la base de datos');
+            
+            setMessage({ text: `Documento eliminado`, type: 'success' });
+            setDocModal(null);
+            setDocFile(null);
+            loadData();
+        } catch (err) {
+            setMessage({ text: 'Error al eliminar: ' + (err.message || ''), type: 'error' });
+        } finally {
+            setDocUploading(false);
+        }
+    };
+
+    // Close add menu on outside click
+    useEffect(() => {
+        const handler = (e) => { if (addMenuRef.current && !addMenuRef.current.contains(e.target)) setShowAddMenu(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     return (
         <div className="animate-fade-in relative transition-all">
             {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
-            {/* Content Actions */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold w-full text-center sm:text-left" style={{ color: theme.text }}>
-                    Dashboard de Empresas
-                </h2>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+            {/* Top Bar: Group title (left) + Search & Nuevo (right) */}
+            <div className="flex items-center justify-between gap-2 mb-3">
+                {/* Left: Back + Group Name (when inside a group) */}
+                {expandedGroup ? (
+                    <div className="flex items-center gap-2">
+                        <button onClick={handleBackToGroups} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                            <ChevronLeft size={20} />
+                        </button>
+                        <h3 className="text-lg font-bold" style={{ color: theme.text }}>{expandedGroup.name}</h3>
+                    </div>
+                ) : (
+                    <div />
+                )}
+
+                {/* Right: Search + Nuevo */}
+                <div className="flex items-center gap-2">
                     {expandedGroup && (
-                        <div className="relative w-full sm:w-64">
+                        <div className="relative">
                             <input
-                                type="text" placeholder="Buscar empresa..."
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                type="text" placeholder="Buscar..."
+                                className="w-40 sm:w-52 pl-8 pr-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 style={{ background: isDark ? '#1a1f2e' : '#fff', borderColor: theme.border, color: theme.text }}
                                 value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                             />
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                         </div>
                     )}
-                    <button onClick={() => openModal(null)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm whitespace-nowrap font-bold">
-                        <Plus size={18} /> <span>Nueva Empresa</span>
-                    </button>
+                    <div className="relative" ref={addMenuRef}>
+                        <button
+                            onClick={() => setShowAddMenu(!showAddMenu)}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm font-bold text-sm"
+                        >
+                            <Plus size={16} />
+                            <span className="hidden sm:inline">Nuevo</span>
+                            <ChevronDown size={14} className={`transition-transform ${showAddMenu ? 'rotate-180' : ''}`} />
+                        </button>
+                        {showAddMenu && (
+                            <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
+                                <button
+                                    onClick={() => { openModal(null); setShowAddMenu(false); }}
+                                    className="w-full px-4 py-2.5 text-left text-sm font-medium flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                    style={{ color: theme.text }}
+                                >
+                                    <Building2 size={15} className="text-blue-500" /> Nueva Empresa
+                                </button>
+                                {(expandedGroup?.type === 'contabilidad' || expandedGroup?.type === 'auditoria') && (
+                                    <button
+                                        onClick={() => { openModal(null, true); setShowAddMenu(false); }}
+                                        className="w-full px-4 py-2.5 text-left text-sm font-medium flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors border-t"
+                                        style={{ color: theme.text, borderColor: theme.border }}
+                                    >
+                                        <FolderPlus size={15} className="text-emerald-500" /> Nuevo Grupo
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -329,21 +484,20 @@ export default function CompanyManager() {
                         <div className="space-y-8 animate-fade-in">
                             {/* PRG Header */}
                             {prgCompany && (
-                                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 sm:p-6 rounded-xl border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all">
-                                    <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-4">
+                                <div className="p-4 rounded-xl border flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all" style={{ background: theme.surface, borderColor: theme.border }}>
+                                    <div className="flex items-center gap-3">
                                         {prgCompany.avatar_url ? (
-                                            <img src={prgCompany.avatar_url} className="w-16 h-16 rounded-xl object-cover border-2 border-amber-500/30" />
+                                            <img src={prgCompany.avatar_url} className="w-11 h-11 rounded-lg object-cover border" style={{ borderColor: theme.border }} />
                                         ) : (
-                                            <div className="w-16 h-16 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-600"><Building2 size={32} /></div>
+                                            <div className="w-11 h-11 rounded-lg flex items-center justify-center border" style={{ background: isDark ? theme.surfaceElevated : '#f8fafc', borderColor: theme.border }}><Building2 size={22} className="text-blue-500" /></div>
                                         )}
                                         <div>
-                                            <h3 className="text-xs sm:text-sm font-black text-amber-600/80 uppercase tracking-widest">Empresa Principal</h3>
-                                            <p className="text-base sm:text-lg font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Empresa Principal</p>
+                                            <p className="text-sm font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 rounded-full flex items-center gap-2 sm:block">
-                                        <Edit2 size={18} className="text-amber-600" />
-                                        <span className="sm:hidden text-amber-600 font-bold text-sm">Editar</span>
+                                    <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
+                                        <Edit2 size={16} className="text-gray-400" />
                                     </button>
                                 </div>
                             )}
@@ -351,7 +505,7 @@ export default function CompanyManager() {
                             {/* Unified Groups Grid */}
                             <div>
                                 <h3 className="text-lg font-bold mb-4 opacity-50 uppercase tracking-widest text-xs flex items-center gap-2"><Layers size={14} /> Grupos de Trabajo</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
                                     {/* DYAMIC GROUPS */}
                                     {groups.filter(g => !g.category).map(group => {
@@ -361,37 +515,40 @@ export default function CompanyManager() {
                                         const moreCount = groupCompanies.length > 3 ? `+${groupCompanies.length - 3}` : '';
 
                                         return (
-                                            <button
+                                            <div
                                                 key={group.id}
                                                 onClick={() => handleGroupClick(group)}
-                                                className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupClick(group); } }}
+                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className="w-full flex items-start justify-between mb-4">
-                                                    <div className="w-14 h-14 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                <div className="w-full flex items-start justify-between mb-3">
+                                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                         {group.image_url ? (
-                                                            <img src={group.image_url} className="w-full h-full object-cover rounded-xl" alt="" />
+                                                            <img src={group.image_url} className="w-full h-full object-cover rounded-lg" alt="" />
                                                         ) : (
-                                                            <Folder size={28} className="text-blue-500" />
+                                                            <Folder size={20} className="text-blue-500" />
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
-                                                            className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                            className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
                                                         >
-                                                            <Edit2 size={16} />
+                                                            <Edit2 size={14} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
-                                                            className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                            className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
                                                         >
-                                                            <Trash2 size={16} />
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
-                                                <div className="flex items-center gap-2 mb-4">
+                                                <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
+                                                <div className="flex items-center gap-2 mb-3">
                                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
                                                         {groupCompanies.length} Empresas
                                                     </span>
@@ -399,17 +556,17 @@ export default function CompanyManager() {
 
                                                 {/* Member Preview */}
                                                 {groupCompanies.length > 0 ? (
-                                                    <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                    <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
                                                         <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
                                                             {previewNames} {moreCount && <span className="text-blue-500 font-bold">{moreCount}</span>}
                                                         </p>
                                                     </div>
                                                 ) : (
-                                                    <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                    <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
                                                         <p className="text-xs text-gray-400 italic">Sin empresas asignadas</p>
                                                     </div>
                                                 )}
-                                            </button>
+                                            </div>
                                         );
                                     })}
 
@@ -421,17 +578,20 @@ export default function CompanyManager() {
                                         const previewNames = typeCompanies.slice(0, 3).map(c => c.name).join(', ');
 
                                         return (
-                                            <button
+                                            <div
                                                 key={lg.id}
                                                 onClick={() => handleGroupClick(lg)}
-                                                className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full opacity-80 hover:opacity-100"
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupClick(lg); } }}
+                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full opacity-80 hover:opacity-100 cursor-pointer"
                                                 style={{ background: theme.surface, borderColor: theme.border }}
                                             >
-                                                <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                    <Users size={28} className="text-gray-400" />
+                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <Users size={20} className="text-gray-400" />
                                                 </div>
-                                                <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{lg.name}</h3>
-                                                <div className="flex items-center gap-2 mb-4">
+                                                <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{lg.name}</h3>
+                                                <div className="flex items-center gap-2 mb-3">
                                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700 uppercase tracking-tight">
                                                         {typeCompanies.length} Empresas
                                                     </span>
@@ -441,7 +601,7 @@ export default function CompanyManager() {
                                                         {previewNames || <span className="italic opacity-50 font-normal">Sin empresas</span>}
                                                     </p>
                                                 </div>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
@@ -451,82 +611,63 @@ export default function CompanyManager() {
 
                     {/* LEVEL 2: DETAILED LIST */}
                     {expandedGroup && (
-                        <div className="animate-fade-in space-y-6">
-                            <div className="flex flex-col sm:flex-row items-center gap-4 pb-4 border-b border-gray-200 dark:border-gray-800 text-center sm:text-left">
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <button onClick={handleBackToGroups} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
-                                        <ChevronLeft size={24} />
-                                    </button>
-                                    <div>
-                                        <h3 className="text-xl sm:text-2xl font-bold flex items-center justify-center sm:justify-start gap-2">
-                                            {expandedGroup.name}
-                                        </h3>
-                                        <p className="text-sm opacity-60">Visualizando empresas del grupo</p>
-                                    </div>
-                                </div>
-                                {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
-                                    <button
-                                        onClick={() => openModal(null, true)}
-                                        className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-500/20 font-bold"
-                                    >
-                                        <FolderPlus size={18} />
-                                        <span>Nuevo Grupo</span>
-                                    </button>
-                                )}
-                            </div>
+                         <div className="animate-fade-in space-y-6">
 
                             {/* LEVEL 2: SUB-GROUPS (Only for categories) */}
                             {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Grupos en {expandedGroup.name}</h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 border-b border-gray-100 dark:border-gray-800/50">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 border-b border-gray-100 dark:border-gray-800/50">
                                         {groups.filter(g => g.category === expandedGroup.type).map(group => {
                                             const groupCompanies = companies.filter(c => c.group_id === group.id);
                                             const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
                                             const moreCount = groupCompanies.length > 3 ? `+${groupCompanies.length - 3}` : '';
 
                                             return (
-                                                <button
+                                                <div
                                                     key={group.id}
                                                     onClick={() => handleGroupClick(group)}
-                                                    className="group relative flex flex-col items-start p-6 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-xl text-left h-full"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupClick(group); } }}
+                                                    className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer"
                                                     style={{ background: theme.surface, borderColor: theme.border }}
                                                 >
-                                                    <div className="w-full flex items-start justify-between mb-4">
-                                                        <div className="w-14 h-14 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                    <div className="w-full flex items-start justify-between mb-3">
+                                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                             {group.image_url ? (
-                                                                <img src={group.image_url} className="w-full h-full object-cover rounded-xl" alt="" />
+                                                                <img src={group.image_url} className="w-full h-full object-cover rounded-lg" alt="" />
                                                             ) : (
-                                                                <Folder size={28} className="text-blue-500" />
+                                                                <Folder size={20} className="text-blue-500" />
                                                             )}
                                                         </div>
-                                                        <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
-                                                                className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                                className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
                                                             >
-                                                                <Edit2 size={16} />
+                                                                <Edit2 size={14} />
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
-                                                                className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Trash2 size={14} />
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
-                                                    <div className="flex items-center gap-2 mb-4">
+                                                    <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
+                                                    <div className="flex items-center gap-2 mb-3">
                                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
                                                             {groupCompanies.length} Empresas
                                                         </span>
                                                     </div>
-                                                    <div className="w-full mt-auto pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                    <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
                                                         <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
                                                             {previewNames} {moreCount && <span className="text-blue-500 font-bold">{moreCount}</span>}
                                                         </p>
                                                     </div>
-                                                </button>
+                                                </div>
                                             );
                                         })}
                                         {groups.filter(g => g.category === expandedGroup.type).length === 0 && (
@@ -571,24 +712,24 @@ export default function CompanyManager() {
                                     }
 
                                     return groupCompanies.map(company => (
-                                        <div key={company.id} className="p-5 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
-                                            <div className="flex justify-between items-start mb-3">
+                                        <div key={company.id} className="p-4 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
+                                            <div className="flex justify-between items-start mb-2">
                                                 {(company.logo_url || company.avatar_url) ? (
-                                                    <div className="w-16 h-16 rounded-xl border overflow-hidden shadow-sm transition-transform group-hover:rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1.5" alt={company.name} />
+                                                    <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1" alt={company.name} />
                                                     </div>
                                                 ) : (
-                                                    <div className="w-16 h-16 rounded-xl flex items-center justify-center text-gray-400 border shadow-sm transition-transform group-hover:-rotate-3 group-hover:scale-110" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                        <Building2 size={32} />
+                                                    <div className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-400 border shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                        <Building2 size={22} />
                                                     </div>
                                                 )}
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => openModal(company)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={16} /></button>
-                                                    <button onClick={() => handleDelete(company.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => openModal(company)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                                                    <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={14} /></button>
                                                 </div>
                                             </div>
-                                            <h3 className="font-bold text-lg mb-1 truncate" style={{ color: theme.text }}>{company.name}</h3>
-                                            <div className="flex flex-wrap gap-2 text-[10px] font-bold tracking-tight uppercase">
+                                            <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
+                                            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
                                                 {(() => {
                                                     const type = (company.type || 'otro').toLowerCase();
                                                     let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
@@ -599,11 +740,42 @@ export default function CompanyManager() {
 
                                                     return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
                                                 })()}
-                                                {company.username && (
-                                                    <span className="px-2 py-0.5 rounded-full bg-blue-50/50 text-blue-600 dark:bg-blue-500/5 dark:text-blue-300 border border-blue-100 dark:border-blue-900/30">
-                                                        ID: {company.username}
-                                                    </span>
-                                                )}
+                                            </div>
+                                            {/* Action buttons grid */}
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenArchivos(company); }}
+                                                    disabled={archivosLoading === company.id}
+                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border disabled:opacity-50"
+                                                    style={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
+                                                >
+                                                    {archivosLoading === company.id ? (
+                                                        <><div className="w-3 h-3 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" /> Buscando...</>
+                                                    ) : (
+                                                        <><ExternalLink size={12} /> Archivos</>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); }}
+                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
+                                                    style={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
+                                                >
+                                                    <BarChart3 size={12} /> Financieros
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); }}
+                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
+                                                    style={{ color: '#f59e0b', borderColor: isDark ? 'rgba(245,158,11,0.3)' : '#fef3c7', background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb' }}
+                                                >
+                                                    <TrendingUp size={12} /> Impuestos
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); }}
+                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
+                                                    style={{ color: '#8b5cf6', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#ede9fe', background: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff' }}
+                                                >
+                                                    <FileBarChart size={12} /> Informes
+                                                </button>
                                             </div>
                                         </div>
                                     ));
@@ -778,6 +950,134 @@ export default function CompanyManager() {
                     </div>
                 )
             }
+
+            {/* Document Upload Modal */}
+            {docModal && (() => {
+                const colors = {
+                    financieros: { accent: '#10b981', bg: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5', icon: <BarChart3 size={24} /> },
+                    impuestos: { accent: '#f59e0b', bg: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb', icon: <TrendingUp size={24} /> },
+                    informes: { accent: '#8b5cf6', bg: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff', icon: <FileBarChart size={24} /> }
+                };
+                const c = colors[docModal.type];
+                const existingUrl = docModal.company[`${docModal.type}_url`];
+                return (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+                        <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
+                            {/* Header */}
+                            <div className="flex items-center gap-3 p-5 border-b" style={{ borderColor: theme.border, background: c.bg }}>
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ color: c.accent, background: isDark ? 'rgba(255,255,255,0.05)' : '#fff' }}>
+                                    {c.icon}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-base" style={{ color: theme.text }}>{DOC_TYPE_LABELS[docModal.type]}</h3>
+                                    <p className="text-xs opacity-60">{docModal.company.name}</p>
+                                </div>
+                                <button onClick={() => { setDocModal(null); setDocFile(null); }} className="p-1.5 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                                    <X size={18} style={{ color: theme.textSecondary }} />
+                                </button>
+                            </div>
+
+                            <div className="p-5 space-y-4">
+                                {/* Existing document card */}
+                                {existingUrl && (
+                                    <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: `${c.accent}33`, background: c.bg }}>
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle size={16} style={{ color: c.accent }} />
+                                            <span className="text-xs font-semibold flex-1" style={{ color: c.accent }}>Documento cargado</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <a
+                                                href={existingUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 py-1.5 rounded-lg text-xs font-bold text-center border transition-colors hover:opacity-80"
+                                                style={{ color: c.accent, borderColor: `${c.accent}44`, background: isDark ? 'rgba(255,255,255,0.05)' : '#fff' }}
+                                            >
+                                                Ver archivo
+                                            </a>
+                                            <button
+                                                onClick={handleDocDelete}
+                                                disabled={docUploading}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold border text-red-500 border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                                            >
+                                                <Trash2 size={12} className="inline mr-1" />Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Drop zone */}
+                                <div
+                                    onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
+                                    onDragLeave={() => setDocDragging(false)}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        setDocDragging(false);
+                                        const f = e.dataTransfer.files[0];
+                                        if (f) setDocFile(f);
+                                    }}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${docDragging ? 'scale-[1.02]' : 'hover:border-opacity-60'}`}
+                                    style={{
+                                        borderColor: docDragging ? c.accent : (isDark ? 'rgba(255,255,255,0.15)' : '#e2e8f0'),
+                                        background: docDragging ? c.bg : 'transparent'
+                                    }}
+                                >
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
+                                        onChange={(e) => { if (e.target.files[0]) setDocFile(e.target.files[0]); }}
+                                    />
+                                    {docFile ? (
+                                        <div className="space-y-2">
+                                            <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
+                                                <CheckCircle size={24} style={{ color: c.accent }} />
+                                            </div>
+                                            <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{docFile.name}</p>
+                                            <p className="text-[11px] opacity-50">{(docFile.size / 1024).toFixed(0)} KB — Clic para cambiar</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
+                                                <Upload size={24} style={{ color: c.accent }} />
+                                            </div>
+                                            <p className="text-sm font-semibold" style={{ color: theme.text }}>
+                                                {existingUrl ? 'Subir nuevo archivo (reemplazar)' : 'Arrastra o selecciona archivo'}
+                                            </p>
+                                            <p className="text-[11px] opacity-50">PDF, Excel, Word, Imágenes (máx. 50MB)</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2 pt-1">
+                                    <button
+                                        onClick={() => { setDocModal(null); setDocFile(null); }}
+                                        className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
+                                        style={{ borderColor: theme.border, color: theme.textSecondary }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleDocUpload}
+                                        disabled={!docFile || docUploading}
+                                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                                        style={{ background: c.accent }}
+                                    >
+                                        {docUploading ? (
+                                            <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Subiendo...</>
+                                        ) : (
+                                            <><Upload size={14} /> {existingUrl ? 'Reemplazar' : 'Subir'}</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div >
     );
 }

@@ -366,23 +366,82 @@ export default function RealTimeMonitor({ onLogsChanged }) {
         );
     });
 
-    const totalPages = Math.max(1, Math.ceil(filteredEvents.length / itemsPerPage));
+    // ── Smart Merging: consecutive edits of same file by same user ──────────
+    // Groups events where the same person modifies the same file within a 60-min
+    // window (no other file in between by that user). Shows time range.
+    const MERGE_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
+
+    // ── Smart Merging (computed directly, no useMemo) ─────────────────────────
+    // Helper: strip diacritics so "Rodríguez" matches "Rodriguez"
+    const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const mergedEvents = (() => {
+        if (filteredEvents.length === 0) return [];
+
+        const result = [];
+
+        for (let i = 0; i < filteredEvents.length; i++) {
+            const ev = filteredEvents[i];
+            const evAction = (ev.action || '').toUpperCase();
+
+            // Check if we can merge into the last result item
+            const last = result.length > 0 ? result[result.length - 1] : null;
+
+            if (last) {
+                const lastAction = (last.action || '').toUpperCase();
+                const sameAction = lastAction === evAction;
+                const sameFile = last.fileName === ev.fileName;
+                const sameUser = norm(last.user) === norm(ev.user);
+                const sameCompany = norm(last.company) === norm(ev.company);
+
+                if (sameAction && sameFile && sameUser && sameCompany) {
+                    const lastTime = new Date(last._mergeEndDate || last.date).getTime();
+                    const evTime = new Date(ev.date).getTime();
+                    const diff = Math.abs(lastTime - evTime);
+
+                    if (diff <= MERGE_WINDOW_MS) {
+                        // Merge: expand the time range
+                        const allDates = [
+                            new Date(last._mergeStartDate || last.date).getTime(),
+                            new Date(last._mergeEndDate || last.date).getTime(),
+                            evTime,
+                        ];
+                        last._mergeStartDate = new Date(Math.min(...allDates)).toISOString();
+                        last._mergeEndDate = new Date(Math.max(...allDates)).toISOString();
+                        last._mergeCount = (last._mergeCount || 1) + 1;
+                        last._merged = true;
+                        if (!last._mergedDbIds) last._mergedDbIds = [last.dbId].filter(Boolean);
+                        if (ev.dbId) last._mergedDbIds.push(ev.dbId);
+                        if (!last._mergedUids) last._mergedUids = [last._uid];
+                        last._mergedUids.push(ev._uid);
+                        continue;
+                    }
+                }
+            }
+
+            result.push({ ...ev, _merged: false });
+        }
+
+        return result;
+    })();
+
+    const totalPages = Math.max(1, Math.ceil(mergedEvents.length / itemsPerPage));
     const validCurrentPage = Math.min(currentPage, totalPages);
 
     // Render safety
-    if (currentPage !== validCurrentPage && filteredEvents.length > 0) {
+    if (currentPage !== validCurrentPage && mergedEvents.length > 0) {
         setCurrentPage(validCurrentPage);
     }
 
     const startIndex = (validCurrentPage - 1) * itemsPerPage;
-    const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedEvents = mergedEvents.slice(startIndex, startIndex + itemsPerPage);
 
 
 
     const PaginationBlock = () => (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3 px-5" style={{ color: theme.textSecondary }}>
             <span className="text-xs font-medium tracking-wide" style={{ letterSpacing: '0.02em' }}>
-                {filteredEvents.length === 0 ? 'Sin resultados' : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, filteredEvents.length)} de ${filteredEvents.length}`}
+                {mergedEvents.length === 0 ? 'Sin resultados' : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, mergedEvents.length)} de ${mergedEvents.length}`}
             </span>
             <div className="flex items-center gap-1">
                 <button
@@ -437,7 +496,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
                 <div className="flex items-center gap-2.5">
                     <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
-                        Reportes Automáticos
+                        Informes
                     </h3>
 
                     <div className="flex items-center" title={status === 'connected' ? 'En línea' : 'Conectando...'}>
@@ -645,8 +704,9 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                     <div className="divide-y" style={{ borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }}>
                         {paginatedEvents.map((ev, index) => {
                             const isSelected = selected.has(ev._uid);
-                            const accentColor = ACTION_ACCENTS[ev.action_type] || '#3b82f6';
-                            const actionStyle = ACTION_STYLES[ev.action_type] || ACTION_STYLES.MODIFIED;
+                            const actionKey = ev.action_type || ev.action || 'MODIFIED';
+                            const accentColor = ACTION_ACCENTS[actionKey] || '#3b82f6';
+                            const actionStyle = ACTION_STYLES[actionKey] || ACTION_STYLES.MODIFIED;
                             const path = ev.folderPath || ev.parentPath || '';
 
                             return (
@@ -702,6 +762,14 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                                     <h4 className="font-bold text-[13px] sm:text-[14px] truncate" style={{ color: theme.text, letterSpacing: '-0.01em' }}>
                                                         {ev.fileName}
                                                     </h4>
+                                                    {ev._mergeCount > 1 && (
+                                                        <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{
+                                                            background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff',
+                                                            color: '#3b82f6',
+                                                        }}>
+                                                            ×{ev._mergeCount}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <span className="hidden sm:inline text-[11px] whitespace-nowrap flex-shrink-0 font-medium" style={{ color: theme.textSecondary, opacity: 0.5 }}>
                                                     {formatDate(ev.date)}
