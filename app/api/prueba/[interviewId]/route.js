@@ -29,19 +29,10 @@ function checkRateLimit(ip) {
     return true;
 }
 
-// Since this route runs securely on the backend, we use the service role key to bypass RLS,
-// OR we can just use anon key and let our strict RLS policies handle it.
-// However, reading questions requires bypassing RLS or ensuring policies allow it based on the token.
-// The architectural plan specified backend validation. Using the generic supabase client with admin powers (or passing token logic) is preferred.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Requires service role to safely validate
+import { getServiceSupabase } from '@/lib/actions';
 
 const getSupabaseAdmin = () => {
-   if (!supabaseServiceKey) {
-       console.warn("Missing SUPABASE_SERVICE_ROLE_KEY, falling back to ANONYMOUS. This may fail if RLS read is restricted.");
-       return createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-   }
-   return createClient(supabaseUrl, supabaseServiceKey);
+   return getServiceSupabase();
 };
 
 export async function GET(request, { params }) {
