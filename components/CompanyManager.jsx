@@ -442,7 +442,10 @@ export default function CompanyManager({ isWorker = false }) {
                         <h3 className="text-lg font-bold" style={{ color: theme.text }}>{expandedGroup.name}</h3>
                     </div>
                 ) : (
-                    <div />
+                    <div className="flex items-center gap-2">
+                        <Layers className="text-blue-500" size={24} />
+                        <h2 className="text-xl sm:text-2xl font-bold" style={{ color: theme.text }}>Grupos de Trabajo</h2>
+                    </div>
                 )}
 
                 {/* Right: Search + Nuevo */}
@@ -501,31 +504,45 @@ export default function CompanyManager({ isWorker = false }) {
                     {/* LEVEL 1: GROUPS GRID */}
                     {!expandedGroup && (
                         <div className="space-y-8 animate-fade-in">
-                            {/* PRG Header */}
-                            {prgCompany && (
-                                <div className="p-4 rounded-xl border flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all" style={{ background: theme.surface, borderColor: theme.border }}>
-                                    <div className="flex items-center gap-3">
-                                        {prgCompany.avatar_url ? (
-                                            <img src={prgCompany.avatar_url} className="w-11 h-11 rounded-lg object-cover border" style={{ borderColor: theme.border }} />
-                                        ) : (
-                                            <div className="w-11 h-11 rounded-lg flex items-center justify-center border" style={{ background: isDark ? theme.surfaceElevated : '#f8fafc', borderColor: theme.border }}><Building2 size={22} className="text-blue-500" /></div>
-                                        )}
-                                        <div>
-                                            <p className="text-sm font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
-                                        </div>
-                                    </div>
-                                    {!isWorker && (
-                                        <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
-                                            <Edit2 size={16} className="text-gray-400" />
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
                             {/* Unified Groups Grid */}
                             <div>
-                                <h3 className="text-lg font-bold mb-4 opacity-50 uppercase tracking-widest text-xs flex items-center gap-2"><Layers size={14} /> Grupos de Trabajo</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                     {/* PRG AUDITORES CARD */}
+                                     {prgCompany && (
+                                         <div
+                                             className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full"
+                                             style={{ background: theme.surface, borderColor: theme.border }}
+                                         >
+                                             <div className="w-full flex items-start justify-between mb-3">
+                                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                                                     {prgCompany.avatar_url ? (
+                                                         <img src={prgCompany.avatar_url} className="w-full h-full object-cover rounded-lg" alt="" />
+                                                     ) : (
+                                                         <Building2 size={20} className="text-blue-500" />
+                                                     )}
+                                                 </div>
+                                                 {!isWorker && (
+                                                     <button
+                                                         onClick={(e) => { e.stopPropagation(); openModal(prgCompany); }}
+                                                         className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                     >
+                                                         <Edit2 size={14} />
+                                                     </button>
+                                                 )}
+                                             </div>
+                                             <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{prgCompany.name}</h3>
+                                             <div className="flex items-center gap-2 mb-3">
+                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700 uppercase tracking-tight">
+                                                     Sede Principal
+                                                 </span>
+                                             </div>
+                                             <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                 <p className="text-xs text-gray-500 italic dark:text-gray-400 font-medium">
+                                                     Empresa Principal
+                                                 </p>
+                                             </div>
+                                         </div>
+                                     )}
 
                                     {/* DYAMIC GROUPS */}
                                     {groups.filter(g => !g.category).map(group => {
