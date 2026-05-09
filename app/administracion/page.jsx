@@ -801,7 +801,8 @@ export default function AdminPage() {
           {/* WIDGETS COMPACTOS (Quality Issues) */}
           <div className="flex flex-col gap-2 mb-6">
             {/* CALIDAD COMPACTA */}
-            {showQualityWidget && qualityIssues.length > 0 && (
+            {/* CALIDAD COMPACTA (Oculto por solicitud) */}
+            {/* showQualityWidget && qualityIssues.length > 0 && (
               <details className="group">
                 <summary
                   className="list-none cursor-pointer p-3 rounded-lg flex items-center justify-between text-sm font-medium shadow-sm border transition-all hover:opacity-90"
@@ -825,7 +826,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               </details>
-            )}
+            ) */}
           </div>
 
 
@@ -1107,7 +1108,7 @@ export default function AdminPage() {
                   if (normalized.includes('danny suarez')) return 'Danny Suárez';
                   if (normalized.includes('eddy campuzano') || normalized.includes('prg.audex')) return 'Eddy Campuzano';
                   if (normalized.includes('maria teresa')) return 'Maria Teresa Fernández Bravo';
-                  if (normalized.includes('lissbeth') || normalized.includes('lisbeth')) return 'Lissbeth Solórzano';
+                  if (normalized.includes('lissbeth') || normalized.includes('lisbeth')) return 'Maria Teresa Fernández Bravo';
                   if (normalized.includes('valeria almeida')) return 'Eddy Campuzano';
                   
                   return NAME_CORRECTIONS[corrected] || corrected;
