@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { MonitorPlay, LogOut } from 'lucide-react';
+import { MonitorPlay, LogOut, Info } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import Sidebar from '../../components/Sidebar';
 import { getCompanySession, clearUnifiedSession } from '../../lib/auth.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 
 const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
+const CompanyInformation = dynamic(() => import('../../components/CompanyInformation'), { ssr: false });
 
 export default function CompanyPage() {
     const router = useRouter();
@@ -18,11 +19,12 @@ export default function CompanyPage() {
 
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('cursos');
+    const [activeTab, setActiveTab] = useState('informacion');
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
     const sidebarItems = [
-        { id: 'cursos', label: 'Mis Cursos', icon: MonitorPlay }
+        { id: 'informacion', label: 'Información', icon: Info },
+        { id: 'cursos', label: 'Cursos', icon: MonitorPlay }
     ];
 
     useEffect(() => {
@@ -67,6 +69,7 @@ export default function CompanyPage() {
                 onTabChange={setActiveTab}
                 userName={company.name}
                 userRole="Empresa"
+                avatarUrl={company.logo_url || company.avatar_url}
                 onLogout={handleLogout}
                 showBackButton={false}
                 onHoverChange={setIsSidebarExpanded}
@@ -82,7 +85,8 @@ export default function CompanyPage() {
                 }}
             >
                 <div className="max-w-7xl mx-auto py-8 px-4">
-                    <CourseViewer companyId={company.id} company={company} />
+                    {activeTab === 'informacion' && <CompanyInformation company={company} />}
+                    {activeTab === 'cursos' && <CourseViewer companyId={company.id} company={company} />}
                 </div>
             </main>
         </div>

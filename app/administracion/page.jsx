@@ -37,13 +37,11 @@ export default function AdminPage() {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
 
-  // Menú de navegación del sidebar
   const sidebarItems = [
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
-    { id: 'funcionarios', label: 'Funcionarios', icon: Users },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
-    { id: 'cursos', label: 'Cursos', icon: MonitorPlay },
-    { id: 'entrevistas', label: 'Entrevistas', icon: ClipboardList }
+    { id: 'talento_humano', label: 'Gestión de Talento Humano', icon: Users },
+    { id: 'cursos', label: 'Cursos', icon: MonitorPlay }
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -51,12 +49,13 @@ export default function AdminPage() {
 
   // Initialize activeTab from URL hash or default to 'dashboards'
   const [activeTab, setActiveTab] = useState('dashboards');
+  const [activeSubTab, setActiveSubTab] = useState('funcionarios'); // For talento_humano panel
 
   useEffect(() => {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'funcionarios', 'empresas', 'cursos', 'entrevistas'].includes(hash)) {
+      if (hash && ['dashboards', 'talento_humano', 'empresas', 'cursos'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -143,9 +142,11 @@ export default function AdminPage() {
   const [deleteMode, setDeleteMode] = useState(false);
 
   // Estado para modal de detalle de registro
-  // Estado para modal de detalle de registro
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isViewerMode, setIsViewerMode] = useState(false);
+
+  // Estado para modal de estadísticas de funcionario
+  const [selectedWorkerStats, setSelectedWorkerStats] = useState(null);
 
 
   // Estado para controlar la expansión del sidebar
@@ -238,7 +239,7 @@ export default function AdminPage() {
     setRealtimeStats(stats);
 
     // Refresh file audit logs for dashboards
-    const fileActivityLogs = await getAuditLogs({ limit: 200 });
+    const fileActivityLogs = await getAuditLogs({ limit: 2000 });
     setFileLogs(fileActivityLogs);
 
     // Cargar estadísticas de asistencia
@@ -682,24 +683,40 @@ export default function AdminPage() {
           {/* Professional Header Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
             {/* Title Section */}
-            <div className={activeTab === 'entrevistas' || activeTab === 'empresas' ? 'hidden' : 'block'}>
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
-                {activeTab === 'dashboards' && 'Panel de Control'}
-                {activeTab === 'funcionarios' && 'Gestión de Funcionarios'}
-                {activeTab === 'empresas' && 'Gestión de Empresas'}
-                {activeTab === 'cursos' && 'Gestión de Cursos'}
-              </h1>
+            <div className={`main-page-header ${activeTab === 'empresas' ? 'hidden' : 'block'}`}>
+              <div className="flex items-center gap-4">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
+                  {activeTab === 'dashboards' && 'Panel de Control'}
+                  {activeTab === 'talento_humano' && 'Gestión de Talento Humano'}
+                  {activeTab === 'empresas' && 'Gestión de Empresas'}
+                  {activeTab === 'cursos' && 'Gestión de Cursos'}
+                </h1>
+                {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
+                  <button
+                    onClick={() => {
+                      setShowUserForm(!showUserForm);
+                      if (!showUserForm) {
+                        setEditingWorkerId(null);
+                        setNewWorker({ username: '', password: '', full_name: '', email: '' });
+                      }
+                    }}
+                    className="text-white px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-sm text-sm"
+                    style={{ background: theme.primary }}
+                  >
+                    <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
+                  </button>
+                )}
+              </div>
               <p className="text-xs sm:text-sm mt-0.5" style={{ color: theme.textSecondary }}>
                 {activeTab === 'dashboards' && 'Estadísticas, informes y métricas en tiempo real'}
-                {activeTab === 'funcionarios' && 'Administra usuarios y permisos'}
                 {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
               </p>
             </div>
-            {activeTab === 'entrevistas' && <div id="interview-header-portal" className="flex-1 w-full" />}
+            {activeTab === 'talento_humano' && activeSubTab === 'pruebas' && <div id="interview-header-portal" className="flex-1 w-full" />}
 
-            {/* Right Section - User Profile (hidden on empresas tab) */}
-            {activeTab !== 'empresas' && (
+            {/* Right Section - User Profile (hidden on empresas tab and talento_humano tab) */}
+            {activeTab !== 'empresas' && activeTab !== 'talento_humano' && (
             <div className="flex flex-row items-center gap-2 flex-shrink-0">
               {/* User Profile - Clickable */}
               <button
@@ -719,6 +736,24 @@ export default function AdminPage() {
             </div>
             )}
           </div>
+
+          {/* Sub-Tabs for Talento Humano */}
+          {activeTab === 'talento_humano' && (
+            <div className="flex gap-2 mb-6 border-b" style={{ borderColor: theme.border }}>
+              <button
+                onClick={() => setActiveSubTab('funcionarios')}
+                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'funcionarios' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+              >
+                Funcionarios
+              </button>
+              <button
+                onClick={() => setActiveSubTab('pruebas')}
+                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'pruebas' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+              >
+                Pruebas
+              </button>
+            </div>
+          )}
 
           {/* Toast Notification */}
           {message && (
@@ -778,14 +813,14 @@ export default function AdminPage() {
                   </div>
                   <span className="text-xs underline group-open:no-underline">Ver detalles</span>
                 </summary>
-                <div className="mt-2 p-3 bg-white rounded-lg border border-red-100 shadow-inner grid gap-2 max-h-60 overflow-y-auto">
+                <div className="mt-2 p-3 rounded-lg border shadow-inner grid gap-2 max-h-60 overflow-y-auto" style={{ background: theme.surface, borderColor: theme.border }}>
                   {qualityIssues.map((issue, idx) => (
-                    <div key={idx} className="flex justify-between items-start text-xs p-2 rounded bg-red-50">
+                    <div key={idx} className="flex justify-between items-start text-xs p-2 rounded" style={{ background: isDark ? 'rgba(239, 68, 68, 0.1)' : '#fef2f2', color: isDark ? '#fca5a5' : '#991b1b' }}>
                       <div className="flex flex-col">
                         <span className="font-semibold">{issue.message}</span>
                         <span className="opacity-75">{issue.record.worker_name}</span>
                       </div>
-                      <span className="text-red-700 font-bold">{issue.severity}</span>
+                      <span className="font-bold">{issue.severity}</span>
                     </div>
                   ))}
                 </div>
@@ -809,38 +844,24 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* TAB: ENTREVISTAS */}
-          {activeTab === 'entrevistas' && (
+          {/* TAB: TALENTO HUMANO -> PRUEBAS */}
+          {activeTab === 'talento_humano' && activeSubTab === 'pruebas' && (
             <div className="animate-fade-in">
               <RecruitmentManager />
             </div>
           )}
 
-          {/* TAB: FUNCIONARIOS */}
-          {activeTab === 'funcionarios' && (
+          {/* TAB: TALENTO HUMANO -> FUNCIONARIOS */}
+          {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
             <div className="animate-fade-in">
               <div
-                className="rounded-xl shadow-lg p-6 mb-6"
-                style={{ background: theme.surface }}
+                className="rounded-xl shadow-lg mb-6"
+                style={{ background: showUserForm ? theme.surface : 'transparent' }}
               >
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">{editingWorkerId ? 'Editar Funcionario' : 'Crear Funcionario'}</h2>
-                  <button
-                    onClick={() => {
-                      setShowUserForm(!showUserForm);
-                      if (!showUserForm) {
-                        setEditingWorkerId(null);
-                        setNewWorker({ username: '', password: '', full_name: '', email: '' });
-                      }
-                    }}
-                    className="text-white px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                    style={{ background: theme.primary }}
-                  >
-                    <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
-                  </button>
-                </div>
-
                 {showUserForm && (
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold mb-4">{editingWorkerId ? 'Editar Funcionario' : 'Crear Funcionario'}</h2>
+
                   <form onSubmit={handleAddWorker} className="grid md:grid-cols-2 gap-4 mt-4">
                     <input
                       type="text"
@@ -908,6 +929,7 @@ export default function AdminPage() {
                       {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
                     </button>
                   </form>
+                  </div>
                 )}
               </div>
 
@@ -929,8 +951,7 @@ export default function AdminPage() {
                             <th className="px-4 py-3 text-left">Usuario</th>
                             <th className="px-4 py-3 text-left">Nombre</th>
                             <th className="px-4 py-3 text-left">Email</th>
-                            <th className="px-4 py-3 text-left">Contraseña</th>
-                            <th className="px-4 py-3 text-left">Acciones</th>
+                            <th className="px-4 py-3 text-left">Contraseña y Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -943,25 +964,27 @@ export default function AdminPage() {
                                 background: isDark ? 'transparent' : '#f8f9fa'
                               }}
                             >
-                              <td className="px-4 py-3 font-semibold">{worker.username}</td>
-                              <td className="px-4 py-3">{worker.full_name}</td>
-                              <td className="px-4 py-3 text-sm">{worker.email || '-'}</td>
-                              <td className="px-4 py-3 flex items-center gap-2">
-                                <span className="font-mono text-xs">
-                                  {showPasswordsSet[worker.id] 
-                                    ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
-                                    : '••••••••'}
-                                </span>
-                                <button
-                                  onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
-                                  className="hover:opacity-70"
-                                  style={{ color: theme.primary }}
-                                  title={worker.password.startsWith('$2') ? "Esta contraseña está encriptada y no se puede visualizar" : "Ver contraseña"}
-                                >
-                                  {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                              </td>
-                              <td className="px-4 py-3 flex gap-2">
+                              <td className="px-4 py-3 font-semibold cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.username}</td>
+                              <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.full_name}</td>
+                              <td className="px-4 py-3 text-sm cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.email || '-'}</td>
+                              <td className="px-4 py-3 flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs">
+                                    {showPasswordsSet[worker.id] 
+                                      ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
+                                      : '••••••••'}
+                                  </span>
+                                  <button
+                                    onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
+                                    className="hover:opacity-70"
+                                    style={{ color: theme.primary }}
+                                    title={worker.password.startsWith('$2') ? "Esta contraseña está encriptada y no se puede visualizar" : "Ver contraseña"}
+                                  >
+                                    {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                  </button>
+                                </div>
+                                <div className="flex gap-2">
+
                                 <button
                                   onClick={() => handleEditWorker(worker)}
                                   className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
@@ -976,6 +999,7 @@ export default function AdminPage() {
                                 >
                                   <Trash2 className="w-3 h-3 inline" /> Eliminar
                                 </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1074,33 +1098,50 @@ export default function AdminPage() {
 
                 function correctName(name) {
                   if (!name) return 'Sin Nombre';
-                  return NAME_CORRECTIONS[name] || name;
+                  let corrected = name.trim().replace(/\s+/g, ' ');
+                  
+                  // Normalización de tildes para comparación
+                  const normalized = corrected.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  
+                  if (normalized.includes('paul rodriguez')) return 'Paul Rodríguez García';
+                  if (normalized.includes('danny suarez')) return 'Danny Suárez';
+                  if (normalized.includes('eddy campuzano') || normalized.includes('prg.audex')) return 'Eddy Campuzano';
+                  if (normalized.includes('maria teresa')) return 'Maria Teresa Fernández Bravo';
+                  if (normalized.includes('lissbeth') || normalized.includes('lisbeth')) return 'Lissbeth Solórzano';
+                  if (normalized.includes('valeria almeida')) return 'Eddy Campuzano';
+                  
+                  return NAME_CORRECTIONS[corrected] || corrected;
                 }
 
-                // LOGICA HIBRIDA DE DATOS
-                const isUsingReports = records && records.length > 0;
+                // LÓGICA HÍBRIDA DE DATOS: Combinar SharePoint y Manuales
                 const hoursByCompanyPRG = {};
                 const hoursByWorker = {};
-                
-                if (isUsingReports) {
-                  records.forEach(r => {
-                    const company = r.company_name || 'Sin Empresa';
-                    const worker = correctName(r.worker_name || 'Sin Nombre');
-                    const hours = parseFloat(r.hours_worked || 0);
+                const SYSTEM_NAMES = ['desconocido', 'usuario desconocido', 'sharepoint', 'system', 'onedrive', 'app@sharepoint'];
 
-                    // PRG billing: only PRG company data
-                    hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + hours;
-                    hoursByWorker[worker] = (hoursByWorker[worker] || 0) + hours;
-                  });
-                } else {
-                  fileLogs.forEach(log => {
-                    const company = log.company_name || 'Sin Empresa';
-                    const worker = correctName(log.worker_name || 'Sin Nombre');
+                // 1. Procesar logs de SharePoint (Contar cada evento como 1 actividad)
+                fileLogs.forEach(log => {
+                  const worker = correctName(log.worker_name || 'Sin Nombre');
+                  if (SYSTEM_NAMES.includes(worker.toLowerCase())) return;
+                  const company = log.company_name || 'Sin Empresa';
+                  
+                  hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + 1;
+                  hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
+                });
+
+                // 2. Procesar registros manuales (También como actividad para el gráfico)
+                if (records && records.length > 0) {
+                  records.forEach(r => {
+                    const worker = correctName(r.worker_name || 'Sin Nombre');
+                    if (SYSTEM_NAMES.includes(worker.toLowerCase())) return;
+                    const company = r.company_name || 'Sin Empresa';
                     
+                    // Sumamos 1 a la actividad por cada reporte manual
                     hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + 1;
                     hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
                   });
                 }
+
+                const isUsingReports = false; // Forzamos a modo "Actividad" para que el gráfico sea consistente con SharePoint
 
                 const topCompanies = Object.entries(hoursByCompanyPRG)
                   .map(([name, val]) => ({ 
@@ -1130,22 +1171,14 @@ export default function AdminPage() {
                     <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <Building2 size={14} /> Facturación PRG{labelSuffix}
+                          <Building2 size={14} /> Facturación PRG
                         </h3>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                          style={{
-                            background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff',
-                            color: '#3b82f6',
-                          }}
-                        >
-                          Top {topCompanies.length} empresas
-                        </span>
                       </div>
                       <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={topCompanies} layout="vertical" margin={{ left: -10, right: 30 }}>
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={120} stroke={theme.textSecondary} tick={{ fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" width={120} stroke={theme.text} tick={{ fill: theme.text, fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                             <Tooltip 
                               cursor={{ fill: 'transparent' }} 
                               contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
@@ -1153,7 +1186,7 @@ export default function AdminPage() {
                               itemStyle={{ color: theme.text }}
                               formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                             />
-                            <Bar dataKey="value" fill={theme.primary} radius={[0, 10, 10, 0]} barSize={22}>
+                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={22}>
                               {topCompanies.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
@@ -1169,22 +1202,14 @@ export default function AdminPage() {
                     <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <TrendingUp size={14} /> Gestión de Colaboradores{labelSuffix}
+                          <TrendingUp size={14} /> Gestión de Colaboradores
                         </h3>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full"
-                          style={{
-                            background: isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4',
-                            color: '#16a34a',
-                          }}
-                        >
-                          {workerData.length} colaboradores
-                        </span>
                       </div>
                       <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={workerData} layout="vertical" margin={{ left: -10, right: 30 }}>
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={140} stroke={theme.textSecondary} tick={{ fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" width={140} stroke={theme.text} tick={{ fill: theme.text, fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
                             <Tooltip 
                               cursor={{ fill: 'transparent' }} 
                               contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
@@ -1192,7 +1217,7 @@ export default function AdminPage() {
                               itemStyle={{ color: theme.text }}
                               formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                             />
-                            <Bar dataKey="value" fill="#27ae60" radius={[0, 10, 10, 0]} barSize={22}>
+                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={22}>
                               {workerData.map((entry, index) => (
                                 <Cell key={`cell-w-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
                               ))}
@@ -1367,6 +1392,191 @@ export default function AdminPage() {
             </div>
           )
         }
+        {/* Modal de estadísticas de funcionario */}
+        {selectedWorkerStats && (() => {
+          const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          const wFullName = norm(selectedWorkerStats.full_name);
+          const wUsername = norm(selectedWorkerStats.username);
+          
+          const isUsingReports = records && records.length > 0;
+
+          const filteredRecords = records.filter(r => {
+            if (!r.worker_name) return false;
+            const rName = norm(r.worker_name);
+            return rName === wFullName || rName === wUsername || 
+                   (wFullName && wFullName.includes(rName)) || 
+                   (rName && rName.includes(wFullName)) ||
+                   (wUsername && rName.includes(wUsername));
+          });
+
+          const filteredFileLogs = fileLogs.filter(log => {
+            if (!log.worker_name) return false;
+            const rName = norm(log.worker_name);
+            return rName === wFullName || rName === wUsername || 
+                   (wFullName && wFullName.includes(rName)) || 
+                   (rName && rName.includes(wFullName)) ||
+                   (wUsername && rName.includes(wUsername));
+          });
+          
+          const showManual = isUsingReports && filteredRecords.length > 0;
+
+          const ACTION_STYLES = {
+              'CREATED': { color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: Plus, label: 'CREADO' },
+              'MODIFIED': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: Edit2, label: 'MODIFICADO' },
+              'DELETED': { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', icon: Trash2, label: 'ELIMINADO' },
+              'RENAMED': { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: FileText, label: 'RENOMBRADO' },
+              'MOVED': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: Folder, label: 'MOVIDO' },
+              'DEFAULT': { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: FileText, label: 'ACTIVIDAD' }
+          };
+
+          return (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-animate"
+            style={{ background: 'rgba(0,0,0,0.7)' }}
+            onClick={() => setSelectedWorkerStats(null)}
+          >
+            <div
+              className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll"
+              style={{ background: theme.surface }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
+                <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
+                  Actividades de {selectedWorkerStats.full_name || selectedWorkerStats.username}
+                </h2>
+                <button
+                  onClick={() => setSelectedWorkerStats(null)}
+                  className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
+                  style={{ background: isDark ? '#333' : '#eee' }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                {/* Tabla de últimas 5 actividades */}
+                <div>
+                  <h3 className="text-lg font-bold mb-3">Actividades Recientes</h3>
+                  {showManual ? (
+                    <div className="rounded-lg border overflow-hidden" style={{ borderColor: theme.border }}>
+                      <table className="w-full text-sm text-left">
+                        <thead style={{ background: theme.primary, color: 'white' }}>
+                          <tr>
+                            <th className="px-4 py-2">Fecha</th>
+                            <th className="px-4 py-2">Empresa</th>
+                            <th className="px-4 py-2">Horas</th>
+                            <th className="px-4 py-2">Descripción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRecords.slice(0, 5).map((r, i) => (
+                            <tr key={i} className="border-b last:border-0" style={{ borderColor: theme.border }}>
+                              <td className="px-4 py-2">{new Date(r.start_datetime).toLocaleDateString()}</td>
+                              <td className="px-4 py-2">{r.company_name}</td>
+                              <td className="px-4 py-2 font-bold">{r.hours_worked}h</td>
+                              <td className="px-4 py-2 truncate max-w-xs">{r.description || '-'}</td>
+                            </tr>
+                          ))}
+                          {filteredRecords.length === 0 && (
+                            <tr>
+                              <td colSpan="4" className="px-4 py-4 text-center text-gray-500">No hay actividades recientes.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredFileLogs.slice(0, 10).map((log, i) => {
+                        let actionRaw = log.metadata?.changeType || log.action_type?.replace('AUTO_', '') || 'MODIFIED';
+                        const style = ACTION_STYLES[actionRaw.toUpperCase()] || ACTION_STYLES['DEFAULT'];
+                        const Icon = style.icon;
+                        const webUrl = log.metadata?.webUrl;
+                        return (
+                          <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
+                            <div className="flex items-center gap-4 mb-3 sm:mb-0">
+                                <div className="p-3 rounded-xl flex-shrink-0" style={{ background: style.bg, color: style.color }}>
+                                    <Icon size={18} strokeWidth={2.5} />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="font-semibold text-sm flex items-center flex-wrap gap-2" style={{ color: theme.text }}>
+                                        <span className="truncate max-w-[200px] sm:max-w-[300px]">{log.file_name || 'Archivo desconocido'}</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider" style={{ background: style.bg, color: style.color }}>
+                                            {style.label}
+                                        </span>
+                                    </h4>
+                                    <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: theme.textSecondary }}>
+                                        <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(log.timestamp).toLocaleString()}</span>
+                                        <span className="flex items-center gap-1"><Building2 size={12} /> {log.company_name || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {webUrl && (
+                                <a 
+                                  href={webUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors sm:w-auto w-full justify-center"
+                                  style={{ background: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', color: theme.primary }}
+                                >
+                                  <FileText size={14} /> Abrir ↗
+                                </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {filteredFileLogs.length === 0 && (
+                          <div className="text-center p-8 border rounded-xl" style={{ borderColor: theme.border, color: theme.textSecondary }}>
+                              No hay actividades recientes en SharePoint.
+                          </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Gráfica de distribución de tiempo */}
+                {showManual && filteredRecords.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold mb-3">Distribución de Tiempo</h3>
+                    <div className="h-64 border rounded-lg p-4 flex items-center justify-center" style={{ borderColor: theme.border }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPie>
+                          <Pie
+                            data={Object.entries(
+                              filteredRecords
+                                .reduce((acc, r) => {
+                                  acc[r.company_name] = (acc[r.company_name] || 0) + parseFloat(r.hours_worked || 0);
+                                  return acc;
+                                }, {})
+                            ).map(([name, value]) => ({ name, value }))}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {Object.keys(
+                              filteredRecords
+                                .reduce((acc, r) => {
+                                  acc[r.company_name] = (acc[r.company_name] || 0) + parseFloat(r.hours_worked || 0);
+                                  return acc;
+                                }, {})
+                            ).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c'][index % 6]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </RechartsPie>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
         {/* Custom Confirmation Modal */}
         {confirmModal.show && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ zIndex: 110 }}>

@@ -6,22 +6,39 @@ export const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // 1. Initial Load: Read preference
     const saved = localStorage.getItem('theme');
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
     if (saved === 'dark') {
       setIsDark(true);
     } else if (saved === 'light') {
       setIsDark(false);
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setIsDark(prefersDark);
+      setIsDark(mediaQuery.matches);
     }
+    
+    setMounted(true);
+
+    // Listen for OS theme changes
+    const handleChange = (e) => {
+      // Only auto-switch if the user hasn't explicitly saved a preference
+      if (!localStorage.getItem('theme')) {
+        setIsDark(e.matches);
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // 2. Sync DOM with State (Always runs when isDark changes)
+  // 2. Sync DOM with State
   useEffect(() => {
+    if (!mounted) return;
+
     const root = document.documentElement;
     if (isDark) {
       root.classList.add('dark');
@@ -30,16 +47,14 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-    // Safety check: ensure no residual classes
-    if (!isDark && root.classList.contains('dark')) {
-      root.classList.remove('dark');
-    }
-  }, [isDark]);
+  }, [isDark, mounted]);
 
   const toggleTheme = () => {
-    setIsDark(prev => !prev);
+    setIsDark(prev => {
+      const newValue = !prev;
+      localStorage.setItem('theme', newValue ? 'dark' : 'light');
+      return newValue;
+    });
   };
 
   return (

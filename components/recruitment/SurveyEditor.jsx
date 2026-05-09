@@ -7,6 +7,8 @@ import { ArrowLeft, Plus, GripVertical, Trash2, Save, AlignLeft, CheckSquare, Gi
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import Toast from '../Toast';
+import { getAdminSession } from '../../lib/auth';
+import { saveSurveyQuestionsAction, getSurveyQuestionsAction } from '../../lib/actions';
 // Simple reordering without external libraries for now, using HTML5 Drag and Drop or just sort
 // since "no agregues nuevas features, arregla esto" - well, reordenar is requested.
 
@@ -38,18 +40,18 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
           .single();
         if (sErr) throw sErr;
         
-        const { data: qData, error: qErr } = await supabase
-          .from('recruitment_questions')
-          .select('*')
-          .eq('survey_id', surveyId)
-          .order('order_index', { ascending: true });
-        if (qErr) throw qErr;
+        const parentId = sData.parent_survey_id || sData.id;
+        const qRes = await getSurveyQuestionsAction(surveyId, parentId);
+        
+        if (!qRes.success) {
+           throw new Error(qRes.error || 'Failed to fetch questions');
+        }
 
         setSurvey(sData);
-        setQuestions(qData || []);
+        setQuestions(qRes.questions);
       } catch (err) {
         console.error("CRITICAL ERROR FETCHING SURVEY:", err);
-        showToast('Error cargando entrevista: ' + err.message, 'error');
+        showToast('Error cargando prueba: ' + err.message, 'error');
       } finally {
         setLoading(false);
       }
@@ -121,39 +123,49 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 1. Update Version of Survey
-      const newVersion = survey.version + 1;
-      const { error: sErr } = await supabase
-        .from('recruitment_surveys')
-        .update({ title: survey.title, description: survey.description, version: newVersion })
-        .eq('id', surveyId);
+      // 1. Create new version of Survey (inactivates old one)
+      const { data: newSurveyId, error: sErr } = await supabase.rpc('create_new_survey_version', {
+        p_old_survey_id: surveyId,
+        p_title: survey.title,
+        p_description: survey.description
+      });
       
       if (sErr) throw sErr;
 
-      // 2. Refresh Questions: delete all and re-insert is easiest or upsert.
-      // Easiest to avoid orphan rows and handle ordering:
-      const { error: delErr } = await supabase
-        .from('recruitment_questions')
-        .delete()
-        .eq('survey_id', surveyId);
-        
-      if (delErr) throw delErr;
+      // We no longer delete questions from the old survey, they stay there.
+      // 2. Insert new questions pointing to newSurveyId
+
 
       if (questions.length > 0) {
         const inserts = questions.map((q, idx) => ({
-           survey_id: surveyId,
+           survey_id: newSurveyId,
            text: q.text,
            type: q.type,
            is_required: q.is_required,
            options: q.options,
            order_index: idx + 1
         }));
-        const { error: insErr } = await supabase.from('recruitment_questions').insert(inserts);
-        if (insErr) throw insErr;
+        const res = await saveSurveyQuestionsAction(inserts, getAdminSession()?.id);
+        if (!res.success) throw new Error(res.error);
       }
 
-      setSurvey({ ...survey, version: newVersion });
-      showToast('Entrevista y preguntas guardadas correctamente.');
+      // Fetch the newly created survey to update the local state correctly
+      const { data: newlyCreatedSurvey } = await supabase
+        .from('recruitment_surveys')
+        .select('*')
+        .eq('id', newSurveyId)
+        .single();
+
+      if (newlyCreatedSurvey) {
+        setSurvey(newlyCreatedSurvey);
+        // Important: we don't change `surveyId` prop as it's passed from parent,
+        // so clicking back goes to the list which will reload the latest active surveys.
+        // Or we could inform the parent to switch to the new ID, but simply returning to list is safest.
+      }
+      showToast('Prueba guardada y nueva versión creada correctamente.');
+      setTimeout(() => {
+        onBack(); // Return to the list so it re-fetches the active surveys
+      }, 1500);
     } catch (err) {
       console.error(err);
       showToast('Error al guardar: ' + err.message, 'error');
@@ -164,16 +176,17 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
 
   if (loading) return <div className="p-10 flex flex-col items-center justify-center">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-    <span style={{ color: theme.textSecondary }}>Cargando editor de entrevista...</span>
+    <span style={{ color: theme.textSecondary }}>Cargando editor de prueba...</span>
   </div>;
 
   if (!survey) return <div className="p-10 text-center text-red-500 bg-red-50 border border-red-200 rounded-xl m-4">
-    <h3 className="text-lg font-bold mb-2">Error Crítico: No se pudo cargar la entrevista</h3>
+    <h3 className="text-lg font-bold mb-2">Error Crítico: No se pudo cargar la prueba</h3>
     <p className="text-sm text-gray-700">Verifica que haya conexion con la base de datos y que las politicas RLS permitan la lectura.</p>
   </div>;
 
   return (
     <div className="space-y-6 animate-fade-in relative">
+      <style>{`.main-page-header { display: none !important; }`}</style>
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
       
       {headerPortalNode ? createPortal(
@@ -208,7 +221,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
       <div className="space-y-4 max-w-4xl">
         <div className="p-5 rounded-xl border space-y-4" style={{ borderColor: theme.border, background: theme.surface }}>
            <div>
-             <label className="block text-sm font-bold mb-1" style={{ color: theme.textSecondary }}>Título de la Entrevista</label>
+             <label className="block text-sm font-bold mb-1" style={{ color: theme.textSecondary }}>Título de la Prueba</label>
              <input 
                type="text" 
                className="w-full p-2 border rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-xl font-bold"

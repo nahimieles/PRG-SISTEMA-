@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import SurveyForm from '@/components/recruitment/SurveyForm';
 
-export default async function EntrevistaPage({ params }) {
+export default async function PruebaPage({ params }) {
   const { interviewId } = await params; // Next.js 15 requires awaiting params
   
   return (

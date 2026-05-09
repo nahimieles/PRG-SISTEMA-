@@ -1,0 +1,130 @@
+﻿{
+    "surveys":  [
+                    {
+                        "id":  "94d7d2ce-fab4-4020-a383-302dee031ddb",
+                        "parent_survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                        "version":  3,
+                        "title":  "PREGUNTAS PARA ASISTENTE CONTABLE"
+                    },
+                    {
+                        "id":  "58a4639f-8c23-4395-81c4-27230ca8cdea",
+                        "parent_survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                        "version":  3,
+                        "title":  "PREGUNTAS PARA ASISTENTE CONTABLE"
+                    },
+                    {
+                        "id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                        "parent_survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                        "version":  2,
+                        "title":  "PREGUNTAS PARA ASISTENTE CONTABLE"
+                    },
+                    {
+                        "id":  "3df2b644-5a48-4933-82ea-ac1a10151ede",
+                        "parent_survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                        "version":  3,
+                        "title":  "PREGUNTAS PARA ASISTENTE CONTABLE"
+                    }
+                ],
+    "questions":  [
+                      {
+                          "id":  "4ffbdef4-a077-46bf-bb29-aeda905bc117",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Un contribuyente calificado como \"Agente de RetenciÃ³n\" debe emitir el comprobante de retenciÃ³n en un plazo mÃ¡ximo de:"
+                      },
+                      {
+                          "id":  "727231e0-aa8e-425b-a792-ebb94bee0cea",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Realice el asiento contable simple para la compra de suministros de oficina por $100 + IVA, pagando con transferencia bancaria (asuma que no hay retenciones para este ejercicio):"
+                      },
+                      {
+                          "id":  "f62975f6-f9d8-4348-8ce8-9f0795317da8",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿QuÃ© es el RIMPE y cuÃ¡les son sus dos subcategorÃ­as principales?"
+                      },
+                      {
+                          "id":  "50e83911-c4d8-413e-b286-12900f310d2d",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿CuÃ¡l es el porcentaje actual de aporte personal al IESS para un trabajador en relaciÃ³n de dependencia?"
+                      },
+                      {
+                          "id":  "7ca24ca5-665a-46c5-8609-fdcb2e13993a",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿CÃ³mo se calcula el pago de la Decimocuarta RemuneraciÃ³n (Bono Escolar) en la regiÃ³n Sierra/AmazonÃ­a y Costa/Insular?"
+                      },
+                      {
+                          "id":  "e18a7f46-4025-4668-9693-79027f5c3118",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "ConciliaciÃ³n Tributaria: Â¿CuÃ¡l es el tratamiento contable y tributario de los \"Gastos No Deducibles\" al calcular el Impuesto a la Renta?"
+                      },
+                      {
+                          "id":  "aaf52109-606d-4620-9bf5-92b0802c735f",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Escriba 4 Ejemplos de gastos no deducibles"
+                      },
+                      {
+                          "id":  "301cf03b-6db6-4c15-b653-c9d91386fad0",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Retenciones de IVA: Si una empresa calificada como \"Contribuyente Especial\" compra servicios de consultorÃ­a a una \"Persona Natural no obligada a llevar contabilidad\", Â¿quÃ© porcentaje de IVA debe retener?"
+                      },
+                      {
+                          "id":  "70dafae2-444d-4813-a410-5d34d99c783b",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Activos Fijos: SegÃºn la tÃ©cnica contable y el SRI, Â¿cuÃ¡l es el porcentaje anual de depreciaciÃ³n para \"Equipos de ComputaciÃ³n y Software\"?"
+                      },
+                      {
+                          "id":  "8a173f7d-01ed-4fa5-a481-bb6c1e15b10f",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Impuesto a la Renta: Â¿QuÃ© sucede si el \"CrÃ©dito Tributario de IVA\" acumulado por una empresa es mayor al IVA en ventas durante varios meses?"
+                      },
+                      {
+                          "id":  "e389b2da-80b1-4345-81b9-692a1393458c",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿En quÃ© cuenta de balance se registra el deterioro de la Cartera de Clientes (Cuentas por Cobrar) que se considera incobrable?"
+                      },
+                      {
+                          "id":  "98a69ca3-96ce-41fb-a244-2ced81c61438",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿CuÃ¡l es el cÃ³digo de retenciÃ³n que se aplica actualmente para la compra de \"Bienes Muebles de naturaleza corporal\" (compra de mercaderÃ­a estÃ¡ndar)?"
+                      },
+                      {
+                          "id":  "9e608e2e-7e36-4272-9c3f-3634125b3b90",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Un trabajador tiene un sueldo de $600,00. En el mes de marzo acumulÃ³ 5 horas suplementarias (con recargo del 50%). Calcule:"
+                      },
+                      {
+                          "id":  "da97e3c8-a2cb-4686-95be-480ebc1124f3",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Compras con Retenciones: Una empresa (Agente de RetenciÃ³n) compra mercaderÃ­a a un contribuyente especial por un valor de $2,500 + IVA (15%). El pago se realiza a crÃ©dito. Determine:"
+                      },
+                      {
+                          "id":  "26478031-6434-4829-abe2-a6cc0be45de6",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Se compra una maquinaria por $12,000 el 1 de enero. SegÃºn la ley, se deprecia en 10 aÃ±os (10% anual). Calcule:"
+                      },
+                      {
+                          "id":  "903f3f0f-3ecd-45a1-813e-433e001edc51",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿QuÃ© es un sistema contable y cuÃ¡les son sus principales modulos?"
+                      },
+                      {
+                          "id":  "5ddfc0b0-221a-4f7d-ae29-5be28b229885",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Describa como organizarÃ­a ud un archivo de comprobantes"
+                      },
+                      {
+                          "id":  "01951ed9-9b74-4515-aabc-5368671e1d59",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿QuÃ© es una conciliaciÃ³n bancaria?"
+                      },
+                      {
+                          "id":  "0282b528-a9b3-4686-aa7b-400b8f79376f",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿CuÃ¡les son las principales obligaciones con las entidades de control que tiene una compaÃ±Ã­a?"
+                      },
+                      {
+                          "id":  "19c9e7cb-2352-42fb-bf57-9c2f515af894",
+                          "survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3",
+                          "text":  "Â¿CuÃ¡l es la diferencia entre medicina e insumo mÃ©dico?"
+                      }
+                  ]
+}

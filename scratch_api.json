@@ -1,0 +1,221 @@
+﻿{
+    "survey":  {
+                   "id":  "94d7d2ce-fab4-4020-a383-302dee031ddb",
+                   "title":  "PREGUNTAS PARA ASISTENTE CONTABLE",
+                   "description":  "Por favor completa esta prueba para la vacante de Asistente Contable.",
+                   "version":  3,
+                   "is_active":  true,
+                   "parent_survey_id":  "7c7c839e-9b87-4111-b883-270a77c211b3"
+               },
+    "questions":  [
+                      {
+                          "text":  "Un contribuyente calificado como \"Agente de RetenciÃ³n\" debe emitir el comprobante de retenciÃ³n en un plazo mÃ¡ximo de:",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "5 dÃ­as desde la fecha del comprobante de venta.",
+                                          "10 dÃ­as desde la fecha del comprobante de venta.",
+                                          "15 dÃ­as del mes siguiente."
+                                      ],
+                          "order_index":  1,
+                          "is_required":  true,
+                          "id":  "q_wc921r2yb"
+                      },
+                      {
+                          "text":  "Realice el asiento contable simple para la compra de suministros de oficina por $100 + IVA, pagando con transferencia bancaria (asuma que no hay retenciones para este ejercicio):",
+                          "type":  "multi_text",
+                          "options":  [
+                                          "Debe",
+                                          "Haber"
+                                      ],
+                          "order_index":  2,
+                          "is_required":  true,
+                          "id":  "q_mmhaxcpzh"
+                      },
+                      {
+                          "text":  "Â¿QuÃ© es el RIMPE y cuÃ¡les son sus dos subcategorÃ­as principales?",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  3,
+                          "is_required":  true,
+                          "id":  "q_84ptkjiy8"
+                      },
+                      {
+                          "text":  "Â¿CuÃ¡l es el porcentaje actual de aporte personal al IESS para un trabajador en relaciÃ³n de dependencia?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "12.15%",
+                                          "9.45%",
+                                          "11.15%"
+                                      ],
+                          "order_index":  4,
+                          "is_required":  true,
+                          "id":  "q_mhb0l9x10"
+                      },
+                      {
+                          "text":  "Â¿CÃ³mo se calcula el pago de la Decimocuarta RemuneraciÃ³n (Bono Escolar) en la regiÃ³n Sierra/AmazonÃ­a y Costa/Insular?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "Es la doceava parte de lo ganado en el aÃ±o.",
+                                          "Es un Salario BÃ¡sico Unificado (SBU) vigente.",
+                                          "Es el 15% de las utilidades."
+                                      ],
+                          "order_index":  5,
+                          "is_required":  true,
+                          "id":  "q_f2o7lluti"
+                      },
+                      {
+                          "text":  "ConciliaciÃ³n Tributaria: Â¿CuÃ¡l es el tratamiento contable y tributario de los \"Gastos No Deducibles\" al calcular el Impuesto a la Renta?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "Se restan de la utilidad contable para bajar el impuesto.",
+                                          "Se suman a la utilidad contable para determinar la base imponible."
+                                      ],
+                          "order_index":  6,
+                          "is_required":  true,
+                          "id":  "q_hjms6jy1j"
+                      },
+                      {
+                          "text":  "Escriba 4 Ejemplos de gastos no deducibles",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  7,
+                          "is_required":  true,
+                          "id":  "q_lney7cvy6"
+                      },
+                      {
+                          "text":  "Retenciones de IVA: Si una empresa calificada como \"Contribuyente Especial\" compra servicios de consultorÃ­a a una \"Persona Natural no obligada a llevar contabilidad\", Â¿quÃ© porcentaje de IVA debe retener?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "30%",
+                                          "70%",
+                                          "100%"
+                                      ],
+                          "order_index":  8,
+                          "is_required":  true,
+                          "id":  "q_xuc9wf0bo"
+                      },
+                      {
+                          "text":  "Activos Fijos: SegÃºn la tÃ©cnica contable y el SRI, Â¿cuÃ¡l es el porcentaje anual de depreciaciÃ³n para \"Equipos de ComputaciÃ³n y Software\"?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "10% (10 aÃ±os)",
+                                          "20% (5 aÃ±os)",
+                                          "33.33% (3 aÃ±os)"
+                                      ],
+                          "order_index":  9,
+                          "is_required":  true,
+                          "id":  "q_byon6vhvf"
+                      },
+                      {
+                          "text":  "Impuesto a la Renta: Â¿QuÃ© sucede si el \"CrÃ©dito Tributario de IVA\" acumulado por una empresa es mayor al IVA en ventas durante varios meses?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "El valor se pierde al finalizar el aÃ±o fiscal.",
+                                          "Se mantiene en el activo como CrÃ©dito Tributario para futuras compensaciones o devoluciÃ³n.",
+                                          "El SRI emite una multa por exceso de compras."
+                                      ],
+                          "order_index":  10,
+                          "is_required":  true,
+                          "id":  "q_7szrumjp2"
+                      },
+                      {
+                          "text":  "Â¿En quÃ© cuenta de balance se registra el deterioro de la Cartera de Clientes (Cuentas por Cobrar) que se considera incobrable?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "Una cuenta de Pasivo Corriente.",
+                                          "Una cuenta de Activo con saldo acreedor (Regularizadora de activo).",
+                                          "Directamente contra la cuenta de Capital."
+                                      ],
+                          "order_index":  11,
+                          "is_required":  true,
+                          "id":  "q_gqcralmkb"
+                      },
+                      {
+                          "text":  "Â¿CuÃ¡l es el cÃ³digo de retenciÃ³n que se aplica actualmente para la compra de \"Bienes Muebles de naturaleza corporal\" (compra de mercaderÃ­a estÃ¡ndar)?",
+                          "type":  "multiple_choice",
+                          "options":  [
+                                          "CÃ³digo 312 (1.75%)",
+                                          "CÃ³digo 343 (10%)",
+                                          "CÃ³digo 332 (2%)"
+                                      ],
+                          "order_index":  12,
+                          "is_required":  true,
+                          "id":  "q_3xiwjigcy"
+                      },
+                      {
+                          "text":  "Un trabajador tiene un sueldo de $600,00. En el mes de marzo acumulÃ³ 5 horas suplementarias (con recargo del 50%). Calcule:",
+                          "type":  "multi_text",
+                          "options":  [
+                                          "El valor de la hora normal",
+                                          "El valor total a recibir por las 5 horas suplementarias"
+                                      ],
+                          "order_index":  13,
+                          "is_required":  true,
+                          "id":  "q_fmlcrd4ku"
+                      },
+                      {
+                          "text":  "Compras con Retenciones: Una empresa (Agente de RetenciÃ³n) compra mercaderÃ­a a un contribuyente especial por un valor de $2,500 + IVA (15%). El pago se realiza a crÃ©dito. Determine:",
+                          "type":  "multi_text",
+                          "options":  [
+                                          "Valor del IVA",
+                                          "Valor de RetenciÃ³n de IR (CÃ³digo 312 - 1.75%)",
+                                          "Valor neto a pagar al proveedor"
+                                      ],
+                          "order_index":  14,
+                          "is_required":  true,
+                          "id":  "q_49d59exlj"
+                      },
+                      {
+                          "text":  "Se compra una maquinaria por $12,000 el 1 de enero. SegÃºn la ley, se deprecia en 10 aÃ±os (10% anual). Calcule:",
+                          "type":  "multi_text",
+                          "options":  [
+                                          "Gasto de depreciaciÃ³n mensual",
+                                          "Asiento contable (Debe)",
+                                          "Asiento contable (Haber)"
+                                      ],
+                          "order_index":  15,
+                          "is_required":  true,
+                          "id":  "q_kigr0ejy6"
+                      },
+                      {
+                          "text":  "Â¿QuÃ© es un sistema contable y cuÃ¡les son sus principales modulos?",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  16,
+                          "is_required":  true,
+                          "id":  "q_ahfngllkc"
+                      },
+                      {
+                          "text":  "Describa como organizarÃ­a ud un archivo de comprobantes",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  17,
+                          "is_required":  true,
+                          "id":  "q_4iltoki2z"
+                      },
+                      {
+                          "text":  "Â¿QuÃ© es una conciliaciÃ³n bancaria?",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  18,
+                          "is_required":  true,
+                          "id":  "q_oexxxivld"
+                      },
+                      {
+                          "text":  "Â¿CuÃ¡les son las principales obligaciones con las entidades de control que tiene una compaÃ±Ã­a?",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  19,
+                          "is_required":  true,
+                          "id":  "q_b9yuzlb94"
+                      },
+                      {
+                          "text":  "Â¿CuÃ¡l es la diferencia entre medicina e insumo mÃ©dico?",
+                          "type":  "text",
+                          "options":  null,
+                          "order_index":  20,
+                          "is_required":  true,
+                          "id":  "q_y1dpl3puh"
+                      }
+                  ]
+}

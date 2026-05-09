@@ -20,10 +20,10 @@ export default function SurveyForm({ interviewId }) {
   useEffect(() => {
     const fetchSurvey = async () => {
       try {
-        const res = await fetch(`/api/entrevista/${interviewId}`);
+        const res = await fetch(`/api/prueba/${interviewId}?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error || 'Error al cargar la entrevista');
+        if (!res.ok) throw new Error(data.error || 'Error al cargar la prueba');
 
         setSurvey(data.survey);
         setQuestions(data.questions);
@@ -69,7 +69,7 @@ export default function SurveyForm({ interviewId }) {
     }));
 
     try {
-      const res = await fetch(`/api/entrevista/${interviewId}`, {
+      const res = await fetch(`/api/prueba/${interviewId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate, responses: formattedResponses })
@@ -119,7 +119,7 @@ export default function SurveyForm({ interviewId }) {
           <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg shadow-green-500/30 text-white animate-bounce-short">
             <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Entrevista enviada</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Prueba enviada</h2>
         </div>
       </div>
     );
@@ -189,7 +189,7 @@ export default function SurveyForm({ interviewId }) {
 
             {/* Questions Section */}
             <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-slate-800 mb-8 tracking-tight">Entrevista</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-8 tracking-tight">Prueba</h2>
                 
                 <div className="space-y-12">
                 {questions.map((q, idx) => (

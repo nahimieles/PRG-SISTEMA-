@@ -7,6 +7,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getAuditLogs, deleteAuditLog, deleteMultipleAuditLogs, clearAllAuditLogs } from '@/lib/audit';
+import { getRecords, getWorkerRecords, getWorkerSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import CustomSelect from './CustomSelect';
 
@@ -20,6 +21,7 @@ const ACTION_STYLES = {
     DELETED: { bg: 'bg-red-100    dark:bg-red-900/30', text: 'text-red-700    dark:text-red-400', label: 'ELIMINADO' },
     RENAMED: { bg: 'bg-amber-100  dark:bg-amber-900/30', text: 'text-amber-700  dark:text-amber-400', label: 'RENOMBRADO' },
     MOVED: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', label: 'MOVIDO' },
+    MANUAL: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-400', label: 'MANUAL' },
 };
 
 function ActionBadge({ action }) {
@@ -57,7 +59,7 @@ function shortenPath(path) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RealTimeMonitor({ onLogsChanged }) {
+export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
     const [events, setEvents] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedWorker, setSelectedWorker] = useState('');
@@ -147,9 +149,35 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                 endDate: dateRange.to ? new Date(dateRange.to).toISOString() : null
             });
 
+            // Fetch manual records
+            let manualRecords = [];
+            if (isWorker) {
+                const session = getWorkerSession();
+                if (session) {
+                    manualRecords = await getWorkerRecords(session.id);
+                }
+            } else {
+                manualRecords = await getRecords();
+            }
+
+            if (dateRange.from || dateRange.to) {
+                manualRecords = manualRecords.filter(r => {
+                    const d = new Date(r.created_at || r.start_datetime);
+                    if (dateRange.from && d < new Date(dateRange.from)) return false;
+                    if (dateRange.to) {
+                        const toDate = new Date(dateRange.to);
+                        toDate.setHours(23, 59, 59, 999);
+                        if (d > toDate) return false;
+                    }
+                    return true;
+                });
+            }
+
+            uidCounter.current = 0;
+            let combined = [];
+
             if (logs && logs.length > 0) {
-                uidCounter.current = 0;
-                const mappedHistory = logs.map(log => {
+                combined = combined.concat(logs.map(log => {
                     let actionMsg = log.metadata?.changeType;
                     if (!actionMsg) {
                         actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
@@ -165,11 +193,30 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                         filePath: log.file_path,
                         driveId: log.metadata?.driveId,
                         fileId: log.metadata?.fileId,
-                        webUrl: log.metadata?.webUrl
+                        webUrl: log.metadata?.webUrl,
+                        isManual: false
                     };
-                });
-                setEvents(mappedHistory);
+                }));
             }
+
+            if (manualRecords && manualRecords.length > 0) {
+                combined = combined.concat(manualRecords.map(rec => ({
+                    _uid: String(++uidCounter.current),
+                    dbId: rec.id,
+                    fileName: `${rec.service_type || 'Actividad'}${rec.description ? ` - ${rec.description}` : ''}`,
+                    user: rec.worker_name,
+                    company: rec.company_name,
+                    action: 'MANUAL',
+                    date: rec.created_at || rec.start_datetime,
+                    filePath: null,
+                    webUrl: rec.file_url,
+                    isManual: true,
+                    hours: rec.hours_worked
+                })));
+            }
+
+            combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+            setEvents(combined.slice(0, 500));
         } catch (err) {
             console.error('Failed to reload from DB:', err);
         }
@@ -196,7 +243,10 @@ export default function RealTimeMonitor({ onLogsChanged }) {
             }
         };
 
-        // Auto-poll every 2 minutes ("rapidito") to keep data fresh while active
+        // Execute immediately when the user enters the panel to guarantee 100% fresh data
+        performAutoSync();
+
+        // Auto-poll every 2 minutes to keep data fresh while active
         const autoSyncInterval = setInterval(performAutoSync, 2 * 60 * 1000);
 
         return () => {
@@ -534,46 +584,50 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                 <span className="hidden sm:inline">Exportar Excel</span>
                             </button>
 
-                            <button
-                                onClick={() => { setSelectMode(s => !s); clearSelection(); }}
-                                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
-                                style={{
-                                    background: selectMode ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
-                                    color: selectMode ? '#3b82f6' : theme.textSecondary,
-                                    border: `1px solid ${selectMode ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
-                                }}
-                            >
-                                <CheckSquare className="w-3.5 h-3.5" />
-                                {selectMode ? 'Cancelar' : 'Seleccionar'}
-                            </button>
+                            {!isWorker && (
+                                <>
+                                    <button
+                                        onClick={() => { setSelectMode(s => !s); clearSelection(); }}
+                                        className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                        style={{
+                                            background: selectMode ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
+                                            color: selectMode ? '#3b82f6' : theme.textSecondary,
+                                            border: `1px solid ${selectMode ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
+                                        }}
+                                    >
+                                        <CheckSquare className="w-3.5 h-3.5" />
+                                        {selectMode ? 'Cancelar' : 'Seleccionar'}
+                                    </button>
 
-                            {selectMode && selected.size > 0 && (
-                                <button
-                                    onClick={deleteSelected}
-                                    className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
-                                    style={{
-                                        background: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2',
-                                        color: '#dc2626',
-                                        border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'}`,
-                                    }}
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    Eliminar ({selected.size})
-                                </button>
+                                    {selectMode && selected.size > 0 && (
+                                        <button
+                                            onClick={deleteSelected}
+                                            className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                                            style={{
+                                                background: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2',
+                                                color: '#dc2626',
+                                                border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#fecaca'}`,
+                                            }}
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            Eliminar ({selected.size})
+                                        </button>
+                                    )}
+
+                                    <button
+                                        onClick={clearAll}
+                                        className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                        style={{
+                                            color: theme.textSecondary,
+                                            border: `1px solid ${theme.border}`,
+                                        }}
+                                        title="Limpiar todo"
+                                    >
+                                        <Trash className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">Limpiar todo</span>
+                                    </button>
+                                </>
                             )}
-
-                            <button
-                                onClick={clearAll}
-                                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
-                                style={{
-                                    color: theme.textSecondary,
-                                    border: `1px solid ${theme.border}`,
-                                }}
-                                title="Limpiar todo"
-                            >
-                                <Trash className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Limpiar todo</span>
-                            </button>
                         </>
                     )}
                 </div>
@@ -828,7 +882,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                                         </a>
                                                     )}
                                                     
-                                                    {!selectMode && (
+                                                    {!isWorker && !selectMode && (
                                                         <button
                                                             onClick={() => deleteEvent(ev._uid)}
                                                             className="flex sm:hidden p-1.5 rounded-lg text-red-500 bg-red-500/10"
@@ -841,7 +895,7 @@ export default function RealTimeMonitor({ onLogsChanged }) {
                                         </div>
 
                                         {/* Desktop Delete button */}
-                                        {!selectMode && (
+                                        {!isWorker && !selectMode && (
                                             <button
                                                 onClick={() => deleteEvent(ev._uid)}
                                                 className="hidden sm:flex flex-shrink-0 w-7 h-7 items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all"

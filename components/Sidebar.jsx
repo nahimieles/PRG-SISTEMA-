@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -27,6 +27,8 @@ export default function Sidebar({
     activeTab,
     onTabChange,
     userName = '',
+    userRole = 'Admin',
+    avatarUrl = null,
     onLogout,
     onProfileClick,
     showBackButton = true,
@@ -37,12 +39,40 @@ export default function Sidebar({
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [profilePic, setProfilePic] = useState(null);
+
+    // Fetch Microsoft Graph Profile Picture
+    useEffect(() => {
+        async function fetchProfilePic() {
+            try {
+                // If we are authenticated via MSAL, we could use the instance here.
+                // For now, we simulate or fetch if a token is available in local storage/session.
+                // Assuming `acquireTokenSilent` or a similar backend route is available.
+                const msalToken = sessionStorage.getItem('msal_token') || localStorage.getItem('msal_token');
+                if (!msalToken) return;
+
+                const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+                    headers: { Authorization: `Bearer ${msalToken}` }
+                });
+                
+                if (res.ok) {
+                    const blob = await res.blob();
+                    setProfilePic(URL.createObjectURL(blob));
+                }
+            } catch (error) {
+                console.error("Error fetching MS profile pic:", error);
+            }
+        }
+        if (userName) {
+            fetchProfilePic();
+        }
+    }, [userName]);
 
     // Iconos por defecto según el id del item
     const defaultIcons = {
         actividades: FileText,
         asistencia: Clock,
-        funcionarios: Users,
+        talento_humano: Users,
         empresas: Building2,
         dashboards: PieChart,
         reportes: Calendar,
@@ -91,7 +121,7 @@ export default function Sidebar({
             <div className={`flex items-center ${expanded ? 'px-4 py-4' : 'justify-center py-4'} transition-all duration-300`}>
                 <div className={`flex items-center justify-center w-full transition-all duration-300`}>
                     <LoginLogo
-                        className={`transition-all duration-300 ${expanded ? 'w-48 h-auto' : 'w-10 h-auto'
+                        className={`transition-all duration-300 ${expanded ? 'w-32 lg:w-48 h-auto' : 'w-10 h-auto'
                             }`}
                     />
                 </div>
@@ -113,12 +143,16 @@ export default function Sidebar({
                         onClick={onProfileClick}
                         className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 flex items-center gap-2.5 hover:from-blue-500/20 hover:to-purple-500/20 transition-all cursor-pointer text-left"
                     >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                            {userName?.charAt(0)?.toUpperCase() || 'A'}
-                        </div>
+                        {(avatarUrl || profilePic) ? (
+                            <img src={avatarUrl || profilePic} alt="Perfil" className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-blue-500/30" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                {userName?.charAt(0)?.toUpperCase() || 'A'}
+                            </div>
+                        )}
                         <div className="min-w-0">
                             <p className="text-white font-medium text-sm truncate">{userName}</p>
-                            <p className="text-[10px] text-gray-400">Admin</p>
+                            <p className="text-[10px] text-gray-400">{userRole}</p>
                         </div>
                     </button>
                 )}
@@ -128,9 +162,13 @@ export default function Sidebar({
                         className="w-full flex justify-center py-2 cursor-pointer"
                         title={userName}
                     >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                            {userName?.charAt(0)?.toUpperCase() || 'A'}
-                        </div>
+                        {(avatarUrl || profilePic) ? (
+                            <img src={avatarUrl || profilePic} alt="Perfil" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                                {userName?.charAt(0)?.toUpperCase() || 'A'}
+                            </div>
+                        )}
                     </button>
                 )}
 
@@ -209,14 +247,18 @@ export default function Sidebar({
                     >
                         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
-                    <LoginLogo className="w-24 h-auto" />
+                    <LoginLogo className="w-20 sm:w-24 h-auto" />
                 </div>
                 
                 <div className="flex items-center gap-3">
                     {/* Mobile User Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg border border-white/20">
-                        {userName?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
+                    {(avatarUrl || profilePic) ? (
+                        <img src={avatarUrl || profilePic} alt="Perfil" className="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-lg border border-white/20" />
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg border border-white/20">
+                            {userName?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -17,7 +17,7 @@ import {
 } from '../lib/actions';
 import { supabase } from '../lib/supabase';
 
-export default function CompanyManager() {
+export default function CompanyManager({ isWorker = false }) {
     // V3.12.0 - Groups Integration
 
     const { isDark } = useTheme();
@@ -35,7 +35,8 @@ export default function CompanyManager() {
     // Hardcoded Types (Legacy Groups)
     const legacyGroups = [
         { id: 'contabilidad', name: 'Contabilidad', color: 'green', type: 'contabilidad' },
-        { id: 'auditoria', name: 'Auditoría', color: 'blue', type: 'auditoria' }
+        { id: 'auditoria', name: 'Auditoría', color: 'blue', type: 'auditoria' },
+        { id: 'especiales', name: 'Trabajos Especiales', color: 'purple', type: 'especiales' }
     ];
 
     // Get PRG company (direct access)
@@ -87,6 +88,7 @@ export default function CompanyManager() {
     // Document upload modal state
     const [docModal, setDocModal] = useState(null); // { company, type: 'financieros'|'impuestos'|'informes' }
     const [docFile, setDocFile] = useState(null);
+    const [docName, setDocName] = useState('');
     const [docUploading, setDocUploading] = useState(false);
     const [docDragging, setDocDragging] = useState(false);
     const fileInputRef = useRef(null);
@@ -353,7 +355,9 @@ export default function CompanyManager() {
         setDocUploading(true);
         try {
             const ext = docFile.name.split('.').pop();
-            const path = `company-docs/${docModal.company.id}/${docModal.type}-${Date.now()}.${ext}`;
+            let baseName = docName.trim() ? docName.trim() : docFile.name.replace(/\.[^/.]+$/, "");
+            baseName = baseName.replace(/[^a-zA-Z0-9_.-]/g, '_');
+            const path = `company-docs/${docModal.company.id}/${baseName}-${Date.now()}.${ext}`;
             const { data, error } = await supabase.storage
                 .from('audit-files')
                 .upload(path, docFile, { cacheControl: '3600', upsert: true });
@@ -371,8 +375,15 @@ export default function CompanyManager() {
             if (!updateRes.success) throw new Error(updateRes.error || 'Error al guardar URL en la base de datos');
 
             setMessage({ text: `${DOC_TYPE_LABELS[docModal.type]} subido correctamente`, type: 'success' });
-            setDocModal(null);
+            setDocModal(prev => ({
+                ...prev,
+                company: {
+                    ...prev.company,
+                    [metaKey]: urlData.publicUrl
+                }
+            }));
             setDocFile(null);
+            setDocName('');
             loadData();
         } catch (err) {
             console.error('Upload error:', err);
@@ -393,7 +404,13 @@ export default function CompanyManager() {
             if (!updateRes.success) throw new Error(updateRes.error || 'Error al eliminar URL en la base de datos');
             
             setMessage({ text: `Documento eliminado`, type: 'success' });
-            setDocModal(null);
+            setDocModal(prev => ({
+                ...prev,
+                company: {
+                    ...prev.company,
+                    [metaKey]: null
+                }
+            }));
             setDocFile(null);
             loadData();
         } catch (err) {
@@ -441,7 +458,8 @@ export default function CompanyManager() {
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                         </div>
                     )}
-                    <div className="relative" ref={addMenuRef}>
+                    {!isWorker && (
+                        <div className="relative" ref={addMenuRef}>
                         <button
                             onClick={() => setShowAddMenu(!showAddMenu)}
                             className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm font-bold text-sm"
@@ -471,6 +489,7 @@ export default function CompanyManager() {
                             </div>
                         )}
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -492,13 +511,14 @@ export default function CompanyManager() {
                                             <div className="w-11 h-11 rounded-lg flex items-center justify-center border" style={{ background: isDark ? theme.surfaceElevated : '#f8fafc', borderColor: theme.border }}><Building2 size={22} className="text-blue-500" /></div>
                                         )}
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Empresa Principal</p>
                                             <p className="text-sm font-bold" style={{ color: theme.text }}>{prgCompany.name}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
-                                        <Edit2 size={16} className="text-gray-400" />
-                                    </button>
+                                    {!isWorker && (
+                                        <button onClick={() => openModal(prgCompany)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
+                                            <Edit2 size={16} className="text-gray-400" />
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
@@ -532,20 +552,22 @@ export default function CompanyManager() {
                                                             <Folder size={20} className="text-blue-500" />
                                                         )}
                                                     </div>
-                                                    <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
-                                                            className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
-                                                        >
-                                                            <Edit2 size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
-                                                            className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
+                                                    {!isWorker && (
+                                                        <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
+                                                                className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
+                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
                                                 <div className="flex items-center gap-2 mb-3">
@@ -641,20 +663,22 @@ export default function CompanyManager() {
                                                                 <Folder size={20} className="text-blue-500" />
                                                             )}
                                                         </div>
-                                                        <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
-                                                                className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
-                                                            >
-                                                                <Edit2 size={14} />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
-                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </div>
+                                                        {!isWorker && (
+                                                            <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); openModal(group, true); }}
+                                                                    className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleDelete(group.id, true); }}
+                                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-500 transition-colors"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
                                                     <div className="flex items-center gap-2 mb-3">
@@ -725,7 +749,9 @@ export default function CompanyManager() {
                                                 )}
                                                 <div className="flex gap-1">
                                                     <button onClick={() => openModal(company)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                                                    <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                                    {!isWorker && (
+                                                        <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                                    )}
                                                 </div>
                                             </div>
                                             <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
@@ -756,25 +782,25 @@ export default function CompanyManager() {
                                                     )}
                                                 </button>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); }}
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); }}
                                                     className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
                                                     style={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
                                                 >
-                                                    <BarChart3 size={12} /> Financieros
+                                                    <BarChart3 size={12} /> Estados Fin.
                                                 </button>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); }}
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); }}
                                                     className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
                                                     style={{ color: '#f59e0b', borderColor: isDark ? 'rgba(245,158,11,0.3)' : '#fef3c7', background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb' }}
                                                 >
-                                                    <TrendingUp size={12} /> Impuestos
+                                                    <TrendingUp size={12} /> Decl. Impuestos
                                                 </button>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); }}
+                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); }}
                                                     className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
                                                     style={{ color: '#8b5cf6', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#ede9fe', background: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff' }}
                                                 >
-                                                    <FileBarChart size={12} /> Informes
+                                                    <FileBarChart size={12} /> Inf. Analíticos
                                                 </button>
                                             </div>
                                         </div>
@@ -796,43 +822,47 @@ export default function CompanyManager() {
                             </h3>
                             <form onSubmit={handleSave} className="space-y-4">
                                 {/* Image Upload */}
-                                <div className="flex justify-center mb-4">
-                                    <div className="relative group cursor-pointer">
-                                        <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-black/20 hover:bg-gray-100 transition-colors">
-                                            {formData.avatar_url ? (
-                                                <img src={formData.avatar_url} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="text-center p-2">
-                                                    <ImageIcon className="mx-auto text-gray-400 mb-1" size={24} />
-                                                    <span className="text-[10px] text-gray-400 font-bold uppercase">Subir Imagen</span>
+                                {!isWorker && (
+                                    <div className="flex justify-center mb-4">
+                                        <div className="relative group cursor-pointer">
+                                            <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-black/20 hover:bg-gray-100 transition-colors">
+                                                {formData.avatar_url ? (
+                                                    <img src={formData.avatar_url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="text-center p-2">
+                                                        <ImageIcon className="mx-auto text-gray-400 mb-1" size={24} />
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase">Subir Imagen</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleAvatarUpload}
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                disabled={uploadingAvatar}
+                                            />
+                                            {uploadingAvatar && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
+                                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                                 </div>
                                             )}
                                         </div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleAvatarUpload}
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                            disabled={uploadingAvatar}
-                                        />
-                                        {uploadingAvatar && (
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
+                                )}
 
-                                <div>
-                                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Nombre</label>
-                                    <input
-                                        type="text" required
-                                        className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
-                                        style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    />
-                                </div>
+                                {!isWorker && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Nombre</label>
+                                        <input
+                                            type="text" required
+                                            className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                                            style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Shared Credentials Section */}
                                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -860,7 +890,7 @@ export default function CompanyManager() {
                                 </div>
 
                                 {/* Company Only Fields (Hidden for Groups) */}
-                                {((!formData.category && !editingItem) || (editingItem && editingItem.type !== undefined)) && (
+                                {!isWorker && ((!formData.category && !editingItem) || (editingItem && editingItem.type !== undefined)) && (
                                     <>
                                         <div>
                                             <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Categoría (Legacy)</label>
@@ -995,84 +1025,111 @@ export default function CompanyManager() {
                                             >
                                                 Ver archivo
                                             </a>
-                                            <button
-                                                onClick={handleDocDelete}
-                                                disabled={docUploading}
-                                                className="px-3 py-1.5 rounded-lg text-xs font-bold border text-red-500 border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-40"
-                                            >
-                                                <Trash2 size={12} className="inline mr-1" />Eliminar
-                                            </button>
+                                            {!isWorker && (
+                                                <button
+                                                    onClick={handleDocDelete}
+                                                    disabled={docUploading}
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-bold border text-red-500 border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                                                >
+                                                    <Trash2 size={12} className="inline mr-1" />Eliminar
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
+                                {isWorker && !existingUrl && (
+                                    <div className="p-4 rounded-xl border text-center text-sm font-medium" style={{ borderColor: theme.border, color: theme.textSecondary }}>
+                                        No hay documento cargado
+                                    </div>
+                                )}
 
-                                {/* Drop zone */}
-                                <div
-                                    onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
-                                    onDragLeave={() => setDocDragging(false)}
-                                    onDrop={(e) => {
-                                        e.preventDefault();
-                                        setDocDragging(false);
-                                        const f = e.dataTransfer.files[0];
-                                        if (f) setDocFile(f);
-                                    }}
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${docDragging ? 'scale-[1.02]' : 'hover:border-opacity-60'}`}
-                                    style={{
-                                        borderColor: docDragging ? c.accent : (isDark ? 'rgba(255,255,255,0.15)' : '#e2e8f0'),
-                                        background: docDragging ? c.bg : 'transparent'
-                                    }}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        className="hidden"
-                                        accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
-                                        onChange={(e) => { if (e.target.files[0]) setDocFile(e.target.files[0]); }}
-                                    />
-                                    {docFile ? (
-                                        <div className="space-y-2">
-                                            <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
-                                                <CheckCircle size={24} style={{ color: c.accent }} />
-                                            </div>
-                                            <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{docFile.name}</p>
-                                            <p className="text-[11px] opacity-50">{(docFile.size / 1024).toFixed(0)} KB — Clic para cambiar</p>
+                                {!isWorker && (
+                                    <>
+                                        {/* Drop zone */}
+                                        <div
+                                            onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
+                                            onDragLeave={() => setDocDragging(false)}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                setDocDragging(false);
+                                                const f = e.dataTransfer.files[0];
+                                                if (f) setDocFile(f);
+                                            }}
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${docDragging ? 'scale-[1.02]' : 'hover:border-opacity-60'}`}
+                                            style={{
+                                                borderColor: docDragging ? c.accent : (isDark ? 'rgba(255,255,255,0.15)' : '#e2e8f0'),
+                                                background: docDragging ? c.bg : 'transparent'
+                                            }}
+                                        >
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                className="hidden"
+                                                accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg"
+                                                onChange={(e) => { if (e.target.files[0]) setDocFile(e.target.files[0]); }}
+                                            />
+                                            {docFile ? (
+                                                <div className="space-y-2">
+                                                    <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
+                                                        <CheckCircle size={24} style={{ color: c.accent }} />
+                                                    </div>
+                                                    <p className="text-sm font-bold truncate" style={{ color: theme.text }}>{docFile.name}</p>
+                                                    <p className="text-[11px] opacity-50">{(docFile.size / 1024).toFixed(0)} KB — Clic para cambiar</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
+                                                        <Upload size={24} style={{ color: c.accent }} />
+                                                    </div>
+                                                    <p className="text-sm font-semibold" style={{ color: theme.text }}>
+                                                        {existingUrl ? 'Subir nuevo archivo (reemplazar)' : 'Arrastra o selecciona archivo'}
+                                                    </p>
+                                                    <p className="text-[11px] opacity-50">PDF, Excel, Word, Imágenes (máx. 50MB)</p>
+                                                </div>
+                                            )}
                                         </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <div className="w-12 h-12 mx-auto rounded-xl flex items-center justify-center" style={{ background: c.bg }}>
-                                                <Upload size={24} style={{ color: c.accent }} />
-                                            </div>
-                                            <p className="text-sm font-semibold" style={{ color: theme.text }}>
-                                                {existingUrl ? 'Subir nuevo archivo (reemplazar)' : 'Arrastra o selecciona archivo'}
+
+                                        {/* Custom Name Input */}
+                                        <div className="mt-3">
+                                            <label className="text-sm font-semibold opacity-80 mb-1 block" style={{ color: theme.text }}>Nombre a mostrar</label>
+                                            <input 
+                                                type="text" 
+                                                value={docName} 
+                                                onChange={(e) => setDocName(e.target.value)} 
+                                                placeholder="Ej: Reporte Anual 2024"
+                                                className="w-full px-4 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                style={{ background: isDark ? '#1a1f2e' : '#fff', borderColor: theme.border, color: theme.text }}
+                                            />
+                                            <p className="text-[10px] opacity-50 mt-1" style={{ color: theme.text }}>
+                                                Si se deja en blanco se utilizará el nombre original del archivo.
                                             </p>
-                                            <p className="text-[11px] opacity-50">PDF, Excel, Word, Imágenes (máx. 50MB)</p>
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Actions */}
-                                <div className="flex gap-2 pt-1">
-                                    <button
-                                        onClick={() => { setDocModal(null); setDocFile(null); }}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
-                                        style={{ borderColor: theme.border, color: theme.textSecondary }}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={handleDocUpload}
-                                        disabled={!docFile || docUploading}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
-                                        style={{ background: c.accent }}
-                                    >
-                                        {docUploading ? (
-                                            <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Subiendo...</>
-                                        ) : (
-                                            <><Upload size={14} /> {existingUrl ? 'Reemplazar' : 'Subir'}</>
-                                        )}
-                                    </button>
-                                </div>
+                                        {/* Actions */}
+                                        <div className="flex gap-2 pt-1">
+                                            <button
+                                                onClick={() => { setDocModal(null); setDocFile(null); }}
+                                                className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
+                                                style={{ borderColor: theme.border, color: theme.textSecondary }}
+                                            >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={handleDocUpload}
+                                                disabled={!docFile || docUploading}
+                                                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                                                style={{ background: c.accent }}
+                                            >
+                                                {docUploading ? (
+                                                    <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Subiendo...</>
+                                                ) : (
+                                                    <><Upload size={14} /> {existingUrl ? 'Reemplazar' : 'Subir'}</>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

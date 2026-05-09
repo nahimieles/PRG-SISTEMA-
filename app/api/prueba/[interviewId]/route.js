@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSurveyQuestionsAction } from '@/lib/actions';
 import { randomUUID } from 'crypto';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Extremely basic in-memory rate limiting (IP -> timestamps)
 // In a serverless environment (Vercel), this may reset per instance, 
@@ -49,33 +53,30 @@ export async function GET(request, { params }) {
         // 1. Validate Survey Exists, is Active
         const { data: survey, error: surveyError } = await supabase
             .from('recruitment_surveys')
-            .select('id, title, description, version, is_active')
+            .select('id, title, description, version, is_active, parent_survey_id')
             .eq('id', interviewId)
             .single();
 
         if (surveyError || !survey) {
-            return NextResponse.json({ error: 'Entrevista no encontrada o token inválido.' }, { status: 404 });
+            return NextResponse.json({ error: 'Prueba no encontrada o token inválido.' }, { status: 404 });
         }
 
         if (!survey.is_active) {
-            return NextResponse.json({ error: 'La entrevista ya no está activa.' }, { status: 403 });
+            return NextResponse.json({ error: 'La prueba ya no está activa.' }, { status: 403 });
         }
 
-        // 2. Fetch Questions
-        const { data: questions, error: questionsError } = await supabase
-            .from('recruitment_questions')
-            .select('id, text, type, options, is_required')
-            .eq('survey_id', interviewId)
-            .order('order_index', { ascending: true });
-
-        if (questionsError) {
-            throw new Error('Error fetching questions');
+        // 2. Fetch Questions (Using our robust server action that recovers from parent if empty)
+        const parentId = survey.parent_survey_id || survey.id;
+        const { success, questions, error: qErr } = await getSurveyQuestionsAction(interviewId, parentId);
+        
+        if (!success) {
+            throw new Error(qErr || 'Error fetching questions');
         }
 
         return NextResponse.json({ survey, questions });
 
     } catch (error) {
-        console.error('API Entrevista GET Error:', error);
+        console.error('API Prueba GET Error:', error);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
@@ -108,7 +109,7 @@ export async function POST(request, { params }) {
             .single();
 
         if (!survey || !survey.is_active) {
-            return NextResponse.json({ error: 'Entrevista inválida o inactiva.' }, { status: 403 });
+            return NextResponse.json({ error: 'Prueba inválida o inactiva.' }, { status: 403 });
         }
 
         // 2. Cargar todas las preguntas para validar
@@ -178,10 +179,10 @@ export async function POST(request, { params }) {
              return NextResponse.json({ error: 'Error BD (Respuestas): ' + responsesError.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, message: 'Entrevista completada exitosamente.' });
+        return NextResponse.json({ success: true, message: 'Prueba completada exitosamente.' });
 
     } catch (error) {
-        console.error('API Entrevista POST Error:', error);
+        console.error('API Prueba POST Error:', error);
         return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
     }
 }
