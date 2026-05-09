@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getSurveyQuestionsAction } from '@/lib/actions';
+import { getSurveyQuestionsAction, getServiceSupabase } from '@/lib/actions';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +28,7 @@ function checkRateLimit(ip) {
     return true;
 }
 
-import { getServiceSupabase } from '@/lib/actions';
+
 
 const getSupabaseAdmin = () => {
    return getServiceSupabase();
