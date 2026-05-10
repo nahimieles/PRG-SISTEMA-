@@ -115,17 +115,12 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'No se encontraron preguntas.' }, { status: 404 });
         }
 
-        // 3. Validar respuestas
+        // 3. Filtrar respuestas para solo incluir preguntas que existen actualmente
         const questionMap = new Map(questions.map(q => [q.id, q]));
-        const responseDataMap = new Map(responses.map(r => [r.question_id, r.response_value]));
-
-        // Asegurar que no hay question_ids inválidos
-        for (const resp of responses) {
-            if (!questionMap.has(resp.question_id)) {
-                return NextResponse.json({ error: `Pregunta inválida: ${resp.question_id}` }, { status: 400 });
-            }
-            // Aquí se podría añadir validación estricta de JSON según el `type` de pregunta
-        }
+        
+        // Solo procesamos respuestas de preguntas que existen en la base de datos
+        const validResponses = responses.filter(resp => questionMap.has(resp.question_id));
+        const responseDataMap = new Map(validResponses.map(r => [r.question_id, r.response_value]));
 
         // Asegurar que las preguntas requeridas están respondidas
         for (const q of questions) {
@@ -157,7 +152,7 @@ export async function POST(request, { params }) {
         }
 
         // Insert responses
-        const responseInserts = responses.map(r => ({
+        const responseInserts = validResponses.map(r => ({
             candidate_id: newCandidateId,
             question_id: r.question_id,
             response_value: r.response_value
