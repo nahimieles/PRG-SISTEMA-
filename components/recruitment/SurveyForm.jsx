@@ -17,6 +17,30 @@ export default function SurveyForm({ interviewId }) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Draft Key based on interviewId to avoid mixing multiple tests
+  const draftKey = `survey_draft_${interviewId}`;
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        const { candidate: savedCandidate, responses: savedResponses } = JSON.parse(savedDraft);
+        if (savedCandidate) setCandidate(savedCandidate);
+        if (savedResponses) setResponses(savedResponses);
+      }
+    } catch (err) {
+      console.warn('Error loading draft from localStorage:', err);
+    }
+  }, [draftKey]);
+
+  // Save draft to localStorage whenever candidate or responses change
+  useEffect(() => {
+    if (!success && !submitting) {
+      localStorage.setItem(draftKey, JSON.stringify({ candidate, responses }));
+    }
+  }, [candidate, responses, draftKey, success, submitting]);
+
   useEffect(() => {
     const fetchSurvey = async () => {
       try {
@@ -79,6 +103,7 @@ export default function SurveyForm({ interviewId }) {
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
 
       setSuccess(true);
+      localStorage.removeItem(draftKey); // Clear draft on success
       window.scrollTo(0, 0);
     } catch (err) {
       setError(err.message);
