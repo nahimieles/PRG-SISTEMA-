@@ -543,8 +543,8 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
         }}>
             {/* ── Header ── */}
-            <div className="px-5 py-4 flex flex-wrap justify-between items-center gap-3" style={{ borderBottom: `1px solid ${theme.border}` }}>
-                <div className="flex items-center gap-2.5">
+            <div className="px-4 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                     <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
                         Informes
                     </h3>
@@ -552,14 +552,18 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     <div className="flex items-center" title={status === 'connected' ? 'En línea' : 'Conectando...'}>
                         <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
                     </div>
+                    
+                    {isBackgroundSyncing && (
+                        <RefreshCw className="w-3 h-3 animate-spin opacity-40" style={{ color: theme.text }} />
+                    )}
                 </div>
 
-
+                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
                     <button
                         onClick={() => setShowFilters(!showFilters)}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                        className="flex-none flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-bold px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all"
                         style={{
-                            background: showFilters ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
+                            background: showFilters ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
                             color: showFilters ? '#3b82f6' : theme.textSecondary,
                             border: `1px solid ${showFilters ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
                         }}
@@ -569,11 +573,10 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     </button>
 
                     {events.length > 0 && (
-
                         <>
                             <button
                                 onClick={handleExportExcel}
-                                className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                                className="flex-none flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-bold px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all"
                                 style={{
                                     background: isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4',
                                     color: '#16a34a',
@@ -581,28 +584,28 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                 }}
                             >
                                 <Download className="w-3.5 h-3.5" />
-                                <span className="hidden sm:inline">Exportar Excel</span>
+                                <span className="sm:inline">Excel</span>
                             </button>
 
                             {!isWorker && (
                                 <>
                                     <button
                                         onClick={() => { setSelectMode(s => !s); clearSelection(); }}
-                                        className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl transition-all"
                                         style={{
-                                            background: selectMode ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : 'transparent',
+                                            background: selectMode ? (isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff') : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'),
                                             color: selectMode ? '#3b82f6' : theme.textSecondary,
                                             border: `1px solid ${selectMode ? (isDark ? 'rgba(59,130,246,0.3)' : '#bfdbfe') : theme.border}`,
                                         }}
                                     >
                                         <CheckSquare className="w-3.5 h-3.5" />
-                                        {selectMode ? 'Cancelar' : 'Seleccionar'}
+                                        <span className="hidden lg:inline">{selectMode ? 'Cancelar' : 'Seleccionar'}</span>
                                     </button>
 
                                     {selectMode && selected.size > 0 && (
                                         <button
                                             onClick={deleteSelected}
-                                            className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all"
+                                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-all"
                                             style={{
                                                 background: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2',
                                                 color: '#dc2626',
@@ -610,27 +613,28 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                             }}
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
-                                            Eliminar ({selected.size})
+                                            <span>{selected.size}</span>
                                         </button>
                                     )}
 
                                     <button
                                         onClick={clearAll}
-                                        className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                                        className="p-2 rounded-xl transition-all border"
                                         style={{
                                             color: theme.textSecondary,
-                                            border: `1px solid ${theme.border}`,
+                                            borderColor: theme.border,
+                                            background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
                                         }}
                                         title="Limpiar todo"
                                     >
-                                        <Trash className="w-3.5 h-3.5" />
-                                        <span className="hidden sm:inline">Limpiar todo</span>
+                                        <Trash className="w-4 h-4 text-red-400" />
                                     </button>
                                 </>
                             )}
                         </>
                     )}
                 </div>
+            </div>
 
 
             {/* ── Apple-style Filter Drawer ── */}
@@ -739,7 +743,7 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             )}
 
             {/* ── Event List ── */}
-            <div className="overflow-y-auto" style={{ maxHeight: '36rem' }}>
+            <div className="overflow-y-auto" style={{ maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '22rem' : '36rem' }}>
                 {paginatedEvents.length === 0 ? (
                     <div className="text-center py-16 px-6">
                         <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{
@@ -766,18 +770,18 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                             return (
                                 <div
                                     key={ev._uid}
-                                    className="group relative transition-colors"
+                                    className="group relative transition-all animate-in fade-in slide-in-from-bottom-2 duration-500"
                                     style={{
                                         background: isSelected
                                             ? (isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff')
                                             : 'transparent',
-                                        animation: index === 0 ? 'rtmFadeIn 0.4s cubic-bezier(0.25,0.1,0.25,1)' : undefined,
+                                        animationDelay: `${index * 40}ms`,
                                     }}
                                 >
                                     {/* Left accent bar */}
                                     <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full hidden sm:block" style={{ background: accentColor, opacity: 0.7 }} />
 
-                                    <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 pl-4 sm:pl-5 pr-4 py-3 sm:py-3.5">
+                                    <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-3 pl-4 sm:pl-5 pr-4 py-2 sm:py-3.5">
                                         {/* Header area for mobile (name + badge) */}
                                         <div className="flex sm:hidden w-full justify-between items-center mb-1">
                                             <span
@@ -840,11 +844,11 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
 
                                             {/* Row 3: User + Company + Badge */}
                                             <div className="flex items-center gap-y-2 gap-x-3 sm:ml-6 flex-wrap">
-                                                <div className="flex items-center gap-1.5 text-xs" style={{ color: theme.text }}>
-                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: accentColor, opacity: 0.85 }}>
+                                                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs" style={{ color: theme.text }}>
+                                                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white flex-shrink-0" style={{ background: accentColor, opacity: 0.85 }}>
                                                         {ev.user?.charAt(0)?.toUpperCase() || '?'}
                                                     </div>
-                                                    <span className="font-medium">{ev.user}</span>
+                                                    <span className="font-semibold truncate max-w-[80px] sm:max-w-none">{ev.user}</span>
                                                 </div>
 
                                                 <div className="flex items-center gap-1 text-[11px]" style={{ color: theme.textSecondary }}>
@@ -865,13 +869,13 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                     {actionStyle.label}
                                                 </span>
 
-                                                <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                                                <div className="flex items-center gap-2 ml-auto">
                                                     {ev.webUrl && (
                                                         <a
                                                             href={ev.webUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="text-[10px] font-bold px-2 py-1 rounded-lg transition-all"
+                                                            className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all active:scale-95 shadow-sm"
                                                             style={{
                                                                 background: isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff',
                                                                 color: '#3b82f6',
@@ -881,33 +885,9 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                             Abrir ↗
                                                         </a>
                                                     )}
-                                                    
-                                                    {!isWorker && !selectMode && (
-                                                        <button
-                                                            onClick={() => deleteEvent(ev._uid)}
-                                                            className="flex sm:hidden p-1.5 rounded-lg text-red-500 bg-red-500/10"
-                                                        >
-                                                            <X className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Desktop Delete button */}
-                                        {!isWorker && !selectMode && (
-                                            <button
-                                                onClick={() => deleteEvent(ev._uid)}
-                                                className="hidden sm:flex flex-shrink-0 w-7 h-7 items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                                                style={{
-                                                    color: '#ef4444',
-                                                    background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
-                                                }}
-                                                title="Eliminar"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                             );

@@ -243,23 +243,15 @@ export default function Sidebar({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="text-white p-1.5 rounded-lg hover:bg-gray-700/50 cursor-pointer"
+                        className="text-white p-2 rounded-xl hover:bg-gray-700/50 cursor-pointer transition-colors"
                     >
                         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
                     <LoginLogo className="w-20 sm:w-24 h-auto" />
                 </div>
+
+                {/* Perfil movido al SidebarContent interno */}
                 
-                <div className="flex items-center gap-3">
-                    {/* Mobile User Avatar */}
-                    {(avatarUrl || profilePic) ? (
-                        <img src={avatarUrl || profilePic} alt="Perfil" className="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-lg border border-white/20" />
-                    ) : (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg border border-white/20">
-                            {userName?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                    )}
-                </div>
             </div>
 
 

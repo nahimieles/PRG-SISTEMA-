@@ -654,7 +654,7 @@ export default function AdminPage() {
 
 
   return (
-    <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
+    <div className="dashboard-layout overflow-x-hidden" style={{ background: theme.background, minHeight: '100vh' }}>
       {/* Sidebar */}
       <Sidebar
         items={sidebarItems}
@@ -669,7 +669,7 @@ export default function AdminPage() {
 
       {/* Contenido Principal con margen dinámico */}
       <main
-        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-8 page-transition"
+        className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-0 sm:p-4 lg:p-8 page-transition"
         style={{
           background: theme.background,
           color: theme.text,
@@ -678,10 +678,10 @@ export default function AdminPage() {
         }}
       >
 
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-0">
 
           {/* Professional Header Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
             {/* Title Section */}
             <div className={`main-page-header ${activeTab === 'empresas' ? 'hidden' : 'block'}`}>
               <div className="flex items-center gap-4">
@@ -715,26 +715,6 @@ export default function AdminPage() {
             </div>
             {activeTab === 'talento_humano' && activeSubTab === 'pruebas' && <div id="interview-header-portal" className="flex-1 w-full" />}
 
-            {/* Right Section - User Profile (hidden on empresas tab and talento_humano tab) */}
-            {activeTab !== 'empresas' && activeTab !== 'talento_humano' && (
-            <div className="flex flex-row items-center gap-2 flex-shrink-0">
-              {/* User Profile - Clickable */}
-              <button
-                onClick={handleOpenProfile}
-                className="flex items-center gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl transition-all cursor-pointer"
-                style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
-                title="Editar perfil"
-              >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
-                  {adminName?.charAt(0)?.toUpperCase() || 'A'}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs sm:text-sm font-medium leading-tight" style={{ color: theme.text }}>{adminName}</p>
-                  <p className="text-[10px] sm:text-xs leading-tight" style={{ color: theme.textSecondary }}>Admin</p>
-                </div>
-              </button>
-            </div>
-            )}
           </div>
 
           {/* Sub-Tabs for Talento Humano */}
@@ -1164,22 +1144,34 @@ export default function AdminPage() {
                 const labelSuffix = isUsingReports ? ' (Horas)' : ' (Actividad)';
 
                 return (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-4 sm:gap-8">
 
                     {/* ════════════════════════════════════════════════════
                         SECTION 1: FACTURACIÓN PRG
                     ════════════════════════════════════════════════════ */}
-                    <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <Building2 size={14} /> Facturación PRG
+                    <div className="p-3 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
+                      <div className="flex items-center justify-between mb-4 sm:mb-6">
+                        <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
+                          <Building2 size={16} className="text-blue-500" /> Facturación PRG
                         </h3>
                       </div>
-                      <div className="h-[280px] w-full">
+                      <div className="h-[150px] sm:h-[300px] w-full px-3">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topCompanies} layout="vertical" margin={{ left: -10, right: 30 }}>
+                          <BarChart data={topCompanies} layout="vertical" margin={{ left: -15, right: 35, top: 0, bottom: 0 }}>
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={120} stroke={theme.text} tick={{ fill: theme.text, fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <YAxis 
+                                dataKey="name" 
+                                type="category" 
+                                width={typeof window !== 'undefined' && window.innerWidth < 640 ? 70 : 130} 
+                                stroke={theme.text} 
+                                tick={{ fill: theme.text, fontSize: 9, fontWeight: 'bold' }} 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tickFormatter={(value) => {
+                                  const limit = typeof window !== 'undefined' && window.innerWidth < 640 ? 6 : 20;
+                                  return value.length > limit ? `${value.substring(0, limit)}...` : value;
+                                }}
+                            />
                             <Tooltip 
                               cursor={{ fill: 'transparent' }} 
                               contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
@@ -1187,7 +1179,7 @@ export default function AdminPage() {
                               itemStyle={{ color: theme.text }}
                               formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                             />
-                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={22}>
+                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
                               {topCompanies.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
@@ -1200,17 +1192,29 @@ export default function AdminPage() {
                     {/* ════════════════════════════════════════════════════
                         SECTION 2: GESTIÓN DE COLABORADORES (PRODUCTIVIDAD)
                     ════════════════════════════════════════════════════ */}
-                    <div className="p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md" style={{ background: theme.surface, borderColor: theme.border }}>
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-sm font-bold uppercase tracking-widest opacity-40 flex items-center gap-2">
-                          <TrendingUp size={14} /> Gestión de Colaboradores
+                    <div className="p-4 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100" style={{ background: theme.surface, borderColor: theme.border }}>
+                      <div className="flex items-center justify-between mb-4 sm:mb-6">
+                        <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
+                          <TrendingUp size={16} className="text-emerald-500" /> Gestión de Colaboradores
                         </h3>
                       </div>
-                      <div className="h-[280px] w-full">
+                      <div className="h-[150px] sm:h-[300px] w-full px-3">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={workerData} layout="vertical" margin={{ left: -10, right: 30 }}>
+                          <BarChart data={workerData} layout="vertical" margin={{ left: -15, right: 35, top: 0, bottom: 0 }}>
                             <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={140} stroke={theme.text} tick={{ fill: theme.text, fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                            <YAxis 
+                                dataKey="name" 
+                                type="category" 
+                                width={typeof window !== 'undefined' && window.innerWidth < 640 ? 70 : 140} 
+                                stroke={theme.text} 
+                                tick={{ fill: theme.text, fontSize: 9, fontWeight: 'bold' }} 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tickFormatter={(value) => {
+                                  const limit = typeof window !== 'undefined' && window.innerWidth < 640 ? 6 : 25;
+                                  return value.length > limit ? `${value.substring(0, limit)}...` : value;
+                                }}
+                            />
                             <Tooltip 
                               cursor={{ fill: 'transparent' }} 
                               contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
@@ -1218,7 +1222,7 @@ export default function AdminPage() {
                               itemStyle={{ color: theme.text }}
                               formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
                             />
-                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={22}>
+                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
                               {workerData.map((entry, index) => (
                                 <Cell key={`cell-w-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
                               ))}

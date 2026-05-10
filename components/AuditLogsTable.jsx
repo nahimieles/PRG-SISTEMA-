@@ -188,11 +188,15 @@ export default function AuditLogsTable() {
                         </p>
                     </div>
                 ) : (
-                    paginatedLogs.map((log) => (
+                    paginatedLogs.map((log, index) => (
                         <div
                             key={log.id}
-                            className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl shadow-sm border transition-transform hover:scale-[1.01]"
-                            style={{ background: theme.surface, borderColor: theme.border }}
+                            className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl shadow-sm border transition-all hover:scale-[1.01] animate-in fade-in slide-in-from-bottom-4 duration-500"
+                            style={{ 
+                                background: theme.surface, 
+                                borderColor: theme.border,
+                                animationDelay: `${index * 50}ms`
+                            }}
                         >
                             {getActionIcon(log.action_type)}
 

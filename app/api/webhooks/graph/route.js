@@ -39,7 +39,16 @@ export async function POST(req) {
 
     after(async () => {
         try {
-            console.log('[Webhook] Received notification payload:', JSON.stringify(payload, null, 2));
+            // Log a minimal summary only to avoid dumping potentially sensitive notification contents
+            try {
+                const summary = {
+                    items: Array.isArray(payload?.value) ? payload.value.length : 0,
+                    keys: Object.keys(payload || {})
+                };
+                console.debug('[Webhook] Received notification summary:', summary);
+            } catch (e) {
+                console.debug('[Webhook] Received notification (unable to summarize)');
+            }
             await processNotifications(payload);
         } catch (err) {
             console.error('[Webhook] Processing error:', err.message);

@@ -16,6 +16,7 @@ import {
     deleteCompanyAction, deleteCompanyGroupAction
 } from '../lib/actions';
 import { supabase } from '../lib/supabase';
+import { normalizeRuc } from '../lib/security';
 
 export default function CompanyManager({ isWorker = false }) {
     // V3.12.0 - Groups Integration
@@ -30,7 +31,6 @@ export default function CompanyManager({ isWorker = false }) {
     // Navigation State
     // Expanded Group can be a String ('auditoria') OR a Group Object ({id, name, ...})
     const [expandedGroup, setExpandedGroup] = useState(null);
-    const [selectedPRGCompany, setSelectedPRGCompany] = useState(null);
 
     // Hardcoded Types (Legacy Groups)
     const legacyGroups = [
@@ -45,7 +45,6 @@ export default function CompanyManager({ isWorker = false }) {
     // Navigation helpers
     const handleGroupClick = (group) => {
         setExpandedGroup(group);
-        setSelectedPRGCompany(null);
     };
 
     const handleBackToGroups = () => {
@@ -58,7 +57,6 @@ export default function CompanyManager({ isWorker = false }) {
             }
         }
         setExpandedGroup(null);
-        setSelectedPRGCompany(null);
     };
 
 
@@ -75,7 +73,8 @@ export default function CompanyManager({ isWorker = false }) {
         password: '',
         group_id: '',
         avatar_url: '',
-        category: null
+        category: null,
+        ruc: ''
     });
 
     const [message, setMessage] = useState(null);
@@ -116,9 +115,6 @@ export default function CompanyManager({ isWorker = false }) {
     const handleSave = async (e) => {
         e.preventDefault();
         setMessage(null);
-        console.log('[DEBUG] handleSave started');
-        console.log('[DEBUG] formData:', formData);
-        console.log('[DEBUG] editingItem:', editingItem);
 
         try {
             const admin = getAdminSession();
@@ -128,16 +124,15 @@ export default function CompanyManager({ isWorker = false }) {
             // The most reliable way to tell if we are saving a company or a group is 
             // whether the 'type' field (legacy category) exists in our current form state
             const isSavingCompany = formData.type !== undefined;
-            console.log('[DEBUG] isSavingCompany:', isSavingCompany);
 
             if (isSavingCompany) {
                 // SAVING COMPANY
-                console.log('[DEBUG] Branch: Saving Company');
                 if (editingItem) {
                     // Update Company
                     const updates = {};
                     if (formData.name !== editingItem.name) updates.name = formData.name;
                     if (formData.type !== editingItem.type) updates.type = formData.type;
+                    if ((formData.ruc || null) !== (editingItem.ruc || null)) updates.ruc = formData.ruc || null;
                     if ((formData.group_id || null) !== (editingItem.group_id || null)) updates.group_id = formData.group_id || null;
                     if ((formData.avatar_url || null) !== (editingItem.avatar_url || null)) {
                         updates.avatar_url = formData.avatar_url || null;
@@ -150,27 +145,24 @@ export default function CompanyManager({ isWorker = false }) {
                     if (currentUsername !== originalUsername) updates.username = currentUsername || null;
                     if (formData.password && formData.password.trim() !== '') updates.password = formData.password;
 
-                    console.log('[DEBUG] updates:', updates);
                     if (Object.keys(updates).length === 0) {
-                        console.log('[DEBUG] No updates detected, returning');
                         setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
                     }
                     result = await updateCompanyAction(editingItem.id, updates, requesterId);
                 } else {
                     // Create Company
-                    console.log('[DEBUG] Action: createCompanyAction');
                     result = await createCompanyAction({
                         name: formData.name,
                         type: formData.type,
                         username: formData.username,
                         password: formData.password,
-                        groupId: formData.groupId,
+                        groupId: formData.group_id,
+                        ruc: formData.ruc,
                         logo_url: formData.avatar_url || null
                     }, requesterId);
                 }
             } else {
                 // SAVING GROUP
-                console.log('[DEBUG] Branch: Saving Group');
                 const groupData = {
                     name: formData.name,
                     image_url: formData.avatar_url || null,
@@ -178,31 +170,26 @@ export default function CompanyManager({ isWorker = false }) {
                     username: formData.username || null,
                     password: formData.password || null
                 };
-                console.log('[DEBUG] groupData:', groupData);
 
                 if (editingItem) {
-                    console.log('[DEBUG] Action: updateCompanyGroupAction');
                     result = await updateCompanyGroupAction(editingItem.id, groupData, requesterId);
                 } else {
-                    console.log('[DEBUG] Action: createCompanyGroupAction');
                     result = await createCompanyGroupAction(groupData, requesterId);
                 }
             }
 
-            console.log('[DEBUG] result:', result);
             if (result && result.success) {
                 showToast(editingItem ? 'Actualizado correctamente' : 'Creado correctamente');
                 setShowModal(false);
                 setEditingItem(null);
-                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: null, category: null });
+                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: null, category: null, ruc: '' });
                 loadData();
             } else {
                 const errorMsg = result?.error || 'Error al guardar';
-                console.error('[DEBUG] Save failed:', errorMsg);
                 showToast(errorMsg, 'error');
             }
         } catch (error) {
-            console.error('[DEBUG] Unexpected error in handleSave:', error);
+            console.error('Unexpected error in handleSave:', error);
             showToast('Error inesperado al procesar la solicitud', 'error');
         }
     };
@@ -249,7 +236,6 @@ export default function CompanyManager({ isWorker = false }) {
     const showToast = (text, type = 'success') => { setMessage({ text, type }); setTimeout(() => setMessage(null), 3000); };
 
     const openModal = (item = null, isGroup = false) => {
-        console.log('[DEBUG] openModal called with item:', item);
         setEditingItem(item);
         if (item) {
             // Use 'type' field to detect company vs group - companies have 'type', groups don't
@@ -262,7 +248,8 @@ export default function CompanyManager({ isWorker = false }) {
                     username: item.username || '',
                     password: '',
                     group_id: item.group_id || '',
-                    avatar_url: item.avatar_url || ''
+                    avatar_url: item.avatar_url || '',
+                    ruc: item.ruc || ''
                 });
             } else {
                 // It is a group
@@ -292,17 +279,25 @@ export default function CompanyManager({ isWorker = false }) {
                     password: '',
                     group_id: expandedGroup && !['contabilidad', 'auditoria'].includes(expandedGroup.type) ? expandedGroup.id : '',
                     avatar_url: '',
-                    category: null
+                    category: null,
+                    ruc: ''
                 });
             }
         }
         setShowModal(true);
     };
 
-    const filteredCompanies = companies.filter(company =>
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (company.group_name && company.group_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const filteredCompanies = companies.filter(company => {
+        if (!normalizedSearch) return true;
+        const searchClean = normalizedSearch.trim();
+        const rucClean = searchClean.replace(/\D/g, '');
+        
+        const nameMatch = company.name.toLowerCase().includes(searchClean);
+        const rucMatch = rucClean && company.ruc && company.ruc.includes(rucClean);
+        
+        return nameMatch || rucMatch;
+    });
 
     // SharePoint — auto-discover folder via Graph API
     const [archivosLoading, setArchivosLoading] = useState(null); // companyId while loading
@@ -354,7 +349,9 @@ export default function CompanyManager({ isWorker = false }) {
         if (!docFile || !docModal) return;
         setDocUploading(true);
         try {
-            const ext = docFile.name.split('.').pop();
+            const ext = docFile.name.split('.').pop()?.toLowerCase();
+            const allowedExtensions = new Set(['pdf', 'xlsx', 'xls', 'doc', 'docx', 'png', 'jpg', 'jpeg']);
+            if (!allowedExtensions.has(ext)) throw new Error('Tipo de archivo no permitido');
             let baseName = docName.trim() ? docName.trim() : docFile.name.replace(/\.[^/.]+$/, "");
             baseName = baseName.replace(/[^a-zA-Z0-9_.-]/g, '_');
             const path = `company-docs/${docModal.company.id}/${baseName}-${Date.now()}.${ext}`;
@@ -427,6 +424,87 @@ export default function CompanyManager({ isWorker = false }) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
+    const CompanyCard = ({ company, featured = false }) => (
+        <div className="p-4 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
+            <div className="flex justify-between items-start mb-2">
+                {(company.logo_url || company.avatar_url) ? (
+                    <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1" alt={company.name} />
+                    </div>
+                ) : (
+                    <div className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-400 border shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                        <Building2 size={22} />
+                    </div>
+                )}
+                {!isWorker && (
+                    <div className="flex gap-1">
+                        <button onClick={() => openModal(company)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar empresa"><Edit2 size={14} /></button>
+                        {!featured && (
+                            <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar empresa"><Trash2 size={14} /></button>
+                        )}
+                    </div>
+                )}
+            </div>
+            <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
+            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
+                {(() => {
+                    const type = (company.type || 'otro').toLowerCase();
+                    let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+
+                    if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
+                    else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
+                    else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
+
+                    return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
+                })()}
+                {company.ruc && (
+                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
+                        RUC {company.ruc}
+                    </span>
+                )}
+            </div>
+            <div className={`grid ${featured ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-1.5`}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); handleOpenArchivos(company); }}
+                    disabled={archivosLoading === company.id}
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border disabled:opacity-50"
+                    style={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
+                >
+                    {archivosLoading === company.id ? (
+                        <><div className="w-3 h-3 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" /> Buscando...</>
+                    ) : (
+                        <><ExternalLink size={12} /> Archivos</>
+                    )}
+                </button>
+                {!featured && (
+                    <>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); }}
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
+                            style={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
+                        >
+                            <BarChart3 size={12} /> Estados Fin.
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); }}
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
+                            style={{ color: '#f59e0b', borderColor: isDark ? 'rgba(245,158,11,0.3)' : '#fef3c7', background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb' }}
+                        >
+                            <TrendingUp size={12} /> Decl. Impuestos
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); }}
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
+                            style={{ color: '#8b5cf6', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#ede9fe', background: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff' }}
+                        >
+                            <FileBarChart size={12} /> Inf. Analíticos
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="animate-fade-in relative transition-all">
             {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
@@ -450,17 +528,29 @@ export default function CompanyManager({ isWorker = false }) {
 
                 {/* Right: Search + Nuevo */}
                 <div className="flex items-center gap-2">
-                    {expandedGroup && (
-                        <div className="relative">
-                            <input
-                                type="text" placeholder="Buscar..."
-                                className="w-40 sm:w-52 pl-8 pr-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                style={{ background: isDark ? '#1a1f2e' : '#fff', borderColor: theme.border, color: theme.text }}
-                                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                        </div>
-                    )}
+                    <div className="relative group/search">
+                        <input
+                            type="text"
+                            placeholder={expandedGroup ? 'Buscar...' : 'Buscar empresa o RUC...'}
+                            className="w-44 sm:w-64 pl-9 pr-9 py-2.5 rounded-2xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm group-hover/search:shadow-md"
+                            style={{ 
+                                background: isDark ? '#1e293b' : '#fff', 
+                                borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0', 
+                                color: theme.text 
+                            }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500/50 group-hover/search:text-blue-500 transition-colors" size={16} />
+                        {searchTerm && (
+                            <button 
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
                     {!isWorker && (
                         <div className="relative" ref={addMenuRef}>
                         <button
@@ -502,50 +592,66 @@ export default function CompanyManager({ isWorker = false }) {
                 /* === DASHBOARD VIEW === */
                 <>
                     {/* LEVEL 1: GROUPS GRID */}
-                    {!expandedGroup && (
-                        <div className="space-y-8 animate-fade-in">
+                    {!expandedGroup && normalizedSearch && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-1">
+                                <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                                    <h4 className="text-[10px] font-black opacity-30 uppercase tracking-[0.2em]">Búsqueda Global</h4>
+                                    <p className="text-lg sm:text-xl font-black mt-1" style={{ color: theme.text }}>
+                                        {filteredCompanies.length} {filteredCompanies.length === 1 ? 'resultado' : 'resultados'} para "{searchTerm}"
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => setSearchTerm('')}
+                                    className="text-[11px] font-bold text-blue-500 hover:underline px-4 py-2 rounded-xl bg-blue-500/10 transition-all hover:bg-blue-500/20 w-fit"
+                                >
+                                    Limpiar búsqueda
+                                </button>
+                            </div>
+
+                            {filteredCompanies.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-center rounded-[2rem] border-2 border-dashed animate-in zoom-in-95 duration-500" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                                    <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-6">
+                                        <Search size={40} className="text-gray-300 dark:text-gray-700" />
+                                    </div>
+                                    <p className="text-xl font-black" style={{ color: theme.text }}>No encontramos coincidencias</p>
+                                    <p className="text-sm opacity-50 mt-2 max-w-xs">Intenta buscar por el nombre exacto de la empresa o los números del RUC.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredCompanies
+                                        .sort((a, b) => {
+                                            // Prioritize exact name matches
+                                            const aExact = a.name.toLowerCase() === normalizedSearch;
+                                            const bExact = b.name.toLowerCase() === normalizedSearch;
+                                            if (aExact && !bExact) return -1;
+                                            if (!aExact && bExact) return 1;
+                                            return 0;
+                                        })
+                                        .map((company, index) => (
+                                            <div key={company.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
+                                                <CompanyCard company={company} featured={company.id === prgCompany?.id} />
+                                            </div>
+                                        ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {!expandedGroup && !normalizedSearch && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75">
                             {/* Unified Groups Grid */}
                             <div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                      {/* PRG AUDITORES CARD */}
                                      {prgCompany && (
-                                         <div
-                                             className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full"
-                                             style={{ background: theme.surface, borderColor: theme.border }}
-                                         >
-                                             <div className="w-full flex items-start justify-between mb-3">
-                                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                     {prgCompany.avatar_url ? (
-                                                         <img src={prgCompany.avatar_url} className="w-full h-full object-cover rounded-lg" alt="" />
-                                                     ) : (
-                                                         <Building2 size={20} className="text-blue-500" />
-                                                     )}
-                                                 </div>
-                                                 {!isWorker && (
-                                                     <button
-                                                         onClick={(e) => { e.stopPropagation(); openModal(prgCompany); }}
-                                                         className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors"
-                                                     >
-                                                         <Edit2 size={14} />
-                                                     </button>
-                                                 )}
-                                             </div>
-                                             <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{prgCompany.name}</h3>
-                                             <div className="flex items-center gap-2 mb-3">
-                                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700 uppercase tracking-tight">
-                                                     Sede Principal
-                                                 </span>
-                                             </div>
-                                             <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
-                                                 <p className="text-xs text-gray-500 italic dark:text-gray-400 font-medium">
-                                                     Empresa Principal
-                                                 </p>
-                                             </div>
-                                         </div>
+                                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                                            <CompanyCard company={prgCompany} featured />
+                                        </div>
                                      )}
 
                                     {/* DYAMIC GROUPS */}
-                                    {groups.filter(g => !g.category).map(group => {
+                                    {groups.filter(g => !g.category).map((group, index) => {
                                         // Get companies in this group
                                         const groupCompanies = companies.filter(c => c.group_id === group.id);
                                         const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
@@ -555,11 +661,8 @@ export default function CompanyManager({ isWorker = false }) {
                                             <div
                                                 key={group.id}
                                                 onClick={() => handleGroupClick(group)}
-                                                role="button"
-                                                tabIndex={0}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupClick(group); } }}
-                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer"
-                                                style={{ background: theme.surface, borderColor: theme.border }}
+                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
+                                                style={{ background: theme.surface, borderColor: theme.border, animationDelay: `${(index + 1) * 60}ms` }}
                                             >
                                                 <div className="w-full flex items-start justify-between mb-3">
                                                     <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
@@ -610,7 +713,7 @@ export default function CompanyManager({ isWorker = false }) {
                                     })}
 
                                     {/* LEGACY TYPES (If needed, or encourage migration) */}
-                                    {legacyGroups.map(lg => {
+                                    {legacyGroups.map((lg, index) => {
                                         const count = companies.filter(c => c.type === lg.type && !c.group_id).length; // Only count those NOT in a dynamic group to avoid dupes? Or count all?
                                         // Let's count all logic matching type for backward compat
                                         const typeCompanies = companies.filter(c => c.type === lg.type);
@@ -620,11 +723,12 @@ export default function CompanyManager({ isWorker = false }) {
                                             <div
                                                 key={lg.id}
                                                 onClick={() => handleGroupClick(lg)}
-                                                role="button"
-                                                tabIndex={0}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupClick(lg); } }}
-                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full opacity-80 hover:opacity-100 cursor-pointer"
-                                                style={{ background: theme.surface, borderColor: theme.border }}
+                                                className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full opacity-80 hover:opacity-100 cursor-pointer animate-in fade-in slide-in-from-bottom-4 duration-500"
+                                                style={{ 
+                                                    background: theme.surface, 
+                                                    borderColor: theme.border,
+                                                    animationDelay: `${(groups.length + index + 1) * 60}ms`
+                                                }}
                                             >
                                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
                                                     <Users size={20} className="text-gray-400" />
@@ -734,14 +838,6 @@ export default function CompanyManager({ isWorker = false }) {
                                         return c.group_id === expandedGroup.id;
                                     });
 
-                                    console.log('[DEBUG] Group Companies Filter:', {
-                                        expandedGroupId: expandedGroup.id,
-                                        expandedGroupType: expandedGroup.type,
-                                        totalCompanies: filteredCompanies.length,
-                                        matchingCompanies: groupCompanies.length,
-                                        sampleCompanyGroupIds: filteredCompanies.slice(0, 3).map(c => ({ name: c.name, group_id: c.group_id }))
-                                    });
-
                                     if (groupCompanies.length === 0) {
                                         return (
                                             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
@@ -783,6 +879,11 @@ export default function CompanyManager({ isWorker = false }) {
 
                                                     return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
                                                 })()}
+                                                {company.ruc && (
+                                                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
+                                                        RUC {company.ruc}
+                                                    </span>
+                                                )}
                                             </div>
                                             {/* Action buttons grid */}
                                             <div className="grid grid-cols-2 gap-1.5">
@@ -920,6 +1021,24 @@ export default function CompanyManager({ isWorker = false }) {
                                                 <option value="contabilidad">Contabilidad</option>
                                                 <option value="otro">Otro</option>
                                             </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>RUC</label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={13}
+                                                className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                                                style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
+                                                value={formData.ruc || ''}
+                                                onChange={e => setFormData({ ...formData, ruc: e.target.value.replace(/\D/g, '').slice(0, 13) })}
+                                                onBlur={e => setFormData({ ...formData, ruc: normalizeRuc(e.target.value) || '' })}
+                                                placeholder="13 dígitos"
+                                            />
+                                            <p className="text-[10px] opacity-50 mt-1" style={{ color: theme.textSecondary }}>
+                                                Se usa para calcular vencimientos por noveno dígito.
+                                            </p>
                                         </div>
 
                                         <div className="space-y-2">
