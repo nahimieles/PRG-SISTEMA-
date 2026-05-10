@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { Users, Clock, CheckCircle2, XCircle, Search, Eye, Filter, ArrowDown, ArrowUp, ClipboardList, ArrowLeft } from 'lucide-react';
-import { getSurveyQuestionsAction } from '../../lib/actions';
+import { getSurveyQuestionsAction, getQuestionsByIdsAction } from '../../lib/actions';
+import { getAdminSession } from '../../lib/auth';
 import Toast from '../Toast';
 
 export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortalNode }) {
@@ -90,7 +91,39 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
         .eq('candidate_id', candidate.id);
       
       if (error) throw error;
-      setCandidateResponses(data || []);
+      const responses = data || [];
+      setCandidateResponses(responses);
+
+      // Check for missing questions and fetch them via secure Server Action
+      const missingQIds = [...new Set(responses.map(r => r.question_id).filter(id => !questions.find(q => q.id === id)))];
+      
+      if (missingQIds.length > 0) {
+        const adminSession = getAdminSession();
+        if (adminSession) {
+          const res = await getQuestionsByIdsAction(missingQIds, adminSession.id);
+          if (res.success && res.questions.length > 0) {
+            setQuestions(prev => {
+              const existingIds = new Set(prev.map(q => q.id));
+              const toAdd = res.questions.filter(q => !existingIds.has(q.id));
+              return [...prev, ...toAdd];
+            });
+          }
+        } else {
+          // Fallback to client if no admin session found for some reason
+          const { data: missingQs } = await supabase
+            .from('recruitment_questions')
+            .select('*')
+            .in('id', missingQIds);
+          
+          if (missingQs && missingQs.length > 0) {
+            setQuestions(prev => {
+              const existingIds = new Set(prev.map(q => q.id));
+              const toAdd = missingQs.filter(q => !existingIds.has(q.id));
+              return [...prev, ...toAdd];
+            });
+          }
+        }
+      }
     } catch (err) {
       showToast('Error cargando respuestas', 'error');
     } finally {
