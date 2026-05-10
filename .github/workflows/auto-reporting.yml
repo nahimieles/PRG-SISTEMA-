@@ -2,14 +2,21 @@ name: Automated Reporting Sync
 
 on:
   schedule:
-    # Run every 10 minutes
-    - cron: '*/5 * * * *'
+    # Backup reconciler for Microsoft Graph webhooks.
+    # Webhooks handle near real-time updates; this keeps subscriptions fresh
+    # and catches missed notifications without using Vercel Cron.
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     # Allows manual trigger from GitHub UI for testing
+
+concurrency:
+  group: automated-reporting-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Trigger Delta Scan
         run: |
@@ -20,7 +27,7 @@ jobs:
           
           echo "Triggering scan on ${{ secrets.APP_URL }}..."
           
-          curl -X POST "${{ secrets.APP_URL }}/api/graph/delta" \
+          curl --fail --show-error --silent --retry 3 --retry-delay 10 \
+            -X POST "${{ secrets.APP_URL }}/api/graph/delta" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            --fail
+            -H "Content-Type: application/json"

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runDeltaScanAllDrives, discoverAllDrives, driveCompanyMap, manageGraphSubscriptions } from '@/lib/graphServerService';
+import { runDeltaScanAllDrives, discoverAllDrives, manageGraphSubscriptions } from '@/lib/graphServerService';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

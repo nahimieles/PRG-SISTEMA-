@@ -1,5 +1,10 @@
-import { NextResponse } from 'next/server';
-import { runDeltaScanForDrive, runDeltaScanAllDrives, getAppToken } from '@/lib/graphServerService';
+import { after, NextResponse } from 'next/server';
+import { runDeltaScanForDrive, runDeltaScanAllDrives } from '@/lib/graphServerService';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const maxDuration = 60;
 
 /**
  * Microsoft Graph Webhook Handler
@@ -32,14 +37,16 @@ export async function POST(req) {
         return new NextResponse(null, { status: 202 });
     }
 
-    // Await process so Vercel Serverless doesn't terminate the lambda early
-    try {
-        console.log('[Webhook] Received notification payload:', JSON.stringify(payload, null, 2));
-        await processNotifications(payload);
-    } catch (err) {
-        console.error('[Webhook] Processing error:', err.message);
-    }
+    after(async () => {
+        try {
+            console.log('[Webhook] Received notification payload:', JSON.stringify(payload, null, 2));
+            await processNotifications(payload);
+        } catch (err) {
+            console.error('[Webhook] Processing error:', err.message);
+        }
+    });
 
+    // Microsoft Graph expects a fast 202 response; the delta scan continues after it.
     return new NextResponse(null, { status: 202 });
 }
 
