@@ -85,11 +85,15 @@ export async function POST(request, { params }) {
 
     try {
         const body = await request.json();
-        const { candidate, responses } = body;
+        const { candidate, responses = [] } = body;
 
         // Validar campos obligatorios del candidato
         if (!candidate || !candidate.full_name || !candidate.email) {
             return NextResponse.json({ error: 'Faltan datos requeridos del candidato (Nombre, Email).' }, { status: 400 });
+        }
+
+        if (!Array.isArray(responses)) {
+            return NextResponse.json({ error: 'Formato de respuestas inválido.' }, { status: 400 });
         }
 
         const supabase = getSupabaseAdmin();
@@ -97,7 +101,7 @@ export async function POST(request, { params }) {
         // 1. Validar Encuesta
         const { data: survey } = await supabase
             .from('recruitment_surveys')
-            .select('id, version, is_active')
+            .select('id, version, is_active, parent_survey_id')
             .eq('id', interviewId)
             .single();
 
@@ -124,16 +128,22 @@ export async function POST(request, { params }) {
             .in('survey_id', surveyIds);
 
         // 3. Procesar respuestas
-        // Si no hay preguntas en la BD para validar (caso raro), confiamos en lo que envía el candidato
-        // para no bloquear el proceso de reclutamiento.
         const questionMap = questions ? new Map(questions.map(q => [q.id, q])) : new Map();
         
-        // Filtramos las respuestas válidas si tenemos preguntas, si no, las aceptamos todas
+        // Solo aceptamos respuestas contra preguntas reales para proteger la FK question_id.
         const validResponses = (questions && questions.length > 0)
             ? responses.filter(resp => questionMap.has(resp.question_id))
-            : responses;
+            : [];
             
         const responseDataMap = new Map(validResponses.map(r => [r.question_id, r.response_value]));
+
+        if (!questions || questions.length === 0) {
+            return NextResponse.json({ error: 'No hay preguntas configuradas para esta prueba.' }, { status: 500 });
+        }
+
+        if (validResponses.length === 0) {
+            return NextResponse.json({ error: 'No se recibieron respuestas válidas para esta prueba. Recarga la página e intenta nuevamente.' }, { status: 400 });
+        }
 
         // Validar obligatorias SOLO si tenemos la lista de preguntas
         if (questions && questions.length > 0) {
@@ -188,6 +198,10 @@ export async function POST(request, { params }) {
 
             if (responsesError) {
                  console.error("Responses Insert Error:", responsesError);
+                 await supabase
+                    .from('recruitment_candidates')
+                    .delete()
+                    .eq('id', newCandidateId);
                  return NextResponse.json({ error: 'Error BD (Respuestas): ' + responsesError.message }, { status: 500 });
             }
         }

@@ -87,10 +87,20 @@ export default function SurveyForm({ interviewId }) {
     setError(null);
 
     // Prepare payload
-    const formattedResponses = Object.keys(responses).map(qid => ({
-      question_id: qid,
-      response_value: responses[qid]
-    }));
+    const hasAnswer = (value) => {
+      if (Array.isArray(value)) return value.length > 0;
+      if (value && typeof value === 'object') {
+        return Object.values(value).some(v => String(v ?? '').trim() !== '');
+      }
+      return String(value ?? '').trim() !== '';
+    };
+
+    const formattedResponses = questions
+      .filter(q => hasAnswer(responses[q.id]))
+      .map(q => ({
+        question_id: q.id,
+        response_value: responses[q.id]
+      }));
 
     try {
       const res = await fetch(`/api/prueba/${interviewId}`, {
