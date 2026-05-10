@@ -105,14 +105,23 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Prueba inválida o inactiva.' }, { status: 403 });
         }
 
-        // 2. Cargar todas las preguntas para validar
+        // 2. Cargar todas las preguntas de TODAS las versiones de esta encuesta para validar
+        // Esto previene fallos si el candidato responde a preguntas heredadas de una versión anterior
+        const parentId = survey.parent_survey_id || survey.id;
+        const { data: allVersionIds } = await supabase
+            .from('recruitment_surveys')
+            .select('id')
+            .or(`id.eq.${parentId},parent_survey_id.eq.${parentId}`);
+            
+        const surveyIds = allVersionIds ? allVersionIds.map(v => v.id) : [interviewId];
+
         const { data: questions } = await supabase
             .from('recruitment_questions')
-            .select('id, is_required, type')
-            .eq('survey_id', interviewId);
+            .select('id, is_required, type, survey_id')
+            .in('survey_id', surveyIds);
 
-        if (!questions) {
-            return NextResponse.json({ error: 'No se encontraron preguntas.' }, { status: 404 });
+        if (!questions || questions.length === 0) {
+            return NextResponse.json({ error: 'No se encontraron preguntas para validar en ninguna versión.' }, { status: 404 });
         }
 
         // 3. Filtrar respuestas para solo incluir preguntas que existen actualmente
@@ -122,8 +131,18 @@ export async function POST(request, { params }) {
         const validResponses = responses.filter(resp => questionMap.has(resp.question_id));
         const responseDataMap = new Map(validResponses.map(r => [r.question_id, r.response_value]));
 
-        // Asegurar que las preguntas requeridas están respondidas
-        for (const q of questions) {
+        // Error crítico: Si el candidato envió respuestas pero ninguna es válida para esta encuesta
+        if (responses.length > 0 && validResponses.length === 0) {
+            console.error("Critical: Candidate sent responses but none matched database questions.", {
+                sentIds: responses.map(r => r.question_id),
+                dbIds: questions.map(q => q.id)
+            });
+            return NextResponse.json({ error: 'Las preguntas de esta prueba han cambiado. Por favor, refresca la página e intenta de nuevo.' }, { status: 400 });
+        }
+
+        // Asegurar que las preguntas requeridas (de la versión ACTUAL) están respondidas
+        const currentVersionQuestions = questions.filter(q => q.survey_id === interviewId);
+        for (const q of currentVersionQuestions) {
             if (q.is_required && (!responseDataMap.has(q.id) || responseDataMap.get(q.id) === null || responseDataMap.get(q.id) === '')) {
                 return NextResponse.json({ error: 'Faltan respuestas en preguntas obligatorias.' }, { status: 400 });
             }
