@@ -171,20 +171,25 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: 'Error BD (Candidato): ' + candidateError.message }, { status: 500 });
         }
 
-        // Insert responses
-        const responseInserts = validResponses.map(r => ({
-            candidate_id: newCandidateId,
-            question_id: r.question_id,
-            response_value: r.response_value
-        }));
+        // Insert responses (FILTRANDO solo IDs que sean UUIDs válidos para evitar errores de BD)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const responseInserts = validResponses
+            .filter(r => uuidRegex.test(r.question_id))
+            .map(r => ({
+                candidate_id: newCandidateId,
+                question_id: r.question_id,
+                response_value: r.response_value
+            }));
 
-        const { error: responsesError } = await supabase
-            .from('recruitment_responses')
-            .insert(responseInserts);
+        if (responseInserts.length > 0) {
+            const { error: responsesError } = await supabase
+                .from('recruitment_responses')
+                .insert(responseInserts);
 
-        if (responsesError) {
-             console.error("Responses Insert Error:", responsesError);
-             return NextResponse.json({ error: 'Error BD (Respuestas): ' + responsesError.message }, { status: 500 });
+            if (responsesError) {
+                 console.error("Responses Insert Error:", responsesError);
+                 return NextResponse.json({ error: 'Error BD (Respuestas): ' + responsesError.message }, { status: 500 });
+            }
         }
 
         return NextResponse.json({ success: true, message: 'Prueba completada exitosamente.' });
