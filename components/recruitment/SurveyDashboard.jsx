@@ -59,11 +59,13 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
         if (cErr) throw cErr;
         setCandidates(cands || []);
 
-        // Load Survey Questions for context in details using Server Action to bypass RLS
-        const { success, questions: qs } = await getSurveyQuestionsAction(survey.id, parentId);
-        if (success) {
-           setQuestions(qs || []);
-        }
+        // Load ALL questions for context (from all versions)
+        const { data: allQuestions } = await supabase
+          .from('recruitment_questions')
+          .select('*')
+          .in('survey_id', allIds);
+          
+        setQuestions(allQuestions || []);
 
       } catch (err) {
         console.error("Error loading dashboard:", err);
