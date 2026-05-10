@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSurveyQuestionsAction, getServiceSupabase } from '@/lib/actions';
+import { getSurveyQuestionsAction } from '@/lib/actions';
+import { getServiceSupabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,9 @@ function checkRateLimit(ip) {
 
 
 const getSupabaseAdmin = () => {
-   return getServiceSupabase();
+   const client = getServiceSupabase();
+   if (!client) throw new Error('Error de configuración en el servidor (Supabase Admin)');
+   return client;
 };
 
 export async function GET(request, { params }) {
