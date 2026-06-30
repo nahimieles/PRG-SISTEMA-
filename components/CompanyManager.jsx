@@ -143,6 +143,9 @@ export default function CompanyManager({ isWorker = false }) {
             if (result.success) {
                 if (result.method === 'playwright') {
                     showToast('Automatización iniciada localmente.', 'success');
+                } else if (result.method === 'manual') {
+                    showToast('Modo Web: Usa la App de Escritorio para Auto-Login', 'info');
+                    window.open(result.url, '_blank', 'noopener,noreferrer');
                 } else if (result.url) {
                     window.open(result.url, '_blank', 'noopener,noreferrer');
                 }
