@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Toast from './Toast';
-import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, ChevronLeft, Upload, Image as ImageIcon, CheckCircle, X, Layers, ExternalLink, ChevronDown, BarChart3, TrendingUp, FileBarChart } from 'lucide-react';
+import DropdownMenu from './DropdownMenu';
+import CredentialManager from './CredentialManager';
+import { Building2, Plus, Edit2, Trash2, Users, Search, FolderPlus, Folder, ChevronLeft, Upload, Image as ImageIcon, CheckCircle, X, Layers, ExternalLink, ChevronDown, BarChart3, TrendingUp, FileBarChart, FileText, Shield, Landmark, Briefcase, Calculator, Navigation, Lock } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import {
@@ -13,10 +15,12 @@ import {
 import {
     createCompanyAction, updateCompanyAction,
     createCompanyGroupAction, updateCompanyGroupAction,
-    deleteCompanyAction, deleteCompanyGroupAction
+    deleteCompanyAction, deleteCompanyGroupAction,
+    accessPlatformAction, getUserPlatformPermissionsAction
 } from '../lib/actions';
 import { supabase } from '../lib/supabase';
 import { normalizeRuc } from '../lib/security';
+import { resolvePlatformsForCompany } from '../lib/platforms/registry';
 
 export default function CompanyManager({ isWorker = false }) {
     // V3.12.0 - Groups Integration
@@ -92,6 +96,16 @@ export default function CompanyManager({ isWorker = false }) {
     const [docDragging, setDocDragging] = useState(false);
     const fileInputRef = useRef(null);
 
+    // Platform access state
+    const [userPermissions, setUserPermissions] = useState({}); // { [empresaId]: ['sri', 'iess', ...] }
+    const [platformAccessLoading, setPlatformAccessLoading] = useState(null); // 'empresaId-slug' while loading
+    const [credentialModalCompany, setCredentialModalCompany] = useState(null);
+
+    // Lucide icon map for platform registry
+    const PLATFORM_ICON_MAP = {
+        FileText, Shield, Landmark, Briefcase, Calculator,
+    };
+
     useEffect(() => {
         loadData();
     }, []);
@@ -99,16 +113,46 @@ export default function CompanyManager({ isWorker = false }) {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [companiesData, groupsData] = await Promise.all([
+            const admin = getAdminSession();
+            const [companiesData, groupsData, permisosResult] = await Promise.all([
                 getCompanies(),
-                getCompanyGroups()
+                getCompanyGroups(),
+                admin?.id ? getUserPlatformPermissionsAction(admin.id) : { success: false }
             ]);
             setCompanies(companiesData);
             setGroups(groupsData);
+            if (permisosResult.success) {
+                setUserPermissions(permisosResult.permisos || {});
+            }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Platform access handler — goes through Server Action, never calls window.open directly from logic
+    const handlePlatformAccess = async (company, plataformaSlug) => {
+        const admin = getAdminSession();
+        if (!admin?.id) return;
+
+        const loadingKey = `${company.id}-${plataformaSlug}`;
+        setPlatformAccessLoading(loadingKey);
+        try {
+            const result = await accessPlatformAction(admin.id, company.id, plataformaSlug);
+            if (result.success) {
+                if (result.method === 'playwright') {
+                    showToast('Automatización iniciada localmente.', 'success');
+                } else if (result.url) {
+                    window.open(result.url, '_blank', 'noopener,noreferrer');
+                }
+            } else {
+                showToast(result.error || 'Error al acceder a la plataforma', 'error');
+            }
+        } catch (err) {
+            showToast('Error inesperado al acceder a la plataforma', 'error');
+        } finally {
+            setPlatformAccessLoading(null);
         }
     };
 
@@ -424,86 +468,118 @@ export default function CompanyManager({ isWorker = false }) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const CompanyCard = ({ company, featured = false }) => (
-        <div className="p-4 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
-            <div className="flex justify-between items-start mb-2">
-                {(company.logo_url || company.avatar_url) ? (
-                    <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1" alt={company.name} />
-                    </div>
-                ) : (
-                    <div className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-400 border shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                        <Building2 size={22} />
+    const CompanyCard = ({ company, featured = false }) => {
+        // Resolve platforms available for this company based on user permissions
+        const companyPermisos = userPermissions[company.id] || [];
+        const availablePlatforms = resolvePlatformsForCompany(companyPermisos, company.sistema_contable_slug);
+
+        // Build "Ir a" dropdown items from resolved platforms
+        const irAItems = availablePlatforms.map(platform => ({
+            label: platform.nombre,
+            icon: PLATFORM_ICON_MAP[platform.icono] || ExternalLink,
+            color: platform.color,
+            onClick: () => handlePlatformAccess(company, platform.slug),
+            disabled: platformAccessLoading === `${company.id}-${platform.slug}`,
+        }));
+
+        // Build "Informes" dropdown items
+        const informesItems = [
+            {
+                label: 'Estados Financieros',
+                icon: BarChart3,
+                color: '#10b981',
+                onClick: () => { setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); },
+            },
+            {
+                label: 'Declaraciones de Impuestos',
+                icon: TrendingUp,
+                color: '#f59e0b',
+                onClick: () => { setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); },
+            },
+            {
+                label: 'Información Analítica',
+                icon: FileBarChart,
+                color: '#8b5cf6',
+                onClick: () => { setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); },
+            },
+        ];
+
+        return (
+            <div
+                className="p-4 rounded-xl border shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800/50 transition-all duration-200 group relative cursor-pointer"
+                style={{ background: theme.surface, borderColor: theme.border }}
+                onClick={() => handleOpenArchivos(company)}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleOpenArchivos(company); }}
+            >
+                {archivosLoading === company.id && (
+                    <div className="absolute inset-0 bg-white/50 dark:bg-black/30 rounded-xl flex items-center justify-center z-10 backdrop-blur-[1px]">
+                        <div className="w-5 h-5 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" />
                     </div>
                 )}
-                {!isWorker && (
-                    <div className="flex gap-1">
-                        <button onClick={() => openModal(company)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar empresa"><Edit2 size={14} /></button>
-                        {!featured && (
-                            <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar empresa"><Trash2 size={14} /></button>
+                <div className="flex justify-between items-start mb-2">
+                    {(company.logo_url || company.avatar_url) ? (
+                        <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                            <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1" alt={company.name} />
+                        </div>
+                    ) : (
+                        <div className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-400 border shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
+                            <Building2 size={22} />
+                        </div>
+                    )}
+                    {!isWorker && (
+                        <div className="flex gap-1">
+                            <button onClick={(e) => { e.stopPropagation(); setCredentialModalCompany(company); }} className="p-1.5 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="Gestionar credenciales de automatización"><Lock size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); openModal(company); }} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar empresa"><Edit2 size={14} /></button>
+                            {!featured && (
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(company.id); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Eliminar empresa"><Trash2 size={14} /></button>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
+                <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
+                    {(() => {
+                        const type = (company.type || 'otro').toLowerCase();
+                        let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+
+                        if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
+                        else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
+                        else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
+
+                        return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
+                    })()}
+                    {company.ruc && (
+                        <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
+                            RUC {company.ruc}
+                        </span>
+                    )}
+                </div>
+                {!featured && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                        <DropdownMenu
+                            items={informesItems}
+                            buttonClassName="w-full px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold hover:shadow-sm border"
+                            buttonStyle={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
+                        >
+                            <BarChart3 size={12} /> Informes
+                        </DropdownMenu>
+                        {irAItems.length > 0 && (
+                            <DropdownMenu
+                                items={irAItems}
+                                buttonClassName="w-full px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold hover:shadow-sm border"
+                                buttonStyle={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
+                                align="right"
+                            >
+                                <Navigation size={12} /> Ir a
+                            </DropdownMenu>
                         )}
                     </div>
                 )}
             </div>
-            <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
-            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
-                {(() => {
-                    const type = (company.type || 'otro').toLowerCase();
-                    let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-
-                    if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
-                    else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
-                    else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
-
-                    return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
-                })()}
-                {company.ruc && (
-                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
-                        RUC {company.ruc}
-                    </span>
-                )}
-            </div>
-            <div className={`grid ${featured ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-1.5`}>
-                <button
-                    onClick={(e) => { e.stopPropagation(); handleOpenArchivos(company); }}
-                    disabled={archivosLoading === company.id}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border disabled:opacity-50"
-                    style={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
-                >
-                    {archivosLoading === company.id ? (
-                        <><div className="w-3 h-3 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" /> Buscando...</>
-                    ) : (
-                        <><ExternalLink size={12} /> Archivos</>
-                    )}
-                </button>
-                {!featured && (
-                    <>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); }}
-                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
-                            style={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
-                        >
-                            <BarChart3 size={12} /> Estados Fin.
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); }}
-                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
-                            style={{ color: '#f59e0b', borderColor: isDark ? 'rgba(245,158,11,0.3)' : '#fef3c7', background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb' }}
-                        >
-                            <TrendingUp size={12} /> Decl. Impuestos
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); }}
-                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold transition-all hover:shadow-sm border"
-                            style={{ color: '#8b5cf6', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#ede9fe', background: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff' }}
-                        >
-                            <FileBarChart size={12} /> Inf. Analíticos
-                        </button>
-                    </>
-                )}
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="animate-fade-in relative transition-all">
@@ -849,78 +925,8 @@ export default function CompanyManager({ isWorker = false }) {
                                     }
 
                                     return groupCompanies.map(company => (
-                                        <div key={company.id} className="p-4 rounded-xl border shadow-sm hover:shadow-md transition-all group relative" style={{ background: theme.surface, borderColor: theme.border }}>
-                                            <div className="flex justify-between items-start mb-2">
-                                                {(company.logo_url || company.avatar_url) ? (
-                                                    <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                        <img src={company.logo_url || company.avatar_url} className="w-full h-full object-contain p-1" alt={company.name} />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-400 border shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                        <Building2 size={22} />
-                                                    </div>
-                                                )}
-                                                <div className="flex gap-1">
-                                                    <button onClick={() => openModal(company)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                                                    {!isWorker && (
-                                                        <button onClick={() => handleDelete(company.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
-                                            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
-                                                {(() => {
-                                                    const type = (company.type || 'otro').toLowerCase();
-                                                    let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-
-                                                    if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
-                                                    else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
-                                                    else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
-
-                                                    return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
-                                                })()}
-                                                {company.ruc && (
-                                                    <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
-                                                        RUC {company.ruc}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {/* Action buttons grid */}
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenArchivos(company); }}
-                                                    disabled={archivosLoading === company.id}
-                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border disabled:opacity-50"
-                                                    style={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
-                                                >
-                                                    {archivosLoading === company.id ? (
-                                                        <><div className="w-3 h-3 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" /> Buscando...</>
-                                                    ) : (
-                                                        <><ExternalLink size={12} /> Archivos</>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); }}
-                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
-                                                    style={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
-                                                >
-                                                    <BarChart3 size={12} /> Estados Fin.
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); }}
-                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
-                                                    style={{ color: '#f59e0b', borderColor: isDark ? 'rgba(245,158,11,0.3)' : '#fef3c7', background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb' }}
-                                                >
-                                                    <TrendingUp size={12} /> Decl. Impuestos
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); }}
-                                                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:shadow-sm border"
-                                                    style={{ color: '#8b5cf6', borderColor: isDark ? 'rgba(139,92,246,0.3)' : '#ede9fe', background: isDark ? 'rgba(139,92,246,0.08)' : '#f5f3ff' }}
-                                                >
-                                                    <FileBarChart size={12} /> Inf. Analíticos
-                                                </button>
-                                            </div>
+                                        <div key={company.id}>
+                                            <CompanyCard company={company} />
                                         </div>
                                     ));
                                 })()}
@@ -1098,8 +1104,14 @@ export default function CompanyManager({ isWorker = false }) {
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
+
+            {credentialModalCompany && (
+                <CredentialManager 
+                    company={credentialModalCompany} 
+                    onClose={() => setCredentialModalCompany(null)} 
+                />
+            )}
 
             {/* Confirmation Modal */}
             {

@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Accesos Empresariales Bot",
+  "version": "1.0",
+  "description": "Auto-login seguro para portales del SRI e IESS",
+  "permissions": [
+    "tabs",
+    "cookies",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*",
+    "https://srienlinea.sri.gob.ec/*",
+    "https://www.iess.gob.ec/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://srienlinea.sri.gob.ec/*", 
+        "https://www.iess.gob.ec/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*"
+      ],
+      "js": ["dashboard-content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*"
+    ]
+  }
+}
