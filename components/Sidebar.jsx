@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import { lightTheme, darkTheme } from '../lib/colors';
 import LoginLogo from './LoginLogo';
+import NotificationBell from './NotificationBell';
 
 export default function Sidebar({
     items = [],
@@ -32,7 +33,8 @@ export default function Sidebar({
     onLogout,
     onProfileClick,
     showBackButton = true,
-    onHoverChange // Add this
+    onHoverChange, // Add this
+    workerId = null // Add this
 }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -172,10 +174,13 @@ export default function Sidebar({
                     </button>
                 )}
 
-                {/* Tema */}
-                <div className={`flex items-center ${expanded ? 'justify-between px-4' : 'justify-center'} py-2`}>
-                    {expanded && <span className="text-sm text-gray-400">Tema</span>}
-                    <ThemeToggle />
+                {/* Tema y Notificaciones */}
+                <div className={`flex items-center ${expanded ? 'justify-between px-4' : 'justify-center flex-col gap-2'} py-2`}>
+                    {expanded && <span className="text-sm text-gray-400">Preferencias</span>}
+                    <div className={`flex items-center ${expanded ? 'gap-2' : 'flex-col gap-3'}`}>
+                        <NotificationBell workerId={workerId} />
+                        <ThemeToggle />
+                    </div>
                 </div>
 
                 {/* Botón volver */}

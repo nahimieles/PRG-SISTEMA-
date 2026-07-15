@@ -196,7 +196,7 @@ export default function CredentialManager({ company, onClose }) {
                                                         {platform.nombre}
                                                     </h3>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full ${isSaved ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                                        <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full ${isSaved ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'}`}>
                                                             {isSaved ? 'Configurado' : 'Sin Configurar'}
                                                         </span>
                                                     </div>

@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
+import CustomDatePicker from './CustomDatePicker';
 
 /**
  * ActivityLogger - Allows employees to register manual activities
@@ -176,10 +177,9 @@ export default function ActivityLogger() {
                   }}
                   required
                 />
-                <input
-                  type="date"
+                <CustomDatePicker
                   value={newActivity.date}
-                  onChange={(e) => setNewActivity(a => ({ ...a, date: e.target.value }))}
+                  onChange={(val) => setNewActivity(a => ({ ...a, date: val }))}
                   className="px-3 py-2 text-sm rounded-xl outline-none"
                   style={{
                     background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',

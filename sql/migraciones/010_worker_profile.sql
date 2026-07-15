@@ -1,0 +1,3 @@
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS sueldo NUMERIC(10,2);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS tipo_contrato TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS evaluacion_desempeno JSONB DEFAULT '{}'::jsonb;

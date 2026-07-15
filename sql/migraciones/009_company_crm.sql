@@ -1,0 +1,4 @@
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS crm_notes TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS contact_name TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS contact_email TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS contact_phone TEXT;

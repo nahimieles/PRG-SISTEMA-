@@ -22,6 +22,19 @@ export default function HomePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Pre-cargar usuario y preferencia de recordarme
+  useEffect(() => {
+    const savedRemember = localStorage.getItem('rememberMe') === 'true';
+    const savedUsername = localStorage.getItem('rememberedUsername') || '';
+    if (savedRemember) {
+      setRememberMe(true);
+      setUsername(savedUsername);
+    }
+  }, []);
+
+
   // Verificar sesión existente al cargar
   useEffect(() => {
     const session = getUnifiedSession();
@@ -47,8 +60,18 @@ export default function HomePage() {
     const result = await loginUnified(username, password);
 
     if (result.success) {
-      // Guardar sesión
-      saveUnifiedSession(result.user, result.role);
+      // Persistir preferencia del checkbox
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        localStorage.setItem('rememberedUsername', username);
+      } else {
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('rememberedUsername');
+      }
+
+      // Guardar sesión: si eligió recordarme, durará 30 días, si no, 8 horas.
+      const expiration = rememberMe ? 30 * 24 * 60 : 8 * 60;
+      saveUnifiedSession(result.user, result.role, expiration);
 
       // Redirigir según el rol
       if (result.role === 'admin') {
@@ -186,6 +209,49 @@ export default function HomePage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+            </div>
+
+            {/* Toggle Recordarme */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginTop: '4px',
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+              onClick={() => setRememberMe(prev => !prev)}
+            >
+              {/* Custom toggle switch */}
+              <div style={{
+                width: '40px',
+                height: '22px',
+                borderRadius: '11px',
+                background: rememberMe ? theme.primary : (isDark ? '#374151' : '#d1d5db'),
+                position: 'relative',
+                flexShrink: 0,
+                transition: 'background 0.2s ease',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: rememberMe ? '21px' : '3px',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </div>
+              <span style={{
+                fontSize: '13px',
+                fontWeight: 500,
+                color: theme.textSecondary,
+              }}>
+                Mantener sesión iniciada
+              </span>
             </div>
 
             {/* Botón de login */}

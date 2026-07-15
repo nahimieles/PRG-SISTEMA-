@@ -21,6 +21,8 @@ import {
 import { supabase } from '../lib/supabase';
 import { normalizeRuc } from '../lib/security';
 import { resolvePlatformsForCompany } from '../lib/platforms/registry';
+import CompanyOperationsCenter from './CompanyOperationsCenter';
+import CustomSelect from './CustomSelect';
 
 export default function CompanyManager({ isWorker = false }) {
     // V3.12.0 - Groups Integration
@@ -35,6 +37,7 @@ export default function CompanyManager({ isWorker = false }) {
     // Navigation State
     // Expanded Group can be a String ('auditoria') OR a Group Object ({id, name, ...})
     const [expandedGroup, setExpandedGroup] = useState(null);
+    const [activeCompanyOperations, setActiveCompanyOperations] = useState(null);
 
     // Hardcoded Types (Legacy Groups)
     const legacyGroups = [
@@ -472,55 +475,15 @@ export default function CompanyManager({ isWorker = false }) {
     }, []);
 
     const CompanyCard = ({ company, featured = false }) => {
-        // Resolve platforms available for this company based on user permissions
-        const companyPermisos = userPermissions[company.id] || [];
-        const availablePlatforms = resolvePlatformsForCompany(companyPermisos, company.sistema_contable_slug);
-
-        // Build "Ir a" dropdown items from resolved platforms
-        const irAItems = availablePlatforms.map(platform => ({
-            label: platform.nombre,
-            icon: PLATFORM_ICON_MAP[platform.icono] || ExternalLink,
-            color: platform.color,
-            onClick: () => handlePlatformAccess(company, platform.slug),
-            disabled: platformAccessLoading === `${company.id}-${platform.slug}`,
-        }));
-
-        // Build "Informes" dropdown items
-        const informesItems = [
-            {
-                label: 'Estados Financieros',
-                icon: BarChart3,
-                color: '#10b981',
-                onClick: () => { setDocModal({ company, type: 'financieros' }); setDocFile(null); setDocName(''); },
-            },
-            {
-                label: 'Declaraciones de Impuestos',
-                icon: TrendingUp,
-                color: '#f59e0b',
-                onClick: () => { setDocModal({ company, type: 'impuestos' }); setDocFile(null); setDocName(''); },
-            },
-            {
-                label: 'Información Analítica',
-                icon: FileBarChart,
-                color: '#8b5cf6',
-                onClick: () => { setDocModal({ company, type: 'informes' }); setDocFile(null); setDocName(''); },
-            },
-        ];
-
         return (
             <div
-                className="p-4 rounded-xl border shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800/50 transition-all duration-200 group relative cursor-pointer"
+                className="p-4 rounded-xl border shadow-sm hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800/50 transition-all duration-200 group relative cursor-pointer h-full flex flex-col"
                 style={{ background: theme.surface, borderColor: theme.border }}
-                onClick={() => handleOpenArchivos(company)}
+                onClick={() => setActiveCompanyOperations(company)}
                 role="link"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleOpenArchivos(company); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) setActiveCompanyOperations(company); }}
             >
-                {archivosLoading === company.id && (
-                    <div className="absolute inset-0 bg-white/50 dark:bg-black/30 rounded-xl flex items-center justify-center z-10 backdrop-blur-[1px]">
-                        <div className="w-5 h-5 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" />
-                    </div>
-                )}
                 <div className="flex justify-between items-start mb-2">
                     {(company.logo_url || company.avatar_url) ? (
                         <div className="w-11 h-11 rounded-lg border overflow-hidden shadow-sm" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
@@ -542,47 +505,49 @@ export default function CompanyManager({ isWorker = false }) {
                     )}
                 </div>
                 <h3 className="font-bold text-sm mb-1.5 truncate" style={{ color: theme.text }}>{company.name}</h3>
-                <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase mb-3">
+                <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase">
                     {(() => {
                         const type = (company.type || 'otro').toLowerCase();
-                        let style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+                        // Estilo plano, sin colores excesivos
+                        const style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
 
-                        if (type.includes('conta')) style = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400';
-                        else if (type.includes('audi')) style = 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400';
-                        else if (type.includes('rrjj')) style = 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400';
-
-                        return <span className={`px-2 py-0.5 rounded-full border border-current opacity-80 ${style}`}>{type}</span>;
+                        return <span className={`px-2 py-0.5 rounded-full border ${style}`}>{type}</span>;
                     })()}
                     {company.ruc && (
-                        <span className="px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-300 dark:border-white/10">
+                        <span className="px-2 py-0.5 rounded-full border border-gray-200 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
                             RUC {company.ruc}
                         </span>
                     )}
                 </div>
-                {!featured && (
-                    <div className="grid grid-cols-2 gap-1.5">
-                        <DropdownMenu
-                            items={informesItems}
-                            buttonClassName="w-full px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold hover:shadow-sm border"
-                            buttonStyle={{ color: '#10b981', borderColor: isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5', background: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5' }}
-                        >
-                            <BarChart3 size={12} /> Informes
-                        </DropdownMenu>
-                        {irAItems.length > 0 && (
-                            <DropdownMenu
-                                items={irAItems}
-                                buttonClassName="w-full px-2 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-semibold hover:shadow-sm border"
-                                buttonStyle={{ color: '#3b82f6', borderColor: isDark ? 'rgba(59,130,246,0.3)' : '#dbeafe', background: isDark ? 'rgba(59,130,246,0.08)' : '#f0f7ff' }}
-                                align="right"
-                            >
-                                <Navigation size={12} /> Ir a
-                            </DropdownMenu>
-                        )}
+                
+                {featured && (
+                    <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700" style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
+                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-500 truncate dark:text-gray-400">
+                            Empresa Principal
+                        </p>
                     </div>
                 )}
             </div>
         );
     };
+
+    if (activeCompanyOperations) {
+        return (
+            <div className="animate-fade-in relative transition-all">
+                {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
+                <CompanyOperationsCenter 
+                    company={activeCompanyOperations}
+                    onBack={() => setActiveCompanyOperations(null)}
+                    theme={theme}
+                    isDark={isDark}
+                    userPermissions={userPermissions}
+                    onPlatformAccess={handlePlatformAccess}
+                    onOpenArchivos={handleOpenArchivos}
+                    platformAccessLoading={platformAccessLoading}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="animate-fade-in relative transition-all">
@@ -724,7 +689,7 @@ export default function CompanyManager({ isWorker = false }) {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                      {/* PRG AUDITORES CARD */}
                                      {prgCompany && (
-                                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                                        <div className="animate-in fade-in zoom-in-95 duration-500 h-full">
                                             <CompanyCard company={prgCompany} featured />
                                         </div>
                                      )}
@@ -1021,15 +986,15 @@ export default function CompanyManager({ isWorker = false }) {
                                     <>
                                         <div>
                                             <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Categoría (Legacy)</label>
-                                            <select
-                                                className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
-                                                style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-                                                value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}
-                                            >
-                                                <option value="auditoria">Auditoría</option>
-                                                <option value="contabilidad">Contabilidad</option>
-                                                <option value="otro">Otro</option>
-                                            </select>
+                                            <CustomSelect
+                                                value={formData.type}
+                                                onChange={val => setFormData({ ...formData, type: val })}
+                                                options={[
+                                                    {value: 'auditoria', label: 'Auditoría'},
+                                                    {value: 'contabilidad', label: 'Contabilidad'},
+                                                    {value: 'otro', label: 'Otro'}
+                                                ]}
+                                            />
                                         </div>
 
                                         <div>

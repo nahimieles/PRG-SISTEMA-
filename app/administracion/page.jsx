@@ -3,12 +3,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Edit2, ClipboardList } from 'lucide-react';
+import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Edit2, ClipboardList, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
+import ManagementAnalysisModule from '../../components/management/ManagementAnalysisModule';
+import CorporateCalendar from '../../components/CorporateCalendar';
 import StatsCard from '../../components/StatsCard';
 import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
 import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction, deleteWorkerAction, deleteAuditRecordAction } from '../../lib/actions.js';
@@ -17,6 +19,8 @@ import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
 import AuditLogsTable from '../../components/AuditLogsTable';
 import Toast from '../../components/Toast';
+import WorkerManager from '../../components/WorkerManager';
+import AdminDashboard from '../../components/management/AdminDashboard';
 
 // Dynamic imports for MSAL-dependent components to avoid SSR issues
 import { getAuditLogs } from '../../lib/audit'; // Added import
@@ -41,6 +45,7 @@ export default function AdminPage() {
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'talento_humano', label: 'Gestión de Talento Humano', icon: Users },
+    { id: 'analisis_gestion', label: 'Análisis de Gestión', icon: BarChart3 },
     { id: 'cursos', label: 'Cursos', icon: MonitorPlay }
   ];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,7 +60,7 @@ export default function AdminPage() {
     // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash && ['dashboards', 'talento_humano', 'empresas', 'cursos'].includes(hash)) {
+      if (hash && ['dashboards', 'analisis_gestion', 'empresas', 'talento_humano', 'cursos'].includes(hash)) {
         setActiveTab(hash);
       }
     }
@@ -90,6 +95,7 @@ export default function AdminPage() {
 
   // Estado para funcionarios
   const [workers, setWorkers] = useState([]);
+  const [workerSearchTerm, setWorkerSearchTerm] = useState('');
   const [showPasswordsSet, setShowPasswordsSet] = useState({});
   const [showNewWorkerPassword, setShowNewWorkerPassword] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
@@ -155,7 +161,7 @@ export default function AdminPage() {
 
   // Admin Profile Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileForm, setProfileForm] = useState({ full_name: '', password: '', confirmPassword: '' });
+  const [profileForm, setProfileForm] = useState({ full_name: '', username: '', password: '', confirmPassword: '' });
   const [profileSaving, setProfileSaving] = useState(false);
 
   const openConfirm = (title, action) => {
@@ -604,7 +610,7 @@ export default function AdminPage() {
 
   // Admin Profile Modal handlers
   const handleOpenProfile = () => {
-    setProfileForm({ full_name: adminSession?.full_name || '', password: '', confirmPassword: '' });
+    setProfileForm({ full_name: adminSession?.full_name || '', username: adminSession?.username || '', password: '', confirmPassword: '' });
     setShowProfileModal(true);
   };
 
@@ -621,6 +627,9 @@ export default function AdminPage() {
     setProfileSaving(true);
     try {
       const payload = {};
+      if (profileForm.username && profileForm.username !== adminSession?.username) {
+        payload.username = profileForm.username;
+      }
       if (profileForm.full_name && profileForm.full_name !== adminSession?.full_name) {
         payload.full_name = profileForm.full_name;
       }
@@ -638,7 +647,7 @@ export default function AdminPage() {
       if (result.success) {
         // Update local session
         const newSession = { ...adminSession };
-        if (payload.full_name) newSession.full_name = payload.full_name;
+        if (payload.username) newSession.username = payload.username;
         saveAdminSession(newSession);
         showToast('Perfil actualizado correctamente');
         setShowProfileModal(false);
@@ -687,51 +696,66 @@ export default function AdminPage() {
               <div className="flex items-center gap-4">
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
                   {activeTab === 'dashboards' && 'Panel de Control'}
+                  {activeTab === 'analisis_gestion' && 'Análisis de Gestión'}
                   {activeTab === 'talento_humano' && 'Gestión de Talento Humano'}
                   {activeTab === 'empresas' && 'Gestión de Empresas'}
                   {activeTab === 'cursos' && 'Gestión de Cursos'}
                 </h1>
-                {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
-                  <button
-                    onClick={() => {
-                      setShowUserForm(!showUserForm);
-                      if (!showUserForm) {
-                        setEditingWorkerId(null);
-                        setNewWorker({ username: '', password: '', full_name: '', email: '' });
-                      }
-                    }}
-                    className="text-white px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-sm text-sm"
-                    style={{ background: theme.primary }}
-                  >
-                    <Plus className="w-4 h-4" /> {showUserForm ? 'Cancelar' : 'Nuevo'}
-                  </button>
-                )}
               </div>
               <p className="text-xs sm:text-sm mt-0.5" style={{ color: theme.textSecondary }}>
                 {activeTab === 'dashboards' && 'Estadísticas, informes y métricas en tiempo real'}
+                {activeTab === 'analisis_gestion' && 'Visualización integral de actividades, horas y cumplimiento'}
                 {activeTab === 'empresas' && 'Administra empresas y personal asociado'}
                 {activeTab === 'cursos' && 'Gestión de material y presentaciones'}
               </p>
             </div>
             {activeTab === 'talento_humano' && activeSubTab === 'pruebas' && <div id="interview-header-portal" className="flex-1 w-full" />}
-
+            {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
+                <button
+                    onClick={() => setShowUserForm(!showUserForm)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                    style={{ background: showUserForm ? '#e74c3c' : theme.primary }}
+                >
+                    {showUserForm ? <Trash2 size={18} /> : <Plus size={18} />}
+                    {showUserForm ? 'Cancelar' : 'Nuevo Funcionario'}
+                </button>
+            )}
           </div>
 
           {/* Sub-Tabs for Talento Humano */}
           {activeTab === 'talento_humano' && (
-            <div className="flex gap-2 mb-6 border-b" style={{ borderColor: theme.border }}>
-              <button
-                onClick={() => setActiveSubTab('funcionarios')}
-                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'funcionarios' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
-              >
-                Funcionarios
-              </button>
-              <button
-                onClick={() => setActiveSubTab('pruebas')}
-                className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'pruebas' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
-              >
-                Pruebas
-              </button>
+            <div className="flex justify-between items-center mb-6 border-b" style={{ borderColor: theme.border }}>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveSubTab('funcionarios')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'funcionarios' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+                >
+                  Funcionarios
+                </button>
+                <button
+                  onClick={() => setActiveSubTab('pruebas')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${activeSubTab === 'pruebas' ? 'text-blue-500 border-blue-500' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+                >
+                  Pruebas
+                </button>
+              </div>
+              {activeSubTab === 'funcionarios' && (
+                <div className="relative max-w-sm w-full md:w-64 pb-2 mr-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} style={{ marginTop: '-4px' }} />
+                    <input
+                        type="text"
+                        placeholder="Buscar funcionarios..."
+                        value={workerSearchTerm}
+                        onChange={(e) => setWorkerSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all shadow-sm"
+                        style={{ 
+                            background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', 
+                            borderColor: theme.border, 
+                            color: theme.text 
+                        }}
+                    />
+                </div>
+              )}
             </div>
           )}
 
@@ -746,37 +770,7 @@ export default function AdminPage() {
 
 
 
-          {/* TOAST NOTIFICATION - Fixed position top-right */}
-          {showAlertsWidget && workersWithoutReports.length > 0 && (
-            <div
-              className={`fixed top-4 right-4 z-50 max-w-sm ${closingAlerts ? 'toast-exit' : 'toast-enter'}`}
-              style={{ marginRight: isSidebarExpanded ? '0' : '0' }}
-            >
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white p-4 rounded-xl shadow-lg flex items-center gap-3 backdrop-blur-sm">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{workersWithoutReports.length} Funcionarios sin reportes recientes</p>
-                  <button
-                    onClick={() => {
-                      handleCloseAlertsWidget();
-                      handleTabChange('funcionarios');
-                    }}
-                    className="text-xs text-white/80 hover:text-white underline mt-0.5 transition-colors"
-                  >
-                    Ver detalles
-                  </button>
-                </div>
-                <button
-                  onClick={handleCloseAlertsWidget}
-                  className="p-1 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          )}
+          {/* TOAST NOTIFICATION - Removido (Notificaciones movidas a campana) */}
 
           {/* WIDGETS COMPACTOS (Quality Issues) */}
           <div className="flex flex-col gap-2 mb-6">
@@ -832,422 +826,30 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* TAB: ANÁLISIS DE GESTIÓN */}
+          {activeTab === 'analisis_gestion' && (
+            <div className="animate-fade-in">
+              <ManagementAnalysisModule theme={theme} isDark={isDark} />
+            </div>
+          )}
+
           {/* TAB: TALENTO HUMANO -> FUNCIONARIOS */}
           {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
             <div className="animate-fade-in">
-              <div
-                className="rounded-xl shadow-lg mb-6"
-                style={{ background: showUserForm ? theme.surface : 'transparent' }}
-              >
-                {showUserForm && (
-                  <div className="p-6">
-                    <h2 className="text-xl font-bold mb-4">{editingWorkerId ? 'Editar Funcionario' : 'Crear Funcionario'}</h2>
-
-                  <form onSubmit={handleAddWorker} className="grid md:grid-cols-2 gap-4 mt-4">
-                    <input
-                      type="text"
-                      placeholder="Nombre de usuario"
-                      value={newWorker.username}
-                      onChange={(e) => setNewWorker({ ...newWorker, username: e.target.value })}
-                      className="input-professional focus:outline-none"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
-                    <div className="relative">
-                      <input
-                        type={showNewWorkerPassword ? "text" : "password"}
-                        placeholder="Contraseña"
-                        value={newWorker.password}
-                        onChange={(e) => setNewWorker({ ...newWorker, password: e.target.value })}
-                        className="input-professional focus:outline-none w-full pr-10"
-                        style={{
-                          borderColor: theme.border,
-                          background: isDark ? '#0f1419' : '#fff',
-                          color: theme.text,
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewWorkerPassword(!showNewWorkerPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity"
-                        style={{ color: theme.text }}
-                      >
-                        {showNewWorkerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Nombre completo"
-                      value={newWorker.full_name}
-                      onChange={(e) => setNewWorker({ ...newWorker, full_name: e.target.value })}
-                      className="input-professional focus:outline-none"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email (opcional)"
-                      value={newWorker.email}
-                      onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })}
-                      className="input-professional focus:outline-none"
-                      style={{
-                        borderColor: theme.border,
-                        background: isDark ? '#0f1419' : '#fff',
-                        color: theme.text,
-                      }}
-                    />
-                    <button
-                      type="submit"
-                      className="md:col-span-2 text-white px-4 py-2 rounded-lg hover:opacity-90 font-semibold cursor-pointer shadow-professional"
-                      style={{ background: '#27ae60' }}
-                    >
-                      {editingWorkerId ? 'Actualizar Funcionario' : 'Crear Funcionario'}
-                    </button>
-                  </form>
-                  </div>
-                )}
-              </div>
-
-              <div
-                className="rounded-xl shadow-lg overflow-hidden"
-                style={{ background: theme.surface }}
-              >
-                {workers.length === 0 ? (
-                  <div className="p-12 text-center" style={{ color: theme.textSecondary }}>
-                    No hay funcionarios registrados
-                  </div>
-                ) : (
-                  <>
-                    {/* Desktop Table */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="text-white" style={{ background: theme.primary }}>
-                          <tr>
-                            <th className="px-4 py-3 text-left">Usuario</th>
-                            <th className="px-4 py-3 text-left">Nombre</th>
-                            <th className="px-4 py-3 text-left">Email</th>
-                            <th className="px-4 py-3 text-left">Contraseña y Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {workers.map(worker => (
-                            <tr
-                              key={worker.id}
-                              className="border-b hover:opacity-75 transition-opacity"
-                              style={{
-                                borderColor: theme.border,
-                                background: isDark ? 'transparent' : '#f8f9fa'
-                              }}
-                            >
-                              <td className="px-4 py-3 font-semibold cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.username}</td>
-                              <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.full_name}</td>
-                              <td className="px-4 py-3 text-sm cursor-pointer" onClick={() => setSelectedWorkerStats(worker)}>{worker.email || '-'}</td>
-                              <td className="px-4 py-3 flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs">
-                                    {showPasswordsSet[worker.id] 
-                                      ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
-                                      : '••••••••'}
-                                  </span>
-                                  <button
-                                    onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
-                                    className="hover:opacity-70"
-                                    style={{ color: theme.primary }}
-                                    title={worker.password.startsWith('$2') ? "Esta contraseña está encriptada y no se puede visualizar" : "Ver contraseña"}
-                                  >
-                                    {showPasswordsSet[worker.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                  </button>
-                                </div>
-                                <div className="flex gap-2">
-
-                                <button
-                                  onClick={() => handleEditWorker(worker)}
-                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                                  style={{ background: '#3498db' }}
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteWorker(worker.id)}
-                                  className="text-white px-3 py-1 rounded hover:opacity-90 text-xs cursor-pointer shadow-professional"
-                                  style={{ background: '#e74c3c' }}
-                                >
-                                  <Trash2 className="w-3 h-3 inline" /> Eliminar
-                                </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile Card Layout */}
-                    <div className="md:hidden divide-y" style={{ borderColor: theme.border }}>
-                      {workers.map(worker => (
-                        <div
-                          key={worker.id}
-                          className="p-4 space-y-3"
-                          style={{ background: isDark ? 'transparent' : '#f8f9fa' }}
-                        >
-                          {/* Header with Avatar and Name */}
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                              {worker.full_name?.charAt(0)?.toUpperCase() || worker.username?.charAt(0)?.toUpperCase() || '?'}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold truncate" style={{ color: theme.text }}>{worker.full_name || worker.username}</p>
-                              <p className="text-xs opacity-60 truncate">@{worker.username}</p>
-                            </div>
-                          </div>
-
-                          {/* Info Grid */}
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="p-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
-                              <p className="opacity-50 text-[10px] uppercase font-bold mb-0.5">Email</p>
-                              <p className="truncate" style={{ color: theme.text }}>{worker.email || '-'}</p>
-                            </div>
-                            <div className="p-2 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
-                              <p className="opacity-50 text-[10px] uppercase font-bold mb-0.5">Contraseña</p>
-                              <div className="flex items-center gap-1">
-                                <span className="font-mono truncate">
-                                  {showPasswordsSet[worker.id] 
-                                    ? (worker.password.startsWith('$2') ? '[PROTEGIDA]' : worker.password) 
-                                    : '••••••'}
-                                </span>
-                                <button
-                                  onClick={() => setShowPasswordsSet({ ...showPasswordsSet, [worker.id]: !showPasswordsSet[worker.id] })}
-                                  className="hover:opacity-70 flex-shrink-0"
-                                  style={{ color: theme.primary }}
-                                >
-                                  {showPasswordsSet[worker.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-2 pt-2">
-                            <button
-                              onClick={() => handleEditWorker(worker)}
-                              className="flex-1 text-white py-2 rounded-lg hover:opacity-90 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
-                              style={{ background: '#3498db' }}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" /> Editar
-                            </button>
-                            <button
-                              onClick={() => handleDeleteWorker(worker.id)}
-                              className="flex-1 text-white py-2 rounded-lg hover:opacity-90 text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5"
-                              style={{ background: '#e74c3c' }}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <WorkerManager 
+                adminSession={adminSession}
+                searchTerm={workerSearchTerm}
+                showForm={showUserForm}
+                setShowForm={setShowUserForm}
+              />
             </div>
           )}
 
           {activeTab === 'dashboards' && (
             <div className="animate-fade-in space-y-8">
-              {(() => {
-                const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
-
-                // ─── Name correction map for productivity chart ──────────
-                const NAME_CORRECTIONS = {
-                  'Valeria Almeida': 'Eddy Campuzano',
-                };
-                const EMAIL_NAMES = {
-                  'manager@prg.com.ec': 'Paul Rodríguez García',
-                  'account1@prg.com.ec': 'Danny Suárez',
-                  'administracion@prg.com.ec': 'Maria Teresa Fernández Bravo',
-                  'prg.audex@gmail.com': 'Eddy Campuzano',
-                  'audex2@prg.com.ec': 'Eddy Campuzano',
-                  'account3@prg.com.ec': 'Sebastián Morales',
-                  'account2@prg.com.ec': 'Lisbeth',
-                };
-
-                function correctName(name) {
-                  if (!name) return 'Sin Nombre';
-                  let corrected = name.trim().replace(/\s+/g, ' ');
-                  
-                  // Normalización de tildes para comparación
-                  const normalized = corrected.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                  
-                  if (normalized.includes('paul rodriguez')) return 'Paul Rodríguez García';
-                  if (normalized.includes('danny suarez')) return 'Danny Suárez';
-                  if (normalized.includes('eddy campuzano') || normalized.includes('prg.audex')) return 'Eddy Campuzano';
-                  if (normalized.includes('maria teresa')) return 'Maria Teresa Fernández Bravo';
-                  if (normalized.includes('lissbeth') || normalized.includes('lisbeth')) return 'Maria Teresa Fernández Bravo';
-                  if (normalized.includes('valeria almeida')) return 'Eddy Campuzano';
-                  
-                  return NAME_CORRECTIONS[corrected] || corrected;
-                }
-
-                // LÓGICA HÍBRIDA DE DATOS: Combinar SharePoint y Manuales
-                const hoursByCompanyPRG = {};
-                const hoursByWorker = {};
-                const SYSTEM_NAMES = ['desconocido', 'usuario desconocido', 'sharepoint', 'system', 'onedrive', 'app@sharepoint'];
-
-                // 1. Procesar logs de SharePoint (Contar cada evento como 1 actividad)
-                fileLogs.forEach(log => {
-                  const worker = correctName(log.worker_name || 'Sin Nombre');
-                  if (SYSTEM_NAMES.includes(worker.toLowerCase())) return;
-                  const company = log.company_name || 'Sin Empresa';
-                  
-                  hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + 1;
-                  hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
-                });
-
-                // 2. Procesar registros manuales (También como actividad para el gráfico)
-                if (records && records.length > 0) {
-                  records.forEach(r => {
-                    const worker = correctName(r.worker_name || 'Sin Nombre');
-                    if (SYSTEM_NAMES.includes(worker.toLowerCase())) return;
-                    const company = r.company_name || 'Sin Empresa';
-                    
-                    // Sumamos 1 a la actividad por cada reporte manual
-                    hoursByCompanyPRG[company] = (hoursByCompanyPRG[company] || 0) + 1;
-                    hoursByWorker[worker] = (hoursByWorker[worker] || 0) + 1;
-                  });
-                }
-
-                const isUsingReports = false; // Forzamos a modo "Actividad" para que el gráfico sea consistente con SharePoint
-
-                const topCompanies = Object.entries(hoursByCompanyPRG)
-                  .map(([name, val]) => ({ 
-                    name: name.length > 18 ? name.substring(0, 18) + '...' : name, 
-                    value: parseFloat(val.toFixed(2)), 
-                    fullName: name 
-                  }))
-                  .sort((a, b) => b.value - a.value)
-                  .slice(0, 6);
-
-                const workerData = Object.entries(hoursByWorker)
-                  .map(([name, val]) => ({ 
-                    name, 
-                    value: parseFloat(val.toFixed(2)) 
-                  }))
-                  .sort((a, b) => b.value - a.value)
-                  .slice(0, 6);
-
-                const labelSuffix = isUsingReports ? ' (Horas)' : ' (Actividad)';
-
-                return (
-                  <div className="flex flex-col gap-4 sm:gap-8">
-
-                    {/* ════════════════════════════════════════════════════
-                        SECTION 1: FACTURACIÓN PRG
-                    ════════════════════════════════════════════════════ */}
-                    <div className="p-3 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
-                      <div className="flex items-center justify-between mb-4 sm:mb-6">
-                        <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
-                          <Building2 size={16} className="text-blue-500" /> Facturación PRG
-                        </h3>
-                      </div>
-                      <div className="h-[150px] sm:h-[300px] w-full px-3">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topCompanies} layout="vertical" margin={{ left: -15, right: 35, top: 0, bottom: 0 }}>
-                            <XAxis type="number" hide />
-                            <YAxis 
-                                dataKey="name" 
-                                type="category" 
-                                width={typeof window !== 'undefined' && window.innerWidth < 640 ? 70 : 130} 
-                                stroke={theme.text} 
-                                tick={{ fill: theme.text, fontSize: 9, fontWeight: 'bold' }} 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tickFormatter={(value) => {
-                                  const limit = typeof window !== 'undefined' && window.innerWidth < 640 ? 6 : 20;
-                                  return value.length > limit ? `${value.substring(0, limit)}...` : value;
-                                }}
-                            />
-                            <Tooltip 
-                              cursor={{ fill: 'transparent' }} 
-                              contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
-                              labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
-                              itemStyle={{ color: theme.text }}
-                              formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
-                            />
-                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
-                              {topCompanies.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    {/* ════════════════════════════════════════════════════
-                        SECTION 2: GESTIÓN DE COLABORADORES (PRODUCTIVIDAD)
-                    ════════════════════════════════════════════════════ */}
-                    <div className="p-4 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100" style={{ background: theme.surface, borderColor: theme.border }}>
-                      <div className="flex items-center justify-between mb-4 sm:mb-6">
-                        <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
-                          <TrendingUp size={16} className="text-emerald-500" /> Gestión de Colaboradores
-                        </h3>
-                      </div>
-                      <div className="h-[150px] sm:h-[300px] w-full px-3">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={workerData} layout="vertical" margin={{ left: -15, right: 35, top: 0, bottom: 0 }}>
-                            <XAxis type="number" hide />
-                            <YAxis 
-                                dataKey="name" 
-                                type="category" 
-                                width={typeof window !== 'undefined' && window.innerWidth < 640 ? 70 : 140} 
-                                stroke={theme.text} 
-                                tick={{ fill: theme.text, fontSize: 9, fontWeight: 'bold' }} 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tickFormatter={(value) => {
-                                  const limit = typeof window !== 'undefined' && window.innerWidth < 640 ? 6 : 25;
-                                  return value.length > limit ? `${value.substring(0, limit)}...` : value;
-                                }}
-                            />
-                            <Tooltip 
-                              cursor={{ fill: 'transparent' }} 
-                              contentStyle={{ borderRadius: '12px', border: 'none', background: isDark ? '#1a2234' : '#fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px', color: theme.text }}
-                              labelStyle={{ color: theme.text, fontWeight: 'bold', marginBottom: '4px' }}
-                              itemStyle={{ color: theme.text }}
-                              formatter={(val) => [`${val}${isUsingReports ? 'h' : ' eventos'}`, isUsingReports ? 'Horas' : 'Actividad']}
-                            />
-                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
-                              {workerData.map((entry, index) => (
-                                <Cell key={`cell-w-${index}`} fill={COLORS[(index + 1) % COLORS.length]} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    {/* ════════════════════════════════════════════════════
-                        SECTION 3: INFORMES (unified)
-                    ════════════════════════════════════════════════════ */}
-                    <RealTimeMonitor onLogsChanged={loadAlertsAndStats} />
-
-                    {/* ════════════════════════════════════════════════════
-                        SECTION 4: CALENDARIO TRIBUTARIO 2026
-                    ════════════════════════════════════════════════════ */}
-                    <div className="space-y-4">
-                      <TaxCalendar2026 />
-                    </div>
-
-                  </div>
-                );
-              })()}
+                <AdminDashboard theme={theme} isDark={isDark} />
             </div>
+
           )}
 
 
@@ -1638,7 +1240,22 @@ export default function AdminPage() {
                     background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                     color: theme.text,
                   }}
-                  placeholder="Tu nombre"
+                  placeholder="Tu nombre completo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Correo (Usuario Microsoft)</label>
+                <input
+                  type="text"
+                  value={profileForm.username}
+                  onChange={(e) => setProfileForm(f => ({ ...f, username: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm rounded-xl border-none outline-none"
+                  style={{
+                    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: theme.text,
+                  }}
+                  placeholder="ejemplo@microsoft.com"
                 />
               </div>
 

@@ -47,6 +47,10 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
+
+    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.setTheme) {
+      window.electronAPI.setTheme(isDark);
+    }
   }, [isDark, mounted]);
 
   const toggleTheme = () => {

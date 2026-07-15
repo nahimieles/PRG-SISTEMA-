@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
+import CustomDatePicker from './CustomDatePicker';
 import { getAuditLogs, deleteAuditLog, deleteMultipleAuditLogs, clearAllAuditLogs } from '@/lib/audit';
 import { getRecords, getWorkerRecords, getWorkerSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -149,29 +150,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                 endDate: dateRange.to ? new Date(dateRange.to).toISOString() : null
             });
 
-            // Fetch manual records
-            let manualRecords = [];
-            if (isWorker) {
-                const session = getWorkerSession();
-                if (session) {
-                    manualRecords = await getWorkerRecords(session.id);
-                }
-            } else {
-                manualRecords = await getRecords();
-            }
-
-            if (dateRange.from || dateRange.to) {
-                manualRecords = manualRecords.filter(r => {
-                    const d = new Date(r.created_at || r.start_datetime);
-                    if (dateRange.from && d < new Date(dateRange.from)) return false;
-                    if (dateRange.to) {
-                        const toDate = new Date(dateRange.to);
-                        toDate.setHours(23, 59, 59, 999);
-                        if (d > toDate) return false;
-                    }
-                    return true;
-                });
-            }
 
             uidCounter.current = 0;
             let combined = [];
@@ -199,21 +177,7 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                 }));
             }
 
-            if (manualRecords && manualRecords.length > 0) {
-                combined = combined.concat(manualRecords.map(rec => ({
-                    _uid: String(++uidCounter.current),
-                    dbId: rec.id,
-                    fileName: `${rec.service_type || 'Actividad'}${rec.description ? ` - ${rec.description}` : ''}`,
-                    user: rec.worker_name,
-                    company: rec.company_name,
-                    action: 'MANUAL',
-                    date: rec.created_at || rec.start_datetime,
-                    filePath: null,
-                    webUrl: rec.file_url,
-                    isManual: true,
-                    hours: rec.hours_worked
-                })));
-            }
+
 
             combined.sort((a, b) => new Date(b.date) - new Date(a.date));
             setEvents(combined.slice(0, 500));
@@ -666,10 +630,9 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Rango de Fechas</label>
                             <div className="flex items-center gap-2">
-                                <input
-                                    type="date"
+                                <CustomDatePicker
                                     value={dateRange.from}
-                                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                                    onChange={(val) => setDateRange(prev => ({ ...prev, from: val }))}
                                     className="flex-1 px-3 py-2 text-xs rounded-xl border-none outline-none"
                                     style={{
                                         background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',
@@ -678,10 +641,9 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                     }}
                                 />
                                 <span className="opacity-30">—</span>
-                                <input
-                                    type="date"
+                                <CustomDatePicker
                                     value={dateRange.to}
-                                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                                    onChange={(val) => setDateRange(prev => ({ ...prev, to: val }))}
                                     className="flex-1 px-3 py-2 text-xs rounded-xl border-none outline-none"
                                     style={{
                                         background: isDark ? 'rgba(255,255,255,0.05)' : '#fff',

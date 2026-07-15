@@ -1,130 +1,66 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Plus, Clock, Play, Square, X, Download, Trash2, Eye, FileText, ClipboardList, PieChart, Building2 } from 'lucide-react';
+import { LogOut, Plus, Play, Square, X, Download, Trash2, Eye, FileText, ClipboardList, User, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
 import Sidebar from '../../components/Sidebar';
 import LoginForm from '../../components/LoginForm';
 import { lightTheme, darkTheme } from '../../lib/colors';
-import { addRecord, deleteRecord, calculateHours, uploadFile, getWorkerRecords, getCompanies, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, startAttendance, stopAttendance, getActiveAttendance, getWorkerAttendanceRecords } from '../../lib/auth.js';
-import { loginUnifiedAction } from '../../lib/actions.js';
+import { addRecord, calculateHours, uploadFile, getWorkerRecords, getCompaniesForWorker, saveWorkerSession, getWorkerSession, clearWorkerSession, clearUnifiedSession, getBusinessUnits, getActivities, getSubactivities } from '../../lib/auth.js';
+import { loginUnifiedAction, deleteWorkerAuditRecordAction } from '../../lib/actions.js';
 import OneDriveContainer from '../../components/OneDriveContainer';
-import dynamic from 'next/dynamic';
-
-const RealTimeMonitor = dynamic(() => import('../../components/RealTimeMonitor'), { ssr: false });
-const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
-const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
-
-const SearchableSelect = ({ options, value, onChange, placeholder, isDark, theme }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setSearch(value);
-    }
-  }, [value, isOpen]);
-
-  const filteredOptions = options.filter(opt => opt.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div ref={wrapperRef} className="relative">
-      <input
-        type="text"
-        required
-        value={isOpen ? search : value}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          onChange(e.target.value);
-          setIsOpen(true);
-        }}
-        onFocus={() => {
-          setSearch(value);
-          setIsOpen(true);
-        }}
-        placeholder={placeholder}
-        className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
-        style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-      />
-      {isOpen && (
-        <div className="absolute z-50 w-full mt-1 max-h-48 overflow-auto rounded-lg border shadow-2xl" style={{ background: theme.surface, borderColor: theme.border }}>
-          {filteredOptions.length > 0 ? filteredOptions.map((opt, i) => (
-            <div
-              key={i}
-              onClick={() => {
-                onChange(opt);
-                setSearch(opt);
-                setIsOpen(false);
-              }}
-              className="px-4 py-2 cursor-pointer text-sm font-medium transition-colors border-b last:border-b-0"
-              style={{ color: theme.text, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              {opt}
-            </div>
-          )) : (
-            <div className="px-4 py-3 text-sm opacity-60 italic flex flex-col gap-1" style={{ color: theme.text }}>
-              <span>No se encontraron coincidencias.</span>
-              <span className="opacity-70 text-xs">Se usará "{search}" como un nuevo valor.</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import CustomSelect from '../../components/CustomSelect';
+import CustomDateTimePicker from '../../components/CustomDateTimePicker';
+import WorkerTasks from '../../components/hr/WorkerTasks';
+import ConfirmModal from '../../components/ConfirmModal';
+import CompanyOperationsCenter from '../../components/CompanyOperationsCenter';
 
 export default function FuncionariosPage() {
   const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
-  const [activeTab, setActiveTab] = useState('dashboards'); // Changed default
+  const [activeTab, setActiveTab] = useState('actividades');
 
   // Menú del sidebar para trabajadores
   const sidebarItems = [
-    { id: 'dashboards', label: 'Dashboards y Actividades', icon: PieChart },
-    { id: 'empresas', label: 'Empresas', icon: Building2 },
-    { id: 'cursos', label: 'Pruebas', icon: Play }
+    { id: 'actividades', label: 'Actividades', icon: ClipboardList },
+    { id: 'perfil', label: 'Perfil', icon: User },
+    { id: 'empresas', label: 'Empresas', icon: Building2 }
   ];
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [currentWorker, setCurrentWorker] = useState(null);
+  
   const [formData, setFormData] = useState({
     companyName: '',
-    serviceType: '',
+    businessUnitId: '',
+    activityId: '',
+    subactivityId: '',
     startDateTime: '',
     endDateTime: '',
     description: ''
   });
+
   const [showSuccess, setShowSuccess] = useState('');
   const [file, setFile] = useState(null);
   const [myRecords, setMyRecords] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [companies, setCompanies] = useState([]);
-  const [selectedRecord, setSelectedRecord] = useState(null); // Estado para el modal
-
-
-  // Estado para asistencia
-  const [activeAttendance, setActiveAttendance] = useState(null);
-  const [attendanceRecords, setAttendanceRecords] = useState([]);
-  const [elapsedTime, setElapsedTime] = useState('00:00:00');
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
+  // Catalogos
+  const [companies, setCompanies] = useState([]);
+  const [searchCompanyTerm, setSearchCompanyTerm] = useState('');
+  const [businessUnits, setBusinessUnits] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [subactivities, setSubactivities] = useState([]);
+
+  const [selectedRecord, setSelectedRecord] = useState(null); // Estado para el modal de detalle
+  const [selectedCompany, setSelectedCompany] = useState(null); // Estado para el modal de detalle de empresa
+  const [confirmModal, setConfirmModal] = useState({ show: false, id: null });
 
   // Verificar sesión al montar el componente
   useEffect(() => {
@@ -133,39 +69,44 @@ export default function FuncionariosPage() {
       setCurrentWorker(savedSession);
       setIsAuthenticated(true);
       loadMyRecords(savedSession.id);
-      loadAttendanceData(savedSession.id);
-      getCompanies().then(setCompanies);
+      loadInitialCatalogs(savedSession.id);
     } else {
       router.push('/');
     }
     setCheckingSession(false);
   }, []);
 
-  // Cronómetro para asistencia activa
-  useEffect(() => {
-    let interval;
-    if (activeAttendance) {
-      const updateElapsed = () => {
-        const checkIn = new Date(activeAttendance.check_in_time);
-        const now = new Date();
-        const diff = Math.floor((now - checkIn) / 1000);
-        const hours = String(Math.floor(diff / 3600)).padStart(2, '0');
-        const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-        const seconds = String(diff % 60).padStart(2, '0');
-        setElapsedTime(`${hours}:${minutes}:${seconds}`);
-      };
-      updateElapsed();
-      interval = setInterval(updateElapsed, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [activeAttendance]);
-
-  const loadAttendanceData = async (workerId) => {
-    const active = await getActiveAttendance(workerId);
-    setActiveAttendance(active);
-    const records = await getWorkerAttendanceRecords(workerId);
-    setAttendanceRecords(records);
+  const loadInitialCatalogs = async (workerId) => {
+    const [comps, units] = await Promise.all([
+      getCompaniesForWorker(workerId),
+      getBusinessUnits()
+    ]);
+    setCompanies(comps);
+    setBusinessUnits(units);
   };
+
+  // Cargar actividades cuando cambia la Unidad de Negocio
+  useEffect(() => {
+    if (formData.businessUnitId) {
+      getActivities(formData.businessUnitId).then(setActivities);
+      setFormData(prev => ({ ...prev, activityId: '', subactivityId: '' }));
+      setSubactivities([]);
+    } else {
+      setActivities([]);
+      setSubactivities([]);
+    }
+  }, [formData.businessUnitId]);
+
+  // Cargar subactividades cuando cambia la Actividad
+  useEffect(() => {
+    if (formData.activityId) {
+      getSubactivities(formData.activityId).then(setSubactivities);
+      setFormData(prev => ({ ...prev, subactivityId: '' }));
+    } else {
+      setSubactivities([]);
+    }
+  }, [formData.activityId]);
+
 
   const handleLogin = async (username, password) => {
     const result = await loginUnifiedAction(username, password);
@@ -175,9 +116,7 @@ export default function FuncionariosPage() {
       setIsAuthenticated(true);
       saveWorkerSession(worker); // Guardar sesión
       loadMyRecords(worker.id);
-      loadAttendanceData(worker.id); // Cargar asistencia al login
-      const companiesData = await getCompanies();
-      setCompanies(companiesData);
+      loadInitialCatalogs(worker.id);
       return { success: true };
     }
     return result;
@@ -189,8 +128,6 @@ export default function FuncionariosPage() {
     clearUnifiedSession();
     setIsAuthenticated(false);
     setCurrentWorker(null);
-    setActiveAttendance(null);
-    setAttendanceRecords([]);
   };
 
   const loadMyRecords = async (workerId) => {
@@ -198,27 +135,23 @@ export default function FuncionariosPage() {
     setMyRecords(records);
   };
 
-  // Handlers de asistencia
-  const handleStartAttendance = async () => {
-    setAttendanceLoading(true);
-    const result = await startAttendance(currentWorker.id, currentWorker.full_name);
-    if (result.success) {
-      setActiveAttendance(result.attendance);
-      loadAttendanceData(currentWorker.id);
+  const confirmDelete = async () => {
+    const id = confirmModal.id;
+    setConfirmModal({ show: false, id: null });
+    
+    // Usamos el Server Action que bypasea RLS y verifica propiedad
+    const result = await deleteWorkerAuditRecordAction(id, currentWorker.id);
+    
+    if (result && result.success) {
+      setShowSuccess('success-Registro eliminado correctamente');
+      if (selectedRecord && selectedRecord.id === id) {
+        setSelectedRecord(null);
+      }
+      loadMyRecords(currentWorker.id);
+    } else {
+      setShowSuccess('error-No se pudo eliminar el registro');
     }
-    setAttendanceLoading(false);
-  };
-
-  const handleStopAttendance = async () => {
-    if (!activeAttendance) return;
-    setAttendanceLoading(true);
-    const result = await stopAttendance(activeAttendance.id);
-    if (result.success) {
-      setActiveAttendance(null);
-      setElapsedTime('00:00:00');
-      loadAttendanceData(currentWorker.id);
-    }
-    setAttendanceLoading(false);
+    setTimeout(() => setShowSuccess(''), 3000);
   };
 
 
@@ -234,27 +167,26 @@ export default function FuncionariosPage() {
       return;
     }
 
-    let fileData = { filePath: null, fileUrl: null };
-    if (file) {
-      fileData = await uploadFile(file, `${currentWorker.id}-${Date.now()}`);
-      if (!fileData.success) {
-        setShowSuccess('error-Error al cargar el archivo');
-        setLoading(false);
-        return;
-      }
-    }
-
+    const subactivityName = subactivities.find(s => s.id === formData.subactivityId)?.name;
+    const activityName = activities.find(a => a.id === formData.activityId)?.name;
+    const businessUnitName = businessUnits.find(b => b.id === formData.businessUnitId)?.name;
+    
     const result = await addRecord({
       workerId: currentWorker.id,
       workerName: currentWorker.full_name,
       companyName: formData.companyName,
-      serviceType: formData.serviceType,
+      businessUnitId: formData.businessUnitId || null,
+      activityId: formData.activityId || null,
+      subactivityId: formData.subactivityId || null,
+      businessUnitName: businessUnitName || null,
+      activityName: activityName || null,
+      subactivityName: subactivityName || null,
       startDateTime: formData.startDateTime,
       endDateTime: formData.endDateTime,
       description: formData.description,
       hoursWorked,
-      filePath: fileData.filePath,
-      fileUrl: fileData.fileUrl
+      filePath: null,
+      fileUrl: null
     });
 
     setLoading(false);
@@ -263,13 +195,14 @@ export default function FuncionariosPage() {
       setShowSuccess('success');
       setFormData({
         companyName: '',
-        serviceType: '',
+        businessUnitId: '',
+        activityId: '',
+        subactivityId: '',
         startDateTime: '',
         endDateTime: '',
         description: ''
       });
       setFile(null);
-      document.getElementById('fileInput')?.reset?.();
       setTimeout(() => setShowSuccess(''), 3000);
       loadMyRecords(currentWorker.id);
     } else {
@@ -277,41 +210,18 @@ export default function FuncionariosPage() {
     }
   };
 
-  const handleDeleteRecord = async (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
-      const success = await deleteRecord(id);
-      if (success) {
-        setShowSuccess('success-Registro eliminado correctamente');
-        setSelectedRecord(null);
-        loadMyRecords(currentWorker.id);
-      } else {
-        setShowSuccess('error-Error al eliminar el registro');
-      }
-      setTimeout(() => setShowSuccess(''), 3000);
-    }
-  };
-
   // Mostrar loading mientras verifica sesión
   if (checkingSession) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: theme.background }}
-      >
+      <div className="min-h-screen flex items-center justify-center" style={{ background: theme.background }}>
         <div className="animate-pulse">
-          <img
-            src="/Sin título-1-08.png"
-            alt="Cargando..."
-            className="w-20 h-20 object-contain opacity-50"
-          />
+          <img src="/Sin título-1-08.png" alt="Cargando..." className="w-20 h-20 object-contain opacity-50" />
         </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
@@ -321,6 +231,8 @@ export default function FuncionariosPage() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         userName={currentWorker?.full_name}
+        userRole="Funcionario"
+        workerId={currentWorker?.id}
         onLogout={handleLogout}
         showBackButton={false}
         onHoverChange={setIsSidebarExpanded}
@@ -332,333 +244,378 @@ export default function FuncionariosPage() {
         style={{
           background: theme.background,
           color: theme.text,
-          marginLeft: typeof window !== 'undefined' && window.innerWidth > 1024 ? (isSidebarExpanded ? '256px' : '72px') : '0',
-          paddingTop: typeof window !== 'undefined' && window.innerWidth <= 1024 ? '80px' : '32px',
-          minHeight: '100vh'
+          marginLeft: typeof window !== "undefined" && window.innerWidth > 1024 ? (isSidebarExpanded ? "256px" : "72px") : "0",
+          paddingTop: typeof window !== "undefined" && window.innerWidth <= 1024 ? "80px" : "32px",
+          minHeight: "100vh"
         }}
       >
+        <div className="max-w-7xl mx-auto space-y-8">
 
-        <div className="max-w-7xl mx-auto">
-
-          {activeTab === 'dashboards' && (
+          {/* Tab: Actividades */}
+          {activeTab === "actividades" && (
             <div className="animate-fade-in space-y-8">
-              <RealTimeMonitor isWorker={true} />
-              
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Formulario Registrar Actividad */}
-                <div className="xl:col-span-1">
-                  <div className="rounded-xl shadow-lg p-6 h-full border" style={{ background: theme.surface, borderColor: theme.border }}>
-                    <h3 className="text-xl font-bold mb-4" style={{ color: theme.primary }}>Registrar Actividad Manual</h3>
+              {/* Formulario Registrar Actividad */}
+              <div className="w-full">
+                  <div 
+                    className="relative z-50 rounded-3xl p-6 lg:p-8 backdrop-blur-xl border shadow-2xl transition-all duration-300 hover:shadow-3xl flex flex-col h-full" 
+                    style={{ 
+                        background: isDark ? "linear-gradient(145deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)" : "linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)", 
+                        borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.5)" 
+                    }}
+                  >
+                    {/* Efectos de cristal y gradiente encapsulados */}
+                    <div className="absolute inset-0 overflow-hidden rounded-3xl -z-10 pointer-events-none">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+                    </div>
+                    
+                    <h3 className="text-2xl font-black tracking-tight mb-6 flex items-center gap-2" style={{ color: theme.text }}>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+                            Registrar
+                        </span> Actividad
+                    </h3>
+
                     {showSuccess && (
-                      <div className={`p-4 rounded-lg mb-6 flex items-center justify-between ${showSuccess.startsWith('error') ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'}`}>
-                        <div className="flex items-center gap-3">
-                          {showSuccess.startsWith('error') ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                          <span className="font-medium text-sm">{showSuccess.startsWith('error') ? showSuccess.split('-')[1] : 'Registro guardado exitosamente.'}</span>
-                        </div>
+                      <div className={`p-4 rounded-xl mb-6 text-sm font-medium flex items-center gap-2 animate-fade-in ${
+                        showSuccess.startsWith("error")
+                          ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20"
+                          : "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
+                      }`}>
+                        {showSuccess.startsWith("error") ? (
+                            <X className="w-5 h-5 shrink-0" />
+                        ) : (
+                            <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        )}
+                        {showSuccess.startsWith("error") ? showSuccess.split("-")[1] : "Actividad registrada exitosamente"}
                       </div>
                     )}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Empresa</label>
-                        <SearchableSelect
-                          options={companies.map(c => c.name)}
-                          value={formData.companyName}
-                          onChange={(val) => setFormData({ ...formData, companyName: val })}
-                          placeholder="Buscar o escribir empresa..."
-                          isDark={isDark}
-                          theme={theme}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Sistema / Actividad</label>
-                        <SearchableSelect
-                          options={['Contífico', 'Perseo', 'SRI', 'IESS', 'Reunión', 'Otro']}
-                          value={formData.serviceType}
-                          onChange={(val) => setFormData({ ...formData, serviceType: val })}
-                          placeholder="Seleccionar o escribir actividad..."
-                          isDark={isDark}
-                          theme={theme}
-                        />
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Fecha Inicio</label>
-                          <input
-                            type="datetime-local" required
-                            value={formData.startDateTime}
-                            onChange={(e) => setFormData({ ...formData, startDateTime: e.target.value })}
-                            className="w-full px-4 py-2 rounded-lg border outline-none text-xs"
-                            style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
+                    <form onSubmit={handleSubmit} className="space-y-5 flex-1 flex flex-col justify-between relative z-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Cliente (Empresa)</label>
+                            <CustomSelect 
+                                value={formData.companyName}
+                                onChange={val => setFormData({ ...formData, companyName: val })}
+                                options={companies.map(c => ({ value: c.name, label: c.name }))}
+                                placeholder="Seleccionar empresa"
+                                theme={theme}
+                                isDark={isDark}
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Unidad de Negocio</label>
+                            <CustomSelect 
+                                value={formData.businessUnitId}
+                                onChange={val => setFormData({ ...formData, businessUnitId: val })}
+                                options={businessUnits.map(b => ({ value: b.id, label: b.name }))}
+                                placeholder="Seleccionar unidad"
+                                theme={theme}
+                                isDark={isDark}
+                            />
+                        </div>
+                        
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Actividad</label>
+                            <CustomSelect 
+                                value={formData.activityId}
+                                onChange={val => setFormData({ ...formData, activityId: val })}
+                                options={activities.map(a => ({ value: a.id, label: a.name }))}
+                                placeholder="Seleccionar actividad"
+                                theme={theme}
+                                isDark={isDark}
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Subactividad</label>
+                            <CustomSelect 
+                                value={formData.subactivityId}
+                                onChange={val => setFormData({ ...formData, subactivityId: val })}
+                                options={subactivities.map(s => ({ value: s.id, label: s.name }))}
+                                placeholder="Seleccionar subactividad"
+                                theme={theme}
+                                isDark={isDark}
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Fecha y Hora de Inicio</label>
+                          <CustomDateTimePicker 
+                              value={formData.startDateTime}
+                              onChange={val => setFormData({ ...formData, startDateTime: val })}
+                              theme={theme}
+                              isDark={isDark}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Fecha Fin</label>
-                          <input
-                            type="datetime-local" required
-                            value={formData.endDateTime}
-                            onChange={(e) => setFormData({ ...formData, endDateTime: e.target.value })}
-                            className="w-full px-4 py-2 rounded-lg border outline-none text-xs"
-                            style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
+                        
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Fecha y Hora de Fin</label>
+                          <CustomDateTimePicker 
+                              value={formData.endDateTime}
+                              onChange={val => setFormData({ ...formData, endDateTime: val })}
+                              theme={theme}
+                              isDark={isDark}
                           />
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Descripción (opcional)</label>
-                        <textarea
-                          rows="2"
-                          value={formData.description}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg border outline-none resize-none text-sm"
-                          style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
-                        ></textarea>
-                      </div>
+                        <div className="space-y-1 md:col-span-2">
+                          <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Descripción / Notas</label>
+                          <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl border text-sm transition-all outline-none focus:ring-2 focus:ring-blue-500/50 resize-none h-24"
+                            style={{ 
+                              background: isDark ? "rgba(0,0,0,0.2)" : "#f8f9fa", 
+                              color: theme.text,
+                              borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"
+                            }}
+                            placeholder="Detalles de la actividad realizada..."
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Evidencia (Opcional)</label>
-                        <input
-                          id="fileInput"
-                          type="file"
-                          onChange={(e) => setFile(e.target.files[0])}
-                          className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
-                          style={{ color: theme.textSecondary }}
-                        />
                       </div>
-
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md flex justify-center items-center gap-2"
-                      >
-                        {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <><Plus size={18} /> Guardar Actividad</>}
-                      </button>
+                      <div className="pt-4 mt-auto">
+                        <button
+                          type="submit"
+                          disabled={
+                            loading || 
+                            !formData.companyName || 
+                            !formData.businessUnitId || 
+                            !formData.startDateTime || 
+                            !formData.endDateTime ||
+                            (activities.length > 0 && !formData.activityId) ||
+                            (subactivities.length > 0 && !formData.subactivityId)
+                          }
+                          className="w-full text-white px-6 py-4 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg flex items-center justify-center gap-2 group relative overflow-hidden"
+                          style={{ background: theme.primary }}
+                        >
+                          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+                          <span className="relative z-10 flex items-center gap-2">
+                              {loading ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                              )}
+                              {loading ? "Guardando..." : "Registrar Actividad"}
+                          </span>
+                        </button>
+                      </div>
                     </form>
                   </div>
-                </div>
+              </div>
 
-                {/* Tabla Mis Actividades */}
-                <div className="xl:col-span-2">
-                  <div
-                    className="rounded-xl shadow-lg p-4 md:p-6 h-full border flex flex-col"
-                    style={{ background: theme.surface, borderColor: theme.border }}
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold" style={{ color: theme.primary }}>
-                          Mis Actividades Registradas
-                        </h3>
-                        <p className="text-sm opacity-60" style={{ color: theme.textSecondary }}>
-                          Historial de reportes registrados manualmente.
-                        </p>
-                      </div>
-                    </div>
-                    {myRecords.length === 0 ? (
-                      <p className="text-center py-8 flex-1 flex items-center justify-center" style={{ color: theme.textSecondary }}>
-                        Aún no tienes actividades registradas
-                      </p>
-                    ) : (
-                      <div className="overflow-x-auto flex-1">
-                        <table className="w-full text-sm">
-                          <thead className="text-white rounded-t-lg" style={{ background: theme.primary }}>
-                            <tr>
-                              <th className="px-4 py-3 text-left first:rounded-tl-lg">Empresa</th>
-                              <th className="px-4 py-3 text-left">Actividad</th>
-                              <th className="px-4 py-3 text-left">Inicio</th>
-                              <th className="px-4 py-3 text-left">Fin</th>
-                              <th className="px-4 py-3 text-left">Horas</th>
-                              <th className="px-4 py-3 text-left last:rounded-tr-lg">Archivo</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {myRecords.map(record => (
-                              <tr
-                                key={record.id}
-                                className="border-b transition-colors cursor-pointer"
-                                style={{
-                                  borderColor: theme.border,
-                                  background: isDark ? 'transparent' : '#f8f9fa'
-                                }}
-                                onClick={() => setSelectedRecord(record)}
-                                onMouseEnter={(e) => e.currentTarget.style.background = isDark ? '#1a2f5a' : '#f1f5f9'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = isDark ? 'transparent' : '#f8f9fa'}
-                              >
-                                <td className="px-4 py-3 font-semibold">{record.company_name}</td>
-                                <td className="px-4 py-3 text-xs capitalize font-medium">{record.service_type || 'No especificado'}</td>
-                                <td className="px-4 py-3 text-xs">{new Date(record.start_datetime).toLocaleString('es-ES')}</td>
-                                <td className="px-4 py-3 text-xs">{new Date(record.end_datetime).toLocaleString('es-ES')}</td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className="px-3 py-1 rounded-full font-semibold text-white text-sm"
-                                    style={{ background: theme.primary }}
-                                  >
-                                    {record.hours_worked}h
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  {record.file_url ? (
-                                    <span className="flex items-center gap-1" style={{ color: theme.secondary }}>
-                                      <FileText className="w-3 h-3" /> Archivo
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: theme.textSecondary }}>-</span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+              {/* Historial de Actividades (Bottom) */}
+              <div className="rounded-3xl shadow-xl p-6 md:p-8 backdrop-blur-xl border transition-all duration-300 hover:shadow-2xl" 
+                   style={{ 
+                       background: theme.surface, 
+                       borderColor: theme.border 
+                   }}>
+                <h3 className="text-xl md:text-2xl font-black mb-1 tracking-tight flex items-center gap-2" style={{ color: theme.text }}>
+                  <ClipboardList className="text-blue-500" size={24} />
+                  Historial de Actividades
+                </h3>
+                <p className="text-sm mb-6 opacity-60" style={{ color: theme.textSecondary }}>
+                  Actividades que has registrado recientemente.
+                </p>
+                {myRecords.length === 0 ? (
+                  <div className="text-center py-12 rounded-2xl border border-dashed" style={{ borderColor: theme.border, background: isDark ? "rgba(0,0,0,0.1)" : "#f8f9fa" }}>
+                    <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: theme.text }} />
+                    <p className="font-medium" style={{ color: theme.textSecondary }}>
+                      Aún no tienes actividades registradas
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-white rounded-t-xl overflow-hidden" style={{ background: theme.primary }}>
+                        <tr>
+                          <th className="px-4 py-3 text-left font-bold first:rounded-tl-xl">Empresa</th>
+                          <th className="px-4 py-3 text-left font-bold">Inicio</th>
+                          <th className="px-4 py-3 text-left font-bold">Fin</th>
+                          <th className="px-4 py-3 text-left font-bold last:rounded-tr-xl">Horas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {myRecords.map(record => (
+                          <tr
+                            key={record.id}
+                            className="border-b transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+                            style={{ borderColor: theme.border }}
+                            onClick={() => setSelectedRecord(record)}
+                          >
+                            <td className="px-4 py-3 font-semibold">{record.company_name}</td>
+                            <td className="px-4 py-3 text-xs opacity-80">{new Date(record.start_datetime).toLocaleString("es-ES")}</td>
+                            <td className="px-4 py-3 text-xs opacity-80">{new Date(record.end_datetime).toLocaleString("es-ES")}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-3 py-1 rounded-full font-bold text-white text-xs shadow-sm bg-gradient-to-r from-blue-500 to-indigo-600">
+                                {record.hours_worked}h
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === 'empresas' && (
+          {/* Tab: Perfil (WorkerTasks) */}
+          {activeTab === "perfil" && (
             <div className="animate-fade-in space-y-6">
-              <CompanyManager isWorker={true} />
+                <div className="rounded-3xl shadow-xl border p-6 lg:p-8" style={{ background: theme.surface, borderColor: theme.border }}>
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                            {currentWorker.full_name?.charAt(0) || "U"}
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black" style={{ color: theme.text }}>{currentWorker.full_name}</h2>
+                        </div>
+                    </div>
+                    
+                    <div className="border-t pt-8" style={{ borderColor: theme.border }}>
+                        <WorkerTasks workerId={currentWorker.id} theme={theme} isDark={isDark} readOnly={true} />
+                    </div>
+                </div>
             </div>
           )}
 
-          {activeTab === 'cursos' && (
-            <div className="animate-fade-in">
-              <CourseViewer adminPreview={true} />
+          {/* Tab: Empresas */}
+          {activeTab === "empresas" && !selectedCompany && (
+            <div className="animate-fade-in space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <Building2 className="text-blue-500 w-8 h-8" />
+                        <h2 className="text-2xl font-black" style={{ color: theme.text }}>Empresas</h2>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                        <input
+                            type="text"
+                            placeholder="Buscar empresa..."
+                            value={searchCompanyTerm}
+                            onChange={(e) => setSearchCompanyTerm(e.target.value)}
+                            className="w-full px-4 py-2 rounded-xl border text-sm outline-none transition-all"
+                            style={{ background: theme.surface, borderColor: theme.border, color: theme.text }}
+                        />
+                    </div>
+                </div>
+
+                {companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase())).length === 0 ? (
+                    <div className="text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: theme.border, background: theme.surface }}>
+                        <Building2 className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: theme.text }} />
+                        <p className="font-medium" style={{ color: theme.textSecondary }}>No hay empresas disponibles.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase())).map(company => (
+                            <div key={company.id} onClick={() => setSelectedCompany(company)} className="rounded-2xl border shadow-sm p-5 hover:shadow-md transition-shadow group flex flex-col cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
+                                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform overflow-hidden">
+                                    {company.logo_url || company.avatar_url ? (
+                                        <img src={company.logo_url || company.avatar_url} alt={company.name} className="w-full h-full object-contain p-1" />
+                                    ) : (
+                                        <Building2 size={24} />
+                                    )}
+                                </div>
+                                <h3 className="font-bold text-lg mb-1 leading-tight" style={{ color: theme.text }}>{company.name}</h3>
+                                {company.type && <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: theme.textSecondary }}>{company.type}</p>}
+                                {company.group_name && (
+                                    <div className="mt-auto pt-4 border-t" style={{ borderColor: theme.border }}>
+                                        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
+                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                            {company.group_name}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
           )}
 
-
+          {activeTab === "empresas" && selectedCompany && (
+            <div className="animate-fade-in pb-10">
+                <CompanyOperationsCenter
+                    company={selectedCompany}
+                    onBack={() => setSelectedCompany(null)}
+                    theme={theme}
+                    isDark={isDark}
+                    readOnly={true}
+                />
+            </div>
+          )}
 
           {/* Modal de detalle de registro */}
           {selectedRecord && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
-              style={{ background: 'rgba(0,0,0,0.7)' }}
-              onClick={() => setSelectedRecord(null)}
-            >
-              <div
-                className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll"
-                style={{ background: theme.surface }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header del modal */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate" style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setSelectedRecord(null)}>
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll" style={{ background: theme.surface }} onClick={(e) => e.stopPropagation()}>
                 <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-                  <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
-                    Detalle de Actividad
-                  </h2>
-                  <button
-                    onClick={() => setSelectedRecord(null)}
-                    className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors"
-                    style={{ background: isDark ? '#333' : '#eee' }}
-                  >
+                  <h2 className="text-xl font-bold" style={{ color: theme.primary }}>Detalle de Actividad</h2>
+                  <button onClick={() => setSelectedRecord(null)} className="p-2 rounded-lg hover:opacity-70 cursor-pointer transition-colors" style={{ background: isDark ? "#333" : "#eee" }}>
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
-                {/* Contenido del modal */}
                 <div className="p-6 space-y-6">
-                  {/* Información del registro */}
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
                       <p className="text-lg font-bold">{selectedRecord.company_name}</p>
                     </div>
-                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Tipo de Servicio</p>
-                      <p className="text-lg font-bold capitalize">{selectedRecord.service_type || 'No especificado'}</p>
+                      <p className="text-lg font-bold capitalize">{selectedRecord.service_type || "No especificado"}</p>
                     </div>
-                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Inicio</p>
-                      <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString('es-ES')}</p>
+                      <p className="font-semibold">{new Date(selectedRecord.start_datetime).toLocaleString("es-ES")}</p>
                     </div>
-                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Fecha/Hora Fin</p>
-                      <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString('es-ES')}</p>
+                      <p className="font-semibold">{new Date(selectedRecord.end_datetime).toLocaleString("es-ES")}</p>
                     </div>
                     <div className="p-4 rounded-lg card-professional shadow-lg" style={{ background: theme.primary }}>
                       <p className="text-sm font-medium text-white opacity-80">Horas Trabajadas</p>
                       <p className="text-2xl font-bold text-white">{selectedRecord.hours_worked}h</p>
                     </div>
-                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                    <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Registrado</p>
-                      <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
+                      <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString("es-ES")}</p>
                     </div>
                   </div>
-
-                  {/* Descripción */}
-                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
+                  <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? "#1a1a2e" : "#f8f9fa" }}>
                     <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
-                    <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
+                    <p className="whitespace-pre-wrap">{selectedRecord.description || "Sin descripción"}</p>
                   </div>
-
-                  {/* Visor de archivo */}
-                  {selectedRecord.file_url ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Archivo Adjunto</p>
-                        <a
-                          href={selectedRecord.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-lg text-white text-sm flex items-center gap-2 hover:opacity-90 shadow-professional"
-                          style={{ background: theme.primary }}
-                        >
-                          <Download className="w-4 h-4" /> Descargar
-                        </a>
-                      </div>
-                      <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
-                        {/* Visor según tipo de archivo */}
-                        {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                          <img
-                            src={selectedRecord.file_url}
-                            alt="Archivo adjunto"
-                            className="w-full max-h-96 object-contain"
-                          />
-                        ) : selectedRecord.file_url.match(/\.pdf$/i) ? (
-                          <iframe
-                            src={selectedRecord.file_url}
-                            className="w-full h-96"
-                            title="Vista previa PDF"
-                          />
-                        ) : (
-                          /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
-                          <iframe
-                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
-                            className="w-full h-96"
-                            title="Vista previa documento"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
-                      <p style={{ color: theme.textSecondary }}>No hay archivo adjunto</p>
-                    </div>
-                  )}
                 </div>
-
-                {/* Footer del modal */}
                 <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
-                  <button
-                    onClick={() => handleDeleteRecord(selectedRecord.id)}
-                    className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional"
-                    style={{ background: '#e74c3c' }}
-                  >
+                  <button onClick={() => setConfirmModal({ show: true, id: selectedRecord.id })} className="px-4 py-2 rounded-lg text-white flex items-center gap-2 hover:opacity-90 cursor-pointer shadow-professional" style={{ background: "#e74c3c" }}>
                     <Trash2 className="w-4 h-4" /> Eliminar
                   </button>
-                  <button
-                    onClick={() => setSelectedRecord(null)}
-                    className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional"
-                    style={{ background: theme.primary, color: 'white' }}
-                  >
+                  <button onClick={() => setSelectedRecord(null)} className="px-6 py-2 rounded-lg font-semibold cursor-pointer shadow-professional" style={{ background: theme.primary, color: "white" }}>
                     Cerrar
                   </button>
                 </div>
               </div>
             </div>
           )}
+
+          <ConfirmModal 
+              isOpen={confirmModal.show}
+              title="Eliminar Registro"
+              message="¿Estás seguro de que deseas eliminar este registro permanentemente? Esta acción no se puede deshacer."
+              onConfirm={confirmDelete}
+              onCancel={() => setConfirmModal({ show: false, id: null })}
+              theme={theme}
+              isDark={isDark}
+          />
         </div>
       </main>
     </div>

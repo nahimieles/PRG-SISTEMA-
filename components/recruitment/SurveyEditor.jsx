@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, GripVertical, Trash2, Save, AlignLeft, CheckSquare, Gi
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import Toast from '../Toast';
+import CustomSelect from '../CustomSelect';
 import { getAdminSession } from '../../lib/auth';
 import { saveSurveyQuestionsAction, getSurveyQuestionsAction } from '../../lib/actions';
 // Simple reordering without external libraries for now, using HTML5 Drag and Drop or just sort
@@ -290,25 +291,24 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
                       placeholder="Escribe la pregunta aquí..."
                       onChange={e => handleQuestionChange(q.id, 'text', e.target.value)}
                     />
-                    <select 
+                    <CustomSelect 
                       value={q.type}
-                      onChange={e => {
-                        const newType = e.target.value;
+                      onChange={val => {
+                        const newType = val;
                         const needsOptions = ['multiple_choice', 'checkbox', 'dropdown', 'multi_text'].includes(newType);
                         const newOpts = newType === 'scale' ? { min: 1, max: 5 } : needsOptions ? ['Opción 1'] : null;
                         handleQuestionChange(q.id, 'type', newType);
                         handleQuestionChange(q.id, 'options', newOpts);
                       }}
-                      className="p-2 border rounded-md text-sm outline-none bg-transparent"
-                      style={{ borderColor: theme.border, color: theme.text, background: theme.surface }}
-                    >
-                      <option value="text">Texto Abierto</option>
-                      <option value="multi_text">Campos Múltiples (Textos cortos)</option>
-                      <option value="multiple_choice">Opciones (Selección Única)</option>
-                      <option value="dropdown">Lista Desplegable</option>
-                      <option value="checkbox">Opciones (Selección Múltiple)</option>
-                      <option value="scale">Escala Numérica</option>
-                    </select>
+                      options={[
+                        {value: 'text', label: 'Texto Abierto'},
+                        {value: 'multi_text', label: 'Campos Múltiples (Textos cortos)'},
+                        {value: 'multiple_choice', label: 'Opciones (Selección Única)'},
+                        {value: 'dropdown', label: 'Lista Desplegable'},
+                        {value: 'checkbox', label: 'Opciones (Selección Múltiple)'},
+                        {value: 'scale', label: 'Escala Numérica'}
+                      ]}
+                    />
                  </div>
 
                  {/* Options Config */}

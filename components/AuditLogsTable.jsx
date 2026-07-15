@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 import { getAuditLogs } from '../lib/audit';
 import { exportToExcel } from '../lib/auth';
+import CustomSelect from './CustomSelect';
 
 export default function AuditLogsTable() {
     const { isDark } = useTheme();
@@ -146,17 +147,16 @@ export default function AuditLogsTable() {
                     </div>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <select
+                        <CustomSelect
                             value={itemsPerPage}
-                            onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                            className="bg-transparent border rounded-lg text-sm px-3 py-2 cursor-pointer focus:outline-none"
-                            style={{ borderColor: theme.border, color: theme.text }}
-                        >
-                            <option value={5}>5 por pág</option>
-                            <option value={10}>10 por pág</option>
-                            <option value={20}>20 por pág</option>
-                            <option value={50}>50 por pág</option>
-                        </select>
+                            onChange={(val) => setItemsPerPage(Number(val))}
+                            options={[
+                                {value: 5, label: '5 por pág'},
+                                {value: 10, label: '10 por pág'},
+                                {value: 20, label: '20 por pág'},
+                                {value: 50, label: '50 por pág'}
+                            ]}
+                        />
 
                         <div className="flex flex-row gap-1.5 sm:gap-2 flex-shrink-0 ml-auto sm:ml-0">
                             <button

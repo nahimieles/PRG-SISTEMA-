@@ -4,8 +4,9 @@ import { ChevronDown, Check } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 
-export default function CustomSelect({ value, onChange, options, placeholder = 'Seleccionar...', className = '', size = 'md' }) {
+export default function CustomSelect({ value, onChange, options, placeholder = 'Seleccionar...', className = '', size = 'md', isSearchable = false }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const ref = useRef(null);
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -21,12 +22,14 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Close on Escape
     useEffect(() => {
         const handler = (e) => {
             if (e.key === 'Escape') setIsOpen(false);
         };
-        if (isOpen) document.addEventListener('keydown', handler);
+        if (isOpen) {
+            document.addEventListener('keydown', handler);
+            setSearchTerm(''); // Reset search when opened
+        }
         return () => document.removeEventListener('keydown', handler);
     }, [isOpen]);
 
@@ -86,7 +89,30 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
                         animation: 'customSelectScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                     }}
                 >
-                    {options.map((opt, i) => {
+                    {isSearchable && (
+                        <div className="px-2 pb-2 sticky top-0 z-10" style={{ background: isDark ? 'rgba(30, 37, 56, 0.95)' : 'rgba(255, 255, 255, 0.98)' }}>
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 text-sm rounded-xl outline-none"
+                                style={{
+                                    background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
+                                    color: theme.text,
+                                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                                }}
+                                placeholder="Buscar..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                            />
+                        </div>
+                    )}
+                    
+                    {options.filter(opt => {
+                        if (!isSearchable || !searchTerm) return true;
+                        const optLabel = typeof opt === 'object' ? opt.label : opt;
+                        return String(optLabel).toLowerCase().includes(searchTerm.toLowerCase());
+                    }).map((opt, i) => {
                         const optValue = typeof opt === 'object' ? opt.value : opt;
                         const optLabel = typeof opt === 'object' ? opt.label : opt;
                         const isSelected = optValue === value;
@@ -99,26 +125,11 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
                                     onChange(optValue);
                                     setIsOpen(false);
                                 }}
-                                className="w-[calc(100%-12px)] mx-auto flex items-center justify-between gap-2 px-3 py-2.5 text-left text-sm rounded-xl transition-all duration-200 mb-0.5 last:mb-0"
-                                style={{
-                                    background: isSelected
-                                        ? (isDark ? 'rgba(59,130,246,0.2)' : '#eff6ff')
-                                        : 'transparent',
-                                    color: isSelected
-                                        ? (isDark ? '#60a5fa' : '#2563eb')
-                                        : theme.text,
-                                    fontWeight: isSelected ? 600 : 500,
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isSelected) {
-                                        e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isSelected) {
-                                        e.currentTarget.style.background = 'transparent';
-                                    }
-                                }}
+                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                                    isSelected 
+                                    ? (isDark ? 'bg-blue-500/20 text-blue-400 font-bold' : 'bg-blue-50 text-blue-600 font-bold')
+                                    : (isDark ? 'text-gray-300 hover:bg-white/5 hover:text-white' : 'text-gray-700 hover:bg-black/5 hover:text-black')
+                                }`}
                             >
                                 <span className="truncate">{optLabel}</span>
                                 {isSelected && <Check className="w-4 h-4 flex-shrink-0 text-blue-500" strokeWidth={3} />}
