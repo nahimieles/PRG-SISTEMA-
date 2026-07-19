@@ -219,9 +219,17 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
                         >
                             <div className="p-5 flex-1">
                                 <div className="flex justify-between items-start mb-3">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
-                                        {worker.full_name?.charAt(0)?.toUpperCase() || worker.username?.charAt(0)?.toUpperCase()}
-                                    </div>
+                                    {worker.avatar_url ? (
+                                        <img 
+                                            src={worker.avatar_url} 
+                                            alt={worker.full_name || worker.username}
+                                            className="w-12 h-12 rounded-full object-cover shadow-md"
+                                        />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
+                                            {worker.full_name?.charAt(0)?.toUpperCase() || worker.username?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                    )}
                                     <button 
                                         onClick={(e) => {
                                             e.stopPropagation();

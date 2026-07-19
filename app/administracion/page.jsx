@@ -12,7 +12,7 @@ import LoginForm from '../../components/LoginForm';
 import ManagementAnalysisModule from '../../components/management/ManagementAnalysisModule';
 import CorporateCalendar from '../../components/CorporateCalendar';
 import StatsCard from '../../components/StatsCard';
-import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
+import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
 import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction, deleteWorkerAction, deleteAuditRecordAction } from '../../lib/actions.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
@@ -202,7 +202,15 @@ export default function AdminPage() {
     if (savedSession) {
       setIsAuthenticated(true);
     } else {
-      router.push('/');
+      // Fallback: verificar sesión unificada para evitar loop de redirección
+      const unifiedSession = getUnifiedSession();
+      if (unifiedSession && unifiedSession.role === 'admin') {
+        // Re-sincronizar la sesión de admin que se desincronizó
+        saveAdminSession(unifiedSession.user);
+        setIsAuthenticated(true);
+      } else {
+        router.push('/');
+      }
     }
     setCheckingSession(false);
   }, []);
@@ -648,6 +656,7 @@ export default function AdminPage() {
         // Update local session
         const newSession = { ...adminSession };
         if (payload.username) newSession.username = payload.username;
+        if (payload.full_name) newSession.full_name = payload.full_name;
         saveAdminSession(newSession);
         showToast('Perfil actualizado correctamente');
         setShowProfileModal(false);

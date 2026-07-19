@@ -47,13 +47,16 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
 
         try {
             setUploadingAvatar(true);
-            const path = await uploadFile(file, 'documents', `avatars/${worker.id}`);
-            const { data } = supabase.storage.from('documents').getPublicUrl(path);
+            const uploadRes = await uploadFile(file, `avatar-${worker.id}`);
+            
+            if (!uploadRes.success) {
+                throw new Error(uploadRes.error || 'Error al subir la imagen');
+            }
             
             // Save directly to the user profile
-            const result = await updateWorkerAction(worker.id, { avatar_url: data.publicUrl }, adminSession?.id);
+            const result = await updateWorkerAction(worker.id, { avatar_url: uploadRes.fileUrl }, adminSession?.id);
             if (result.success) {
-                setProfileData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+                setProfileData(prev => ({ ...prev, avatar_url: uploadRes.fileUrl }));
                 setToast({ type: 'success', message: 'Foto de perfil actualizada' });
             } else {
                 throw new Error('Error al guardar foto en la base de datos');
