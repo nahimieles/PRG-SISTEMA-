@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Plus, Play, Square, X, Download, Trash2, Eye, FileText, ClipboardList, User, Building2 } from 'lucide-react';
+import { LogOut, Plus, Play, Square, X, Download, Trash2, Eye, FileText, ClipboardList, User, Building2, Folder, ChevronLeft, Layers, Search as SearchIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -50,6 +50,7 @@ export default function FuncionariosPage() {
   const [myRecords, setMyRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [archivosLoading, setArchivosLoading] = useState(null);
 
   // Catalogos
   const [companies, setCompanies] = useState([]);
@@ -60,6 +61,7 @@ export default function FuncionariosPage() {
 
   const [selectedRecord, setSelectedRecord] = useState(null); // Estado para el modal de detalle
   const [selectedCompany, setSelectedCompany] = useState(null); // Estado para el modal de detalle de empresa
+  const [expandedGroup, setExpandedGroup] = useState(null); // Estado para grupo expandido
   const [confirmModal, setConfirmModal] = useState({ show: false, id: null });
 
   // Verificar sesión al montar el componente
@@ -489,57 +491,193 @@ export default function FuncionariosPage() {
           )}
 
           {/* Tab: Empresas */}
-          {activeTab === "empresas" && !selectedCompany && (
+          {activeTab === "empresas" && !selectedCompany && (() => {
+            const filtered = companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase()));
+            // Group companies by group_name (using group_id as key for navigation)
+            const groupMap = {};
+            const ungrouped = [];
+            filtered.forEach(c => {
+              if (c.group_name && c.group_id) {
+                if (!groupMap[c.group_id]) groupMap[c.group_id] = { name: c.group_name, id: c.group_id, companies: [] };
+                groupMap[c.group_id].companies.push(c);
+              } else {
+                ungrouped.push(c);
+              }
+            });
+            const sortedGroups = Object.values(groupMap).sort((a, b) => a.name.localeCompare(b.name));
+
+            return (
             <div className="animate-fade-in space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-3">
-                        <Building2 className="text-blue-500 w-8 h-8" />
-                        <h2 className="text-2xl font-black" style={{ color: theme.text }}>Empresas</h2>
-                    </div>
+                {/* Top Bar */}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                    {expandedGroup ? (
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setExpandedGroup(null)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
+                                <ChevronLeft size={20} />
+                            </button>
+                            <h3 className="text-lg font-bold" style={{ color: theme.text }}>{expandedGroup.name}</h3>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Layers className="text-blue-500" size={24} />
+                            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: theme.text }}>Grupos de Trabajo</h2>
+                        </div>
+                    )}
                     <div className="relative w-full sm:w-64">
                         <input
                             type="text"
                             placeholder="Buscar empresa..."
                             value={searchCompanyTerm}
                             onChange={(e) => setSearchCompanyTerm(e.target.value)}
-                            className="w-full px-4 py-2 rounded-xl border text-sm outline-none transition-all"
-                            style={{ background: theme.surface, borderColor: theme.border, color: theme.text }}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-2xl border text-sm outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm"
+                            style={{ background: isDark ? '#1e293b' : '#fff', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0', color: theme.text }}
                         />
+                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500/50" size={16} />
                     </div>
                 </div>
 
-                {companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase())).length === 0 ? (
-                    <div className="text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: theme.border, background: theme.surface }}>
-                        <Building2 className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: theme.text }} />
-                        <p className="font-medium" style={{ color: theme.textSecondary }}>No hay empresas disponibles.</p>
+                {/* Search results mode */}
+                {searchCompanyTerm.trim() && (
+                    <div className="space-y-4">
+                        {filtered.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-center rounded-[2rem] border-2 border-dashed" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                                <Building2 size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
+                                <p className="text-lg font-bold" style={{ color: theme.text }}>No se encontraron empresas</p>
+                                <p className="text-sm opacity-50 mt-1">Intenta con otro término de búsqueda.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filtered.sort((a, b) => a.name.localeCompare(b.name)).map(company => (
+                                    <div key={company.id} onClick={() => setSelectedCompany(company)} className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
+                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', borderColor: theme.border }}>
+                                            {company.logo_url || company.avatar_url ? (
+                                                <img src={company.logo_url || company.avatar_url} alt={company.name} className="w-full h-full object-contain p-1" />
+                                            ) : (
+                                                <Building2 size={20} className="text-blue-500" />
+                                            )}
+                                        </div>
+                                        <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{company.name}</h3>
+                                        {company.type && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
+                                                {company.type}
+                                            </span>
+                                        )}
+                                        {company.group_name && (
+                                            <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{company.group_name}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase())).map(company => (
-                            <div key={company.id} onClick={() => setSelectedCompany(company)} className="rounded-2xl border shadow-sm p-5 hover:shadow-md transition-shadow group flex flex-col cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
-                                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform overflow-hidden">
+                )}
+
+                {/* Level 1: Group Cards (no search active) */}
+                {!searchCompanyTerm.trim() && !expandedGroup && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {sortedGroups.map((group, index) => {
+                            const previewNames = group.companies.slice(0, 3).map(c => c.name).join(', ');
+                            const moreCount = group.companies.length > 3 ? `+${group.companies.length - 3}` : '';
+
+                            return (
+                                <div
+                                    key={group.id}
+                                    onClick={() => setExpandedGroup(group)}
+                                    className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer"
+                                    style={{ background: theme.surface, borderColor: theme.border }}
+                                >
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', borderColor: theme.border }}>
+                                        <Folder size={20} className="text-blue-500" />
+                                    </div>
+                                    <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{group.name}</h3>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
+                                            {group.companies.length} {group.companies.length === 1 ? 'Empresa' : 'Empresas'}
+                                        </span>
+                                    </div>
+                                    {group.companies.length > 0 ? (
+                                        <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
+                                                {previewNames} {moreCount && <span className="text-blue-500 font-bold">{moreCount}</span>}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs text-gray-400 italic">Sin empresas</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* Ungrouped companies as direct cards */}
+                        {ungrouped.sort((a, b) => a.name.localeCompare(b.name)).map(company => (
+                            <div key={company.id} onClick={() => setSelectedCompany(company)} className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', borderColor: theme.border }}>
                                     {company.logo_url || company.avatar_url ? (
                                         <img src={company.logo_url || company.avatar_url} alt={company.name} className="w-full h-full object-contain p-1" />
                                     ) : (
-                                        <Building2 size={24} />
+                                        <Building2 size={20} className="text-blue-500" />
                                     )}
                                 </div>
-                                <h3 className="font-bold text-lg mb-1 leading-tight" style={{ color: theme.text }}>{company.name}</h3>
-                                {company.type && <p className="text-xs font-medium uppercase tracking-wider mb-2" style={{ color: theme.textSecondary }}>{company.type}</p>}
-                                {company.group_name && (
-                                    <div className="mt-auto pt-4 border-t" style={{ borderColor: theme.border }}>
-                                        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
-                                            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                            {company.group_name}
-                                        </p>
-                                    </div>
+                                <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{company.name}</h3>
+                                {company.type && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700 uppercase tracking-tight">
+                                        {company.type}
+                                    </span>
                                 )}
                             </div>
                         ))}
+
+                        {sortedGroups.length === 0 && ungrouped.length === 0 && (
+                            <div className="col-span-full text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: theme.border, background: theme.surface }}>
+                                <Building2 className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: theme.text }} />
+                                <p className="font-medium" style={{ color: theme.textSecondary }}>No hay empresas disponibles.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Level 2: Companies inside expanded group */}
+                {!searchCompanyTerm.trim() && expandedGroup && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {expandedGroup.companies.sort((a, b) => a.name.localeCompare(b.name)).map(company => (
+                            <div key={company.id} onClick={() => setSelectedCompany(company)} className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', borderColor: theme.border }}>
+                                    {company.logo_url || company.avatar_url ? (
+                                        <img src={company.logo_url || company.avatar_url} alt={company.name} className="w-full h-full object-contain p-1" />
+                                    ) : (
+                                        <Building2 size={20} className="text-blue-500" />
+                                    )}
+                                </div>
+                                <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{company.name}</h3>
+                                <div className="flex items-center gap-2 mb-3">
+                                    {company.type && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 uppercase tracking-tight">
+                                            {company.type}
+                                        </span>
+                                    )}
+                                    {company.ruc && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-100 dark:border-gray-700">
+                                            RUC {company.ruc}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {expandedGroup.companies.length === 0 && (
+                            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+                                <Building2 size={48} className="text-gray-300 mb-4" />
+                                <p className="text-lg font-bold" style={{ color: theme.text }}>No hay empresas en este grupo</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
-          )}
+            );
+          })()}
 
           {activeTab === "empresas" && selectedCompany && (
             <div className="animate-fade-in pb-10">
@@ -549,6 +687,29 @@ export default function FuncionariosPage() {
                     theme={theme}
                     isDark={isDark}
                     readOnly={true}
+                    onOpenArchivos={async (company) => {
+                        if (company.sharepoint_folder_url) {
+                            window.open(company.sharepoint_folder_url, '_blank');
+                            return;
+                        }
+                        setArchivosLoading(company.id);
+                        try {
+                            const type = (company.type || '').toLowerCase();
+                            const res = await fetch(`/api/graph/find-folder?company=${encodeURIComponent(company.name)}&type=${type}&_t=${Date.now()}`);
+                            const data = await res.json();
+                            if (data.url) {
+                                window.open(data.url, '_blank');
+                            }
+                            if (!data.found && data.message) {
+                                alert(data.message);
+                            }
+                        } catch (err) {
+                            console.error('Error finding folder:', err);
+                            alert('Error al buscar carpeta en SharePoint');
+                        } finally {
+                            setArchivosLoading(null);
+                        }
+                    }}
                 />
             </div>
           )}
