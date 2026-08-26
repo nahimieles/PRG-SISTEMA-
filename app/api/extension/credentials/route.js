@@ -28,14 +28,33 @@ export async function GET(request) {
         }
 
         // 4. Retornar las credenciales
-        // Esta respuesta solo será visible para el Service Worker (background.js) de la extensión
+        // Agregamos headers CORS para permitir que la extensión (chrome-extension://...) lea la respuesta
         return NextResponse.json({ 
             success: true, 
             credentials 
+        }, {
+            headers: {
+                'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
         });
 
     } catch (error) {
         console.error('Error fetching credentials for extension:', error);
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
     }
+}
+
+export async function OPTIONS(request) {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': request.headers.get('origin') || '*',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+    });
 }
