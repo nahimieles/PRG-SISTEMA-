@@ -11,7 +11,7 @@
   ],
   "host_permissions": [
     "http://localhost:3000/*",
-    "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*",
+    "https://nextjs-boilerplate-*.vercel.app/*",
     "https://srienlinea.sri.gob.ec/*",
     "https://www.iess.gob.ec/*",
     "https://*.contifico.com/*",
@@ -38,7 +38,7 @@
     {
       "matches": [
         "http://localhost:3000/*",
-        "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*"
+        "https://nextjs-boilerplate-*.vercel.app/*"
       ],
       "js": ["dashboard-content.js"],
       "run_at": "document_start"
@@ -47,7 +47,7 @@
   "externally_connectable": {
     "matches": [
       "http://localhost:3000/*",
-      "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*"
+      "https://nextjs-boilerplate-*.vercel.app/*"
     ]
   }
 }
