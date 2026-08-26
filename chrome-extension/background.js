@@ -29,13 +29,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.local.get(['pendingLogin'], (result) => {
       if (result.pendingLogin && (Date.now() - result.pendingLogin.timestamp < 60000)) { // 60 segundos de validez
         sendResponse({ credentials: result.pendingLogin.credentials });
-        
-        // Opcional: No borrarlo inmediatamente porque en SRI hay redirección OIDC y se necesitarán de nuevo
-        // Lo dejamos que expire solo con el tiempo.
       } else {
         sendResponse({ credentials: null });
       }
     });
     return true; // Necesario porque chrome.storage.local.get es asíncrono
+  }
+
+  if (request.action === 'CLEAR_CREDENTIALS') {
+    chrome.storage.local.remove('pendingLogin', () => {
+      console.log('Credenciales borradas tras inicio de sesión exitoso.');
+    });
+    sendResponse({ status: 'cleared' });
   }
 });

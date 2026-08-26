@@ -128,6 +128,7 @@ async function performLogin(credentials) {
         console.log('[Accesos Empresariales Bot] Botón encontrado:', !!submitBtn);
         if (submitBtn) {
           console.log('[Accesos Empresariales Bot] Haciendo click en ingresar...');
+          chrome.runtime.sendMessage({ action: 'CLEAR_CREDENTIALS' });
           submitBtn.click();
         } else {
           console.error('[Accesos Empresariales Bot] No se encontró el botón de ingresar');
@@ -153,6 +154,7 @@ async function performLogin(credentials) {
         
         const submitBtn = document.querySelector(btnSelector);
         if (submitBtn) {
+          chrome.runtime.sendMessage({ action: 'CLEAR_CREDENTIALS' });
           submitBtn.click();
         }
       }
@@ -173,6 +175,7 @@ async function performLogin(credentials) {
         
         const submitBtn = document.querySelector(btnSelector);
         if (submitBtn) {
+          chrome.runtime.sendMessage({ action: 'CLEAR_CREDENTIALS' });
           submitBtn.click();
         }
       }
@@ -214,6 +217,8 @@ async function performLogin(credentials) {
         }) || document.querySelector('button[type="submit"]');
         
         if (loginBtn) {
+          console.log('[Accesos Empresariales Bot] Haciendo click en ingresar...');
+          chrome.runtime.sendMessage({ action: 'CLEAR_CREDENTIALS' });
           loginBtn.click();
         }
       }
