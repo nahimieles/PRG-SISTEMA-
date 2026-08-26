@@ -13,7 +13,11 @@
     "http://localhost:3000/*",
     "https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/*",
     "https://srienlinea.sri.gob.ec/*",
-    "https://www.iess.gob.ec/*"
+    "https://www.iess.gob.ec/*",
+    "https://*.contifico.com/*",
+    "https://*.siigo.com/*",
+    "https://*.perseo.app/*",
+    "https://*.perseoweb.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -22,7 +26,11 @@
     {
       "matches": [
         "https://srienlinea.sri.gob.ec/*", 
-        "https://www.iess.gob.ec/*"
+        "https://www.iess.gob.ec/*",
+        "https://*.contifico.com/*",
+        "https://*.siigo.com/*",
+        "https://*.perseo.app/*",
+        "https://*.perseoweb.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

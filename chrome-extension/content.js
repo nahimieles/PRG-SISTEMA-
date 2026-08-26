@@ -117,6 +117,67 @@ async function performLogin(credentials) {
           submitBtn.click();
         }
       }
+    } else if (hostname.includes('contifico.com') || hostname.includes('siigo.com')) {
+      // Contífico / Siigo
+      const userSelector = 'input[type="text"], input[type="email"], input[name*="login"], input[name*="email"], input[name="username"]';
+      const passSelector = 'input[type="password"]';
+      const btnSelector = 'button[type="submit"], input[type="submit"]';
+
+      const userInput = await waitForElement(userSelector);
+      const passInput = await waitForElement(passSelector);
+      
+      if (userInput && passInput) {
+        await simulateTyping(userInput, credentials.username);
+        await simulateTyping(passInput, credentials.password);
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const submitBtn = document.querySelector(btnSelector);
+        if (submitBtn) {
+          submitBtn.click();
+        }
+      }
+    } else if (hostname.includes('perseo.app') || hostname.includes('perseo')) {
+      // Perseo
+      // Flujo: 1. Ingresar RUC -> Buscar 2. Ingresar Password -> Ingresar
+      const rucSelector = 'input[placeholder*="RUC"], input[placeholder*="Cédula"], input[placeholder*="pasaporte"], input[name="ruc"], input[name="identificacion"], input[type="text"]';
+      const passSelector = 'input[type="password"]';
+      
+      let passInput = document.querySelector(passSelector);
+      
+      if (!passInput) {
+        // Pantalla paso 1: RUC
+        const rucInput = await waitForElement(rucSelector, 5000);
+        if (rucInput) {
+          await simulateTyping(rucInput, credentials.username);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Encontrar botón "Buscar mi sistema"
+          const buttons = Array.from(document.querySelectorAll('button'));
+          const searchBtn = buttons.find(b => b.innerText && b.innerText.toLowerCase().includes('buscar')) || document.querySelector('button[type="submit"]');
+          
+          if (searchBtn) {
+            searchBtn.click();
+          }
+        }
+        // Esperar a que aparezca el campo de contraseña
+        passInput = await waitForElement(passSelector, 10000);
+      }
+      
+      if (passInput) {
+        await simulateTyping(passInput, credentials.password);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const buttons = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+        const loginBtn = buttons.find(b => {
+          const text = (b.innerText || b.value || '').toLowerCase();
+          return text.includes('ingresar') || text.includes('iniciar');
+        }) || document.querySelector('button[type="submit"]');
+        
+        if (loginBtn) {
+          loginBtn.click();
+        }
+      }
     }
   } catch (err) {
     console.error('[Accesos Empresariales Bot] Error fatal en performLogin:', err);

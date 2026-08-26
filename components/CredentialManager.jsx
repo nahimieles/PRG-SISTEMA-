@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Lock, Trash2, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
-import { getAllPlatforms } from '../lib/platforms/registry';
+import { getStandardPlatforms, getAccountingPlatform } from '../lib/platforms/registry';
 import {
     savePlatformCredentialAction,
     deletePlatformCredentialAction,
@@ -23,7 +23,9 @@ export default function CredentialManager({ company, onClose }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const platforms = getAllPlatforms().filter(p => p.requiereCredenciales);
+    const allStandard = getStandardPlatforms().filter(p => p.requiereCredenciales);
+    const accounting = company.sistema_contable_slug ? getAccountingPlatform(company.sistema_contable_slug) : null;
+    const platforms = accounting && accounting.requiereCredenciales ? [...allStandard, accounting] : allStandard;
 
     useEffect(() => {
         loadStatus();

@@ -20,7 +20,7 @@ import {
 } from '../lib/actions';
 import { supabase } from '../lib/supabase';
 import { normalizeRuc } from '../lib/security';
-import { resolvePlatformsForCompany } from '../lib/platforms/registry';
+import { resolvePlatformsForCompany, getAccountingPlatforms } from '../lib/platforms/registry';
 import CompanyOperationsCenter from './CompanyOperationsCenter';
 import CustomSelect from './CustomSelect';
 
@@ -45,9 +45,6 @@ export default function CompanyManager({ isWorker = false }) {
         { id: 'auditoria', name: 'Auditoría', color: 'blue', type: 'auditoria' },
         { id: 'especiales', name: 'Trabajos Especiales', color: 'purple', type: 'especiales' }
     ];
-
-    // Get PRG company (direct access)
-    const prgCompany = companies.find(c => c.name.toUpperCase().includes('PRG'));
 
     // Navigation helpers
     const handleGroupClick = (group) => {
@@ -81,7 +78,8 @@ export default function CompanyManager({ isWorker = false }) {
         group_id: '',
         avatar_url: '',
         category: null,
-        ruc: ''
+        ruc: '',
+        sistema_contable_slug: ''
     });
 
     const [message, setMessage] = useState(null);
@@ -134,20 +132,37 @@ export default function CompanyManager({ isWorker = false }) {
         }
     };
 
-    // Platform access handler — goes through Server Action, never calls window.open directly from logic
+    // Platform access handler — uses extension if available, otherwise server-side Playwright
     const handlePlatformAccess = async (company, plataformaSlug) => {
         const admin = getAdminSession();
         if (!admin?.id) return;
 
+        // Opción 1: Si la extensión está instalada en el navegador, delegarle el trabajo
+        if (typeof window !== 'undefined' && window.__EXTENSION_INSTALLED__) {
+            const allowedPlatforms = resolvePlatformsForCompany(userPermissions, company.sistema_contable_slug);
+            const platformObj = allowedPlatforms.find(p => p.slug === plataformaSlug);
+            const targetUrl = platformObj ? platformObj.url : '';
+            
+            showToast('Iniciando sesión vía Extensión...', 'info');
+            window.postMessage({
+                type: 'TO_EXTENSION_LOGIN',
+                companyId: company.id,
+                platform: plataformaSlug,
+                targetUrl: targetUrl
+            }, '*');
+            return;
+        }
+
+        // Opción 2: Si no hay extensión, usar la automatización de la App / Backend
         const loadingKey = `${company.id}-${plataformaSlug}`;
         setPlatformAccessLoading(loadingKey);
         try {
             const result = await accessPlatformAction(admin.id, company.id, plataformaSlug);
             if (result.success) {
                 if (result.method === 'playwright') {
-                    showToast('Automatización iniciada localmente.', 'success');
+                    showToast('Automatización iniciada localmente (App).', 'success');
                 } else if (result.method === 'manual') {
-                    showToast('Modo Web: Usa la App de Escritorio para Auto-Login', 'info');
+                    showToast('Modo Web: Instala la Extensión o usa la App de Escritorio para Auto-Login', 'info');
                     window.open(result.url, '_blank', 'noopener,noreferrer');
                 } else if (result.url) {
                     window.open(result.url, '_blank', 'noopener,noreferrer');
@@ -181,9 +196,10 @@ export default function CompanyManager({ isWorker = false }) {
                     // Update Company
                     const updates = {};
                     if (formData.name !== editingItem.name) updates.name = formData.name;
-                    if (formData.type !== editingItem.type) updates.type = formData.type;
+                    if ((formData.type !== editingItem.type)) updates.type = formData.type;
                     if ((formData.ruc || null) !== (editingItem.ruc || null)) updates.ruc = formData.ruc || null;
                     if ((formData.group_id || null) !== (editingItem.group_id || null)) updates.group_id = formData.group_id || null;
+                    if ((formData.sistema_contable_slug || null) !== (editingItem.sistema_contable_slug || null)) updates.sistema_contable_slug = formData.sistema_contable_slug || null;
                     if ((formData.avatar_url || null) !== (editingItem.avatar_url || null)) {
                         updates.avatar_url = formData.avatar_url || null;
                         updates.logo_url = formData.avatar_url || null;
@@ -208,7 +224,8 @@ export default function CompanyManager({ isWorker = false }) {
                         password: formData.password,
                         groupId: formData.group_id,
                         ruc: formData.ruc,
-                        logo_url: formData.avatar_url || null
+                        logo_url: formData.avatar_url || null,
+                        sistema_contable_slug: formData.sistema_contable_slug || null
                     }, requesterId);
                 }
             } else {
@@ -232,7 +249,7 @@ export default function CompanyManager({ isWorker = false }) {
                 showToast(editingItem ? 'Actualizado correctamente' : 'Creado correctamente');
                 setShowModal(false);
                 setEditingItem(null);
-                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: null, category: null, ruc: '' });
+                setFormData({ name: '', type: 'auditoria', username: '', password: '', group_id: '', avatar_url: null, category: null, ruc: '', sistema_contable_slug: '' });
                 loadData();
             } else {
                 const errorMsg = result?.error || 'Error al guardar';
@@ -299,7 +316,8 @@ export default function CompanyManager({ isWorker = false }) {
                     password: '',
                     group_id: item.group_id || '',
                     avatar_url: item.avatar_url || '',
-                    ruc: item.ruc || ''
+                    ruc: item.ruc || '',
+                    sistema_contable_slug: item.sistema_contable_slug || ''
                 });
             } else {
                 // It is a group
@@ -330,7 +348,8 @@ export default function CompanyManager({ isWorker = false }) {
                     group_id: expandedGroup && !['contabilidad', 'auditoria'].includes(expandedGroup.type) ? expandedGroup.id : '',
                     avatar_url: '',
                     category: null,
-                    ruc: ''
+                    ruc: '',
+                    sistema_contable_slug: ''
                 });
             }
         }
@@ -520,13 +539,7 @@ export default function CompanyManager({ isWorker = false }) {
                     )}
                 </div>
                 
-                {featured && (
-                    <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700" style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-gray-500 truncate dark:text-gray-400">
-                            Empresa Principal
-                        </p>
-                    </div>
-                )}
+
             </div>
         );
     };
@@ -674,7 +687,7 @@ export default function CompanyManager({ isWorker = false }) {
                                         })
                                         .map((company, index) => (
                                             <div key={company.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
-                                                <CompanyCard company={company} featured={company.id === prgCompany?.id} />
+                                                <CompanyCard company={company} featured={false} />
                                             </div>
                                         ))}
                                 </div>
@@ -687,12 +700,6 @@ export default function CompanyManager({ isWorker = false }) {
                             {/* Unified Groups Grid */}
                             <div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                     {/* PRG AUDITORES CARD */}
-                                     {prgCompany && (
-                                        <div className="animate-in fade-in zoom-in-95 duration-500 h-full">
-                                            <CompanyCard company={prgCompany} featured />
-                                        </div>
-                                     )}
 
                                     {/* DYAMIC GROUPS */}
                                     {groups.filter(g => !g.category).map((group, index) => {
@@ -774,8 +781,14 @@ export default function CompanyManager({ isWorker = false }) {
                                                     animationDelay: `${(groups.length + index + 1) * 60}ms`
                                                 }}
                                             >
-                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border" style={{ backgroundColor: isDark ? theme.surfaceElevated : '#ffffff', borderColor: theme.border }}>
-                                                    <Users size={20} className="text-gray-400" />
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border ${
+                                                    lg.type === 'contabilidad' 
+                                                        ? 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' 
+                                                        : lg.type === 'auditoria' 
+                                                            ? 'text-blue-500 bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' 
+                                                            : 'text-purple-500 bg-purple-50 dark:bg-purple-500/10 border-purple-100 dark:border-purple-500/20'
+                                                }`}>
+                                                    {lg.type === 'contabilidad' ? <Calculator size={20} /> : lg.type === 'auditoria' ? <FileText size={20} /> : <Users size={20} />}
                                                 </div>
                                                 <h3 className="text-base font-bold mb-1" style={{ color: theme.text }}>{lg.name}</h3>
                                                 <div className="flex items-center gap-2 mb-3">
@@ -993,6 +1006,18 @@ export default function CompanyManager({ isWorker = false }) {
                                                     {value: 'auditoria', label: 'Auditoría'},
                                                     {value: 'contabilidad', label: 'Contabilidad'},
                                                     {value: 'otro', label: 'Otro'}
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Sistema Contable</label>
+                                            <CustomSelect
+                                                value={formData.sistema_contable_slug || ''}
+                                                onChange={val => setFormData({ ...formData, sistema_contable_slug: val })}
+                                                options={[
+                                                    {value: '', label: 'Ninguno'},
+                                                    ...getAccountingPlatforms().map(p => ({value: p.slug, label: p.nombre}))
                                                 ]}
                                             />
                                         </div>

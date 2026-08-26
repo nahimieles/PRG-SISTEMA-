@@ -16,11 +16,27 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  ChevronRight,
+  FolderOpen,
+  Calendar,
+  Clock,
+  Lock,
+  CheckCircle,
+  PlusCircle,
+  Maximize2,
+  MoreVertical,
+  FileBarChart,
+  CreditCard,
+  PlayCircle,
+  Building,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 import { supabase } from "../lib/supabase";
 import { uploadFile } from "../lib/auth";
-import { RAW_OBLIGATIONS } from "./TaxCalendar2026";
 import { resolvePlatformsForCompany } from "../lib/platforms/registry";
 import { checkCompanyCredentialsPublicAction } from "../lib/actions";
 import Toast from "./Toast";
@@ -91,62 +107,6 @@ export default function CompanyOperationsCenter({
     company?.gallery_urls,
   ]);
 
-  const taxObligations = React.useMemo(() => {
-    if (!company?.ruc || company.ruc.length < 9) return [];
-    const ninthDigit = company.ruc.charAt(8);
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    const obligations = [];
-
-    RAW_OBLIGATIONS.forEach((ob) => {
-      // Filter by month
-      if (ob.months !== "all" && !ob.months.includes(currentMonth)) return;
-
-      // Find deadline day for this company
-      const deadlineDay =
-        ninthDigit === "0" ? 28 : parseInt(ninthDigit) * 2 + 8;
-
-      // Check if this obligation's possible days includes the calculated deadline day
-      // Some obligations have fixed days like IBP Botellas Plásticas (days: [5,6,7] -> usually 5) or others
-      // To simplify, if the obligation specifies `days` and the deadlineDay is in it, it's a standard one.
-      // If it's a fixed day obligation (like 31 or 30), we use the first day in its array.
-      let day = ob.days.includes(deadlineDay) ? deadlineDay : ob.days[0];
-
-      // Limit day to days in month
-      if (day > daysInMonth) day = daysInMonth;
-
-      let dueDate = new Date(currentYear, currentMonth, day);
-      let diffTime = dueDate - now;
-      let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      // If it already passed in the current month, optionally show it as 'Vencida' or don't generate if next month.
-      // The user wants to see obligations of the month.
-      let status = "Al día";
-      if (diffDays < 0) {
-        status = "Vencida";
-      } else if (diffDays <= 3) {
-        status = "Urgente";
-      } else if (diffDays <= 7) {
-        status = "Pronto";
-      }
-
-      obligations.push({
-        id: ob.id,
-        title: ob.obligacion,
-        due_date: dueDate.toISOString(),
-        status,
-      });
-    });
-
-    // Sort by closest due date
-    return obligations.sort(
-      (a, b) => new Date(a.due_date) - new Date(b.due_date),
-    );
-  }, [company?.ruc]);
 
   React.useEffect(() => {
     if (!company?.id) return;
@@ -312,7 +272,7 @@ export default function CompanyOperationsCenter({
   ];
 
   const sriPlatform = getPlatformBySlug("sri");
-  if (sriPlatform && platformStatus["sri"]) {
+  if (sriPlatform) {
     actionCards.push({
       id: "sri",
       title: sriPlatform.nombre,
@@ -324,7 +284,7 @@ export default function CompanyOperationsCenter({
     });
   }
 
-  if (accountingPlatform && platformStatus[accountingPlatform.slug]) {
+  if (accountingPlatform) {
     actionCards.push({
       id: "contable",
       title: accountingPlatform.nombre,
@@ -332,46 +292,42 @@ export default function CompanyOperationsCenter({
       icon: PLATFORM_ICON_MAP[accountingPlatform.icono] || Calculator,
       color: accountingPlatform.color,
       onClick: () => onPlatformAccess(company, accountingPlatform.slug),
-      loading:
-        platformAccessLoading === `${company.id}-${accountingPlatform.slug}`,
+      loading: platformAccessLoading === `${company.id}-${accountingPlatform.slug}`,
     });
   }
 
-  if (platformStatus["supercias"]) {
-    actionCards.push({
-      id: "supercias",
-      title: "SuperCías",
-      subtitle: "Portal corporativo",
-      icon: Landmark,
-      color: "#eab308", // Yellow for SuperCias
-      onClick: () => window.open("https://www.supercias.gob.ec/portalscvs/index.htm", "_blank"),
-      loading: false,
-    });
-  }
+  // Las siguientes plataformas se muestran siempre que se quiera, 
+  // o se podrían restringir por permisos también.
+  // Por ahora las dejamos visibles.
+  actionCards.push({
+    id: "supercias",
+    title: "SuperCías",
+    subtitle: "Portal corporativo",
+    icon: Landmark,
+    color: "#eab308", // Yellow for SuperCias
+    onClick: () => window.open("https://www.supercias.gob.ec/portalscvs/index.htm", "_blank"),
+    loading: false,
+  });
 
-  if (platformStatus["ministerio_trabajo"]) {
-    actionCards.push({
-      id: "min_trabajo",
-      title: "Ministerio de Trabajo",
-      subtitle: "Trámites laborales",
-      icon: Briefcase,
-      color: "#f97316", // Orange for Min Trabajo
-      onClick: () => window.open("https://sut.trabajo.gob.ec", "_blank"),
-      loading: false,
-    });
-  }
+  actionCards.push({
+    id: "min_trabajo",
+    title: "Ministerio de Trabajo",
+    subtitle: "Trámites laborales",
+    icon: Briefcase,
+    color: "#f97316", // Orange for Min Trabajo
+    onClick: () => window.open("https://sut.trabajo.gob.ec", "_blank"),
+    loading: false,
+  });
 
-  if (platformStatus["iess"]) {
-    actionCards.push({
-      id: "iess",
-      title: "IESS",
-      subtitle: "Seguro Social",
-      icon: Shield,
-      color: "#10b981", // Green for IESS
-      onClick: () => window.open("https://www.iess.gob.ec/empleadores/", "_blank"),
-      loading: false,
-    });
-  }
+  actionCards.push({
+    id: "iess",
+    title: "IESS",
+    subtitle: "Seguro Social",
+    icon: Shield,
+    color: "#10b981", // Green for IESS
+    onClick: () => window.open("https://www.iess.gob.ec/empleadores/", "_blank"),
+    loading: false,
+  });
 
   // Power Automate Desktop Placeholder (Always visible)
   actionCards.push({
@@ -550,7 +506,6 @@ export default function CompanyOperationsCenter({
             <div className="space-y-3">
               {(() => {
                 const allObligations = [
-                  ...taxObligations,
                   ...customTaxObligations,
                 ];
                 const visibleObligations = showAllObligations
