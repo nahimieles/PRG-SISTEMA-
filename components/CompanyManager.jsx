@@ -16,7 +16,7 @@ import {
     createCompanyAction, updateCompanyAction,
     createCompanyGroupAction, updateCompanyGroupAction,
     deleteCompanyAction, deleteCompanyGroupAction,
-    accessPlatformAction, getUserPlatformPermissionsAction
+    accessPlatformAction, getUserPlatformPermissionsAction, getPlatformCredentialsAction
 } from '../lib/actions';
 import { supabase } from '../lib/supabase';
 import { normalizeRuc } from '../lib/security';
