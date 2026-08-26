@@ -3,37 +3,28 @@
 // Almacenar el dominio actual
 const hostname = window.location.hostname;
 
-// Función para simular tecleo humano y disparar eventos de frameworks (Angular/React)
 async function simulateTyping(inputElement, text) {
+  if (!text) return;
   inputElement.focus();
-  inputElement.value = '';
-  inputElement.dispatchEvent(new Event('input', { bubbles: true }));
   
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const keyCode = char.charCodeAt(0);
-    
-    // 1. Keydown
-    inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, keyCode, charCode: keyCode, bubbles: true }));
-    // 2. Keypress
-    inputElement.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode, charCode: keyCode, bubbles: true }));
-    
-    // 3. Setear el valor acumulado (bypass React/Angular setters)
-    nativeInputValueSetter.call(inputElement, inputElement.value + char);
-    
-    // 4. Input event
-    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-    
-    // 5. Keyup
-    inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode, charCode: keyCode, bubbles: true }));
-    
-    // Pequeña pausa humana de 20-50ms
-    await new Promise(resolve => setTimeout(resolve, 30));
+  // Method 1: React/Angular Native Setter
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  if (nativeInputValueSetter) {
+    nativeInputValueSetter.call(inputElement, text);
+  } else {
+    inputElement.value = text;
   }
   
+  // Method 2: Fallback direct assignment just in case
+  inputElement.value = text;
+  inputElement.setAttribute('value', text);
+  
+  // Dispatch events to trigger framework updates
+  inputElement.dispatchEvent(new Event('input', { bubbles: true }));
   inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+  
+  // Pequeña pausa
+  await new Promise(resolve => setTimeout(resolve, 50));
   inputElement.blur();
 }
 
@@ -63,9 +54,9 @@ async function performLogin(credentials) {
   console.log('[Accesos Empresariales Bot] Iniciando performLogin para:', hostname);
   try {
     if (hostname.includes('sri.gob.ec')) {
-      const userSelector = 'input[id="usuario"], input[id="username"], input[name="username"], input[name="usuario"], input[formcontrolname="usuario"]';
-      const passSelector = 'input[type="password"]';
-      const btnSelector = 'button[type="submit"], input[type="submit"], button.p-button, #kc-login';
+      const userSelector = 'input[id="usuario"], input[id="username"], input[name="username"], input[name="usuario"], input[formcontrolname="usuario"], input[type="text"]';
+      const passSelector = 'input[id="password"], input[name="password"], input[type="password"]';
+      const btnSelector = 'button[type="submit"], input[type="submit"], button.p-button, #kc-login, button[name="submit"]';
 
       console.log('[Accesos Empresariales Bot] Buscando campos de SRI...');
       const userInput = await waitForElement(userSelector);
@@ -75,7 +66,7 @@ async function performLogin(credentials) {
       console.log('[Accesos Empresariales Bot] passInput encontrado:', !!passInput);
 
       if (userInput && passInput) {
-        console.log('[Accesos Empresariales Bot] Simulando escritura del usuario...');
+        console.log('[Accesos Empresariales Bot] Simulando escritura del usuario...', credentials.username);
         await simulateTyping(userInput, credentials.username || '');
         
         console.log('[Accesos Empresariales Bot] Simulando escritura de la clave...');
@@ -119,9 +110,9 @@ async function performLogin(credentials) {
       }
     } else if (hostname.includes('contifico.com') || hostname.includes('siigo.com')) {
       // Contífico / Siigo
-      const userSelector = 'input[type="text"], input[type="email"], input[name*="login"], input[name*="email"], input[name="username"]';
-      const passSelector = 'input[type="password"]';
-      const btnSelector = 'button[type="submit"], input[type="submit"]';
+      const userSelector = 'input[id="username_input"], input[id="email"], input[name="email"], input[type="text"], input[type="email"], input[name*="login"]';
+      const passSelector = 'input[id="password_input"], input[id="password"], input[type="password"]';
+      const btnSelector = 'button[type="submit"], input[type="submit"], button[id="login_button"]';
 
       const userInput = await waitForElement(userSelector);
       const passInput = await waitForElement(passSelector);
