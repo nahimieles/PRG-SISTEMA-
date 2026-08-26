@@ -139,7 +139,8 @@ export default function CompanyManager({ isWorker = false }) {
 
         // Opción 1: Si la extensión está instalada en el navegador, delegarle el trabajo
         if (typeof window !== 'undefined' && window.__EXTENSION_INSTALLED__) {
-            const allowedPlatforms = resolvePlatformsForCompany(userPermissions, company.sistema_contable_slug);
+            const companyPermissions = userPermissions[company.id] || [];
+            const allowedPlatforms = resolvePlatformsForCompany(companyPermissions, company.sistema_contable_slug);
             const platformObj = allowedPlatforms.find(p => p.slug === plataformaSlug);
             const targetUrl = platformObj ? platformObj.url : '';
             
