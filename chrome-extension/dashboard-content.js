@@ -13,7 +13,8 @@ window.addEventListener("message", (event) => {
       companyId: event.data.companyId,
       platform: event.data.platform,
       baseUrl: window.location.origin,
-      targetUrl: event.data.targetUrl
+      targetUrl: event.data.targetUrl,
+      credentials: event.data.credentials
     });
   }
 });

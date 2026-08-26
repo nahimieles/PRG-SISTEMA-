@@ -144,12 +144,19 @@ export default function CompanyManager({ isWorker = false }) {
             const platformObj = allowedPlatforms.find(p => p.slug === plataformaSlug);
             const targetUrl = platformObj ? platformObj.url : '';
             
+            const credentials = await getPlatformCredentialsAction(admin.id, company.id, plataformaSlug);
+            if (!credentials.success) {
+                showToast(credentials.error || 'No se encontraron credenciales', 'error');
+                return;
+            }
+
             showToast('Iniciando sesión vía Extensión...', 'info');
             window.postMessage({
                 type: 'TO_EXTENSION_LOGIN',
                 companyId: company.id,
                 platform: plataformaSlug,
-                targetUrl: targetUrl
+                targetUrl: targetUrl,
+                credentials: credentials.data
             }, '*');
             return;
         }

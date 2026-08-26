@@ -3,33 +3,21 @@
 // Escuchar mensajes desde los content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'LOGIN_PLATFORM') {
-    const { companyId, platform, baseUrl, targetUrl } = request;
-    
-    // 1. Hacer fetch seguro al backend usando la sesión de la aplicación web
-    const apiUrl = `${baseUrl}/api/extension/credentials?companyId=${companyId}&platform=${platform}`;
-    
-    fetch(apiUrl, {
-      method: 'GET',
-      credentials: 'include' // Esto asegura que las cookies de administrador viajen al servidor
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.credentials) {
-        // 2. Guardar credenciales en storage local temporalmente
-        chrome.storage.local.set({ 
-          pendingLogin: {
-            credentials: data.credentials,
-            timestamp: Date.now()
-          } 
-        }, () => {
-          // 3. Crear la pestaña UNA VEZ guardadas las credenciales
-          chrome.tabs.create({ url: targetUrl });
-        });
-      } else {
-        console.error('Error del backend:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching credentials:', error));
+    const targetUrl = request.targetUrl;
+    if (request.credentials) {
+      // Guardar credenciales en storage local temporalmente
+      chrome.storage.local.set({ 
+        pendingLogin: {
+          credentials: request.credentials,
+          timestamp: Date.now()
+        } 
+      }, () => {
+        // Crear la pestaña UNA VEZ guardadas las credenciales
+        chrome.tabs.create({ url: targetUrl });
+      });
+    } else {
+      console.error('No se proporcionaron credenciales en el mensaje.');
+    }
 
     // Enviar respuesta inmediata a la web
     sendResponse({ status: 'processing' });
