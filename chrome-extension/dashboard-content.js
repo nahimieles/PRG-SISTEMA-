@@ -18,8 +18,10 @@ window.addEventListener("message", (event) => {
   }
 });
 
-// Opcional: inyectar un script en la página para decirle a React que la extensión está instalada
+// Inyectar un script en la página para decirle a React que la extensión está instalada sin romper CSP
 const script = document.createElement('script');
-script.textContent = `window.__EXTENSION_INSTALLED__ = true;`;
+script.src = chrome.runtime.getURL('inject.js');
+script.onload = function() {
+    this.remove();
+};
 (document.head || document.documentElement).appendChild(script);
-script.remove();

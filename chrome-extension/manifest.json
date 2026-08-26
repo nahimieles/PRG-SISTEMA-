@@ -49,5 +49,14 @@
       "http://localhost:3000/*",
       "https://nextjs-boilerplate-*.vercel.app/*"
     ]
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": [
+        "http://localhost:3000/*",
+        "https://nextjs-boilerplate-*.vercel.app/*"
+      ]
+    }
+  ]
 }
