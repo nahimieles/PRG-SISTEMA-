@@ -86,7 +86,7 @@ async function performLogin(credentials) {
   console.log('[Accesos Empresariales Bot] Iniciando performLogin para:', hostname);
   try {
     if (hostname.includes('sri.gob.ec')) {
-      const userSelector = 'input[id="usuario"], input[id="username"], input[name="username"], input[name="usuario"], input[formcontrolname="usuario"], input[type="text"]';
+      const userSelector = 'input[id="usuario"], input[id="username"], input[name="username"], input[name="usuario"]';
       const passSelector = 'input[id="password"], input[name="password"], input[type="password"]';
       const btnSelector = 'button[type="submit"], input[type="submit"], button.p-button, #kc-login, button[name="submit"]';
 
@@ -98,11 +98,11 @@ async function performLogin(credentials) {
       console.log('[Accesos Empresariales Bot] passInput encontrado:', !!passInput);
 
       if (userInput && passInput) {
-        console.log('[Accesos Empresariales Bot] Simulando escritura lenta del usuario...');
-        await simulateTypingSlowly(userInput, credentials.username || '');
+        console.log('[Accesos Empresariales Bot] Simulando escritura del usuario...');
+        await simulateTyping(userInput, credentials.username || '');
         
         console.log('[Accesos Empresariales Bot] Simulando escritura de la clave...');
-        await simulateTypingSlowly(passInput, credentials.password || '');
+        await simulateTyping(passInput, credentials.password || '');
         
         console.log('[Accesos Empresariales Bot] Pausa de 500ms...');
         await new Promise(resolve => setTimeout(resolve, 500));
