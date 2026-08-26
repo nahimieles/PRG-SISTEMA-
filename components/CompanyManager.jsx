@@ -156,7 +156,10 @@ export default function CompanyManager({ isWorker = false }) {
                 companyId: company.id,
                 platform: plataformaSlug,
                 targetUrl: targetUrl,
-                credentials: credentials.data
+                credentials: {
+                    ...credentials.data,
+                    username: credentials.data.username || company.ruc
+                }
             }, '*');
             return;
         }
