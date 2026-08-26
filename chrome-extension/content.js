@@ -28,6 +28,38 @@ async function simulateTyping(inputElement, text) {
   inputElement.blur();
 }
 
+// Función para simular tipeo real humano letra por letra (para SRI y formularios estrictos)
+async function simulateTypingSlowly(inputElement, text) {
+  if (!text) return;
+  inputElement.focus();
+  inputElement.value = '';
+  inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+  
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const keyCode = char.charCodeAt(0);
+    
+    inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, keyCode, charCode: keyCode, bubbles: true }));
+    inputElement.dispatchEvent(new KeyboardEvent('keypress', { key: char, keyCode, charCode: keyCode, bubbles: true }));
+    
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(inputElement, inputElement.value + char);
+    } else {
+      inputElement.value = inputElement.value + char;
+    }
+    
+    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+    inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: char, keyCode, charCode: keyCode, bubbles: true }));
+    
+    await new Promise(resolve => setTimeout(resolve, 30));
+  }
+  
+  inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+  inputElement.blur();
+}
+
 function waitForElement(selector, maxWaitMs = 15000) {
   return new Promise((resolve) => {
     if (document.querySelector(selector)) {
@@ -66,11 +98,11 @@ async function performLogin(credentials) {
       console.log('[Accesos Empresariales Bot] passInput encontrado:', !!passInput);
 
       if (userInput && passInput) {
-        console.log('[Accesos Empresariales Bot] Simulando escritura del usuario...', credentials.username);
-        await simulateTyping(userInput, credentials.username || '');
+        console.log('[Accesos Empresariales Bot] Simulando escritura lenta del usuario...');
+        await simulateTypingSlowly(userInput, credentials.username || '');
         
         console.log('[Accesos Empresariales Bot] Simulando escritura de la clave...');
-        await simulateTyping(passInput, credentials.password || '');
+        await simulateTypingSlowly(passInput, credentials.password || '');
         
         console.log('[Accesos Empresariales Bot] Pausa de 500ms...');
         await new Promise(resolve => setTimeout(resolve, 500));
