@@ -60,20 +60,36 @@ async function simulateTypingSlowly(inputElement, text) {
   inputElement.blur();
 }
 
+function isElementVisible(el) {
+  if (!el) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 && window.getComputedStyle(el).visibility !== 'hidden';
+}
+
 function waitForElement(selector, maxWaitMs = 15000) {
   return new Promise((resolve) => {
-    if (document.querySelector(selector)) {
-      return resolve(document.querySelector(selector));
-    }
+    const checkNodes = () => {
+      const elements = document.querySelectorAll(selector);
+      for (const el of elements) {
+        if (isElementVisible(el)) {
+          return el;
+        }
+      }
+      return null;
+    };
+
+    const initialMatch = checkNodes();
+    if (initialMatch) return resolve(initialMatch);
     
     const observer = new MutationObserver(() => {
-      if (document.querySelector(selector)) {
+      const match = checkNodes();
+      if (match) {
         observer.disconnect();
-        resolve(document.querySelector(selector));
+        resolve(match);
       }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
 
     setTimeout(() => {
       observer.disconnect();
@@ -86,8 +102,8 @@ async function performLogin(credentials) {
   console.log('[Accesos Empresariales Bot] Iniciando performLogin para:', hostname);
   try {
     if (hostname.includes('sri.gob.ec')) {
-      const userSelector = 'input[id="usuario"], input[id="username"], input[name="username"], input[name="usuario"]';
-      const passSelector = 'input[id="password"], input[name="password"], input[type="password"]';
+      const userSelector = 'input[id="usuario"]:not([type="hidden"]), input[id="username"]:not([type="hidden"])';
+      const passSelector = 'input[id="password"]:not([type="hidden"]), input[type="password"]:not([type="hidden"])';
       const btnSelector = 'button[type="submit"], input[type="submit"], button.p-button, #kc-login, button[name="submit"]';
 
       console.log('[Accesos Empresariales Bot] Buscando campos de SRI...');
