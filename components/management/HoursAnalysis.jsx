@@ -8,17 +8,16 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'
 export default function HoursAnalysis({ theme, isDark }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    
-    // Filter State
-    const [monthOffset, setMonthOffset] = useState(0); // 0 = current month, -1 = last month, etc.
+
+    const [monthOffset, setMonthOffset] = useState(0); 
 
     const dateRange = useMemo(() => {
         const d = new Date();
         d.setMonth(d.getMonth() + monthOffset);
-        
+
         const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
         const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-        
+
         return {
             start: firstDay.toISOString().split('T')[0],
             end: lastDay.toISOString().split('T')[0],
@@ -35,10 +34,10 @@ export default function HoursAnalysis({ theme, isDark }) {
                     .select('hours_worked, business_unit_name, company_name, worker_name')
                     .gte('created_at', `${dateRange.start}T00:00:00Z`)
                     .lte('created_at', `${dateRange.end}T23:59:59Z`);
-                
+
                 setRecords(data || []);
             } catch (error) {
-                console.error("Error fetching hours:", error);
+
             } finally {
                 setLoading(false);
             }
@@ -46,7 +45,6 @@ export default function HoursAnalysis({ theme, isDark }) {
         fetchRecords();
     }, [dateRange]);
 
-    // Data Processing
     const stats = useMemo(() => {
         let total = 0;
         const byUnit = {};
@@ -55,7 +53,7 @@ export default function HoursAnalysis({ theme, isDark }) {
         records.forEach(r => {
             const hrs = parseFloat(r.hours_worked) || 0;
             total += hrs;
-            
+
             const unit = r.business_unit_name || 'General';
             byUnit[unit] = (byUnit[unit] || 0) + hrs;
 
@@ -64,14 +62,14 @@ export default function HoursAnalysis({ theme, isDark }) {
         });
 
         const unitData = Object.keys(byUnit).map(name => ({ name, value: parseFloat(byUnit[name].toFixed(2)) })).sort((a,b) => b.value - a.value);
-        const companyData = Object.keys(byCompany).map(name => ({ name, value: parseFloat(byCompany[name].toFixed(2)) })).sort((a,b) => b.value - a.value).slice(0, 8); // Top 8
+        const companyData = Object.keys(byCompany).map(name => ({ name, value: parseFloat(byCompany[name].toFixed(2)) })).sort((a,b) => b.value - a.value).slice(0, 8); 
 
         return { total, unitData, companyData };
     }, [records]);
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Header / Controls */}
+            {}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
                 <div className="flex items-start sm:items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
@@ -81,7 +79,7 @@ export default function HoursAnalysis({ theme, isDark }) {
                         <h3 className="font-black" style={{ color: theme.text }}>Análisis de Horas</h3>
                     </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                     <button onClick={() => setMonthOffset(prev => prev - 1)} className="px-3 py-1.5 text-xs font-bold rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: theme.border, color: theme.textSecondary }}>
                         Anterior
@@ -108,14 +106,14 @@ export default function HoursAnalysis({ theme, isDark }) {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* KPI Total */}
+
+                    {}
                     <div className="lg:col-span-3 p-6 rounded-2xl border bg-gradient-to-br from-blue-500/10 to-purple-500/10" style={{ borderColor: theme.border }}>
                         <div className="text-sm font-bold text-blue-600 mb-1 uppercase tracking-wider">Total Invertido ({dateRange.monthName})</div>
                         <div className="text-4xl font-black text-blue-700 dark:text-blue-400">{stats.total.toFixed(1)} <span className="text-2xl opacity-50">horas</span></div>
                     </div>
 
-                    {/* Chart 1: By Unit (Pie) */}
+                    {}
                     <div className="p-4 sm:p-6 rounded-2xl border shadow-sm flex flex-col" style={{ background: theme.surface, borderColor: theme.border }}>
                         <h4 className="text-sm font-black uppercase tracking-wider mb-6 flex items-center gap-2" style={{ color: theme.text }}>
                             <PieChart size={16} className="text-purple-500"/>
@@ -147,7 +145,7 @@ export default function HoursAnalysis({ theme, isDark }) {
                         </div>
                     </div>
 
-                    {/* Chart 2: Top Companies (Bar) */}
+                    {}
                     <div className="lg:col-span-2 p-4 sm:p-6 rounded-2xl border shadow-sm flex flex-col" style={{ background: theme.surface, borderColor: theme.border }}>
                         <h4 className="text-sm font-black uppercase tracking-wider mb-6 flex items-center gap-2" style={{ color: theme.text }}>
                             <TrendingUp size={16} className="text-emerald-500"/>

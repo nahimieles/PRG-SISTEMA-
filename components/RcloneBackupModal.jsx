@@ -11,10 +11,8 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
     const logsEndRef = useRef(null);
     const abortControllerRef = useRef(null);
 
-    // Only show groups that have a resource_id (Drive ID)
     const validTargets = groups.filter(g => g.resource_id);
 
-    // Auto-scroll to bottom of logs
     useEffect(() => {
         if (logsEndRef.current) {
             logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -58,7 +56,7 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
 
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n\n');
-                
+
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         try {
@@ -111,7 +109,7 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
                 style={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', maxHeight: '90vh' }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div className="p-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
                     <div className="flex items-center gap-3">
                         <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -135,10 +133,10 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
                     </button>
                 </div>
 
-                {/* Body (Terminal View) */}
+                {}
                 <div className="flex-1 overflow-hidden flex flex-col p-6 gap-6 bg-gray-50 dark:bg-[#090b11]">
-                    
-                    {/* Disclaimer / Info */}
+
+                    {}
                     <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 flex gap-3 text-amber-800 dark:text-amber-200">
                         <AlertCircle className="shrink-0 mt-0.5" size={20} />
                         <div className="text-sm">
@@ -151,7 +149,7 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
                         </div>
                     </div>
 
-                    {/* Console Output */}
+                    {}
                     <div className="flex-1 bg-gray-900 rounded-xl p-4 overflow-auto font-mono text-sm leading-relaxed text-gray-300 shadow-inner min-h-[300px] border border-gray-800">
                         {logs.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-3">
@@ -178,7 +176,7 @@ export default function RcloneBackupModal({ isOpen, onClose, groups }) {
 
                 </div>
 
-                {/* Footer Controls */}
+                {}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0f172a] flex justify-end gap-3">
                     <button
                         onClick={handleClose}

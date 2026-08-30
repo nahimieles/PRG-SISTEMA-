@@ -10,7 +10,7 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
                 className="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in"
                 style={{ background: theme.surface, borderColor: theme.border, borderWidth: '1px' }}
             >
-                {/* Header */}
+                {}
                 <div className="px-6 py-4 border-b flex justify-between items-center bg-black/5 dark:bg-white/5" style={{ borderColor: theme.border }}>
                     <div className="flex items-center gap-2">
                         <AlertTriangle size={20} className="text-red-500" />
@@ -27,14 +27,14 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <div className="px-6 py-6">
                     <p className="text-sm font-medium leading-relaxed" style={{ color: theme.textSecondary }}>
                         {message}
                     </p>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div className="px-6 py-4 border-t flex justify-end gap-3 bg-black/5 dark:bg-white/5" style={{ borderColor: theme.border }}>
                     <button 
                         onClick={onCancel}

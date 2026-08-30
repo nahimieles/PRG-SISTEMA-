@@ -50,7 +50,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
 
     return (
         <div ref={ref} className={`relative ${className}`}>
-            {/* Trigger Button */}
+            {}
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
@@ -73,7 +73,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
                 />
             </button>
 
-            {/* Dropdown Menu */}
+            {}
             {isOpen && (
                 <div
                     className="absolute z-[100] mt-2 w-full rounded-2xl overflow-hidden py-1.5"
@@ -107,7 +107,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = '
                             />
                         </div>
                     )}
-                    
+
                     {options.filter(opt => {
                         if (!isSearchable || !searchTerm) return true;
                         const optLabel = typeof opt === 'object' ? opt.label : opt;

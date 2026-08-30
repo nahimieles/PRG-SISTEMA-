@@ -11,7 +11,7 @@ export default function WorkerVacations({ workerId, theme, isDark }) {
     const [showForm, setShowForm] = useState(false);
     const [adding, setAdding] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(null);
-    
+
     const [newVacation, setNewVacation] = useState({ 
         start_date: '', 
         end_date: '',
@@ -57,7 +57,7 @@ export default function WorkerVacations({ workerId, theme, isDark }) {
         e.preventDefault();
         if (!newVacation.start_date || !newVacation.end_date) return;
         setAdding(true);
-        
+
         if (newVacation.id) {
             const { data } = await supabase.from('hr_vacations').update({
                 start_date: newVacation.start_date,
@@ -81,8 +81,7 @@ export default function WorkerVacations({ workerId, theme, isDark }) {
             }).select().single();
 
             if (error) {
-                console.error(error);
-                // Graceful fail without native alert
+
             } else if (data) {
                 setVacations([data, ...vacations].sort((a,b) => new Date(b.start_date) - new Date(a.start_date)));
                 setNewVacation({ start_date: '', end_date: '', days_used: 1, status: 'requested' });
@@ -97,7 +96,7 @@ export default function WorkerVacations({ workerId, theme, isDark }) {
             case 'approved': return 'bg-emerald-500';
             case 'taken': return 'bg-blue-500';
             case 'cancelled': return 'bg-red-500';
-            default: return 'bg-amber-500'; // requested
+            default: return 'bg-amber-500'; 
         }
     };
 

@@ -4,7 +4,6 @@ import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/lib/authConfig";
 import { initializeGraphClient, getRecentFiles } from "@/lib/onedriveService";
 import { Sparkles, Loader2, RefreshCw, AlertCircle, PlayCircle } from 'lucide-react';
-
 const SmartReportGenerator = () => {
     const { instance, accounts, inProgress } = useMsal();
     const [recentFiles, setRecentFiles] = useState([]);
@@ -12,18 +11,14 @@ const SmartReportGenerator = () => {
     const [loading, setLoading] = useState(false);
     const [generatedReport, setGeneratedReport] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
-
     const isConnected = accounts.length > 0;
-
     const handleLogin = async () => {
         try {
             await instance.loginPopup(loginRequest);
         } catch (error) {
-            console.error("Login failed:", error);
             setErrorMsg("No se pudo iniciar sesión en Microsoft. " + error.message);
         }
     };
-
     const checkForRecentActivity = useCallback(async () => {
         if (!isConnected) return;
         setLoading(true);
@@ -31,17 +26,12 @@ const SmartReportGenerator = () => {
         try {
             const request = { ...loginRequest, account: accounts[0] };
             const response = await instance.acquireTokenSilent(request).catch(async (e) => {
-                // If silent fails, we need to prompt the user
-                console.warn("Silent token failed, prompting user:", e);
                 return await instance.acquireTokenPopup(request);
             });
-
             initializeGraphClient(response.accessToken);
             const files = await getRecentFiles();
-
             if (files.length > 0) {
                 setRecentFiles(files);
-                // Auto-select files modified today
                 const today = new Date().toDateString();
                 const todayFiles = files.filter(f =>
                     new Date(f.lastModifiedDateTime || f.remoteItem?.lastModifiedDateTime).toDateString() === today
@@ -49,37 +39,29 @@ const SmartReportGenerator = () => {
                 setSelectedFiles(todayFiles);
             }
         } catch (error) {
-            console.error("Error auto-syncing:", error);
             setErrorMsg("Error al obtener la actividad de SharePoint.");
         } finally {
             setLoading(false);
         }
     }, [accounts, instance, isConnected]);
-
-    // Initial load when connected
     useEffect(() => {
         if (isConnected && inProgress === "none") {
             checkForRecentActivity();
         }
     }, [isConnected, inProgress, checkForRecentActivity]);
-
     const toggleFileSelection = (fileId) => {
         setSelectedFiles(prev =>
             prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
         );
     };
-
     const generateReport = () => {
         if (selectedFiles.length === 0) return;
-
         const filesToReport = recentFiles.filter(f => selectedFiles.includes(f.id));
         const reportText = filesToReport.map(f =>
             `- ${f.name} (Modificado: ${new Date(f.lastModifiedDateTime || f.remoteItem?.lastModifiedDateTime).toLocaleTimeString()})`
         ).join('\n');
-
         setGeneratedReport(`Reporte de Actividad Automático:\n${reportText}`);
     };
-
     if (inProgress !== "none") {
         return (
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center justify-center gap-2">
@@ -88,7 +70,6 @@ const SmartReportGenerator = () => {
             </div>
         );
     }
-
     if (!isConnected) {
         return (
             <div className="bg-white rounded-xl shadow-sm p-6 border border-red-100 flex flex-col items-center justify-center text-center">
@@ -104,7 +85,6 @@ const SmartReportGenerator = () => {
             </div>
         );
     }
-
     return (
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
@@ -119,13 +99,11 @@ const SmartReportGenerator = () => {
                     <RefreshCw className={loading ? "animate-spin" : ""} size={14} /> Sincronizar
                 </button>
             </div>
-
             {errorMsg && (
                 <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100">
                     {errorMsg}
                 </div>
             )}
-
             {loading && recentFiles.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 flex flex-col items-center gap-2">
                     <Loader2 className="animate-spin text-blue-400" />
@@ -155,7 +133,6 @@ const SmartReportGenerator = () => {
                             </label>
                         ))}
                     </div>
-
                     <button
                         onClick={generateReport}
                         disabled={selectedFiles.length === 0}
@@ -166,7 +143,6 @@ const SmartReportGenerator = () => {
                     </button>
                 </div>
             )}
-
             {generatedReport && (
                 <div className="mt-4 animate-fade-in-up">
                     <p className="text-xs font-semibold text-gray-400 mb-2 px-1 uppercase tracking-wider">Resultado Generado</p>
@@ -185,5 +161,4 @@ const SmartReportGenerator = () => {
         </div>
     );
 };
-
 export default SmartReportGenerator;

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 
-// ─── Icon components (inline SVGs to avoid dependency on lucide in this standalone page) ───
 const ChevronDown = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
 );
@@ -19,7 +18,6 @@ const XIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
 );
 
-// ─── Section Data ─────────────────────────────────────────────────────────────
 const sections = [
   { id: 'inicio', title: '🏠 Inicio' },
   { id: 'roles', title: '👥 Roles y Accesos' },
@@ -35,7 +33,6 @@ const sections = [
   { id: 'faq', title: '❓ Preguntas Frecuentes' },
 ];
 
-// ─── FAQ data ──────────────────────────────────────────────────────────────────
 const faqItems = [
   { q: '¿Puedo acceder desde mi celular?', a: 'Sí, el sistema es completamente responsivo. Puedes acceder desde cualquier dispositivo con navegador web.' },
   { q: '¿Las contraseñas se encriptan?', a: 'Sí, todas las contraseñas se almacenan encriptadas con bcrypt en la base de datos.' },
@@ -47,7 +44,6 @@ const faqItems = [
   { q: '¿Cómo se asignan cursos a empresas?', a: 'Desde el panel de administración > Cursos, al crear o editar un curso puedes seleccionar a cuáles empresas se les asignará. Solo las empresas asignadas verán ese curso en su portal.' },
 ];
 
-// ─── Collapsible Component ────────────────────────────────────────────────────
 function Collapsible({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -76,7 +72,6 @@ function Collapsible({ title, children, defaultOpen = false }) {
   );
 }
 
-// ─── Step list component ──────────────────────────────────────────────────────
 function StepList({ steps }) {
   return (
     <ol style={{ paddingLeft: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -95,7 +90,6 @@ function StepList({ steps }) {
   );
 }
 
-// ─── Info Card ────────────────────────────────────────────────────────────────
 function InfoCard({ emoji, title, children, color = '#3b82f6' }) {
   return (
     <div style={{
@@ -111,7 +105,6 @@ function InfoCard({ emoji, title, children, color = '#3b82f6' }) {
   );
 }
 
-// ─── Warning Card ─────────────────────────────────────────────────────────────
 function WarningCard({ children }) {
   return (
     <div style={{
@@ -124,7 +117,6 @@ function WarningCard({ children }) {
   );
 }
 
-// ─── Code / key highlight ─────────────────────────────────────────────────────
 function Kbd({ children }) {
   return (
     <code style={{
@@ -134,9 +126,6 @@ function Kbd({ children }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState('inicio');
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,7 +154,6 @@ export default function DocsPage() {
     setMobileNavOpen(false);
   };
 
-  // Filterable FAQ
   const filteredFaq = faqItems.filter(f =>
     !searchQuery ||
     f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -180,7 +168,7 @@ export default function DocsPage() {
         <meta name="description" content="Manual de usuario interno del sistema PRG Auditores" />
       </head>
 
-      {/* ── INLINE STYLES ──────────────────────────────────────────── */}
+      {}
       <style>{`
         * { box-sizing: border-box; margin: 0; }
         @keyframes docFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -243,7 +231,7 @@ export default function DocsPage() {
       `}</style>
 
       <div className="doc-page">
-        {/* ── MOBILE HEADER ─────────────────────────────────────── */}
+        {}
         <div className="doc-mobile-header">
           <button onClick={() => setMobileNavOpen(!mobileNavOpen)} style={{ background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', padding: 4 }}>
             {mobileNavOpen ? <XIcon className="doc-icon" style={{ width: 24, height: 24 }} /> : <MenuIcon className="doc-icon" style={{ width: 24, height: 24 }} />}
@@ -252,10 +240,10 @@ export default function DocsPage() {
           <div style={{ width: 28 }} />
         </div>
 
-        {/* ── MOBILE OVERLAY ────────────────────────────────────── */}
+        {}
         <div className={`doc-mobile-overlay ${mobileNavOpen ? 'open' : ''}`} onClick={() => setMobileNavOpen(false)} />
 
-        {/* ── SIDEBAR ───────────────────────────────────────────── */}
+        {}
         <aside className={`doc-sidebar ${mobileNavOpen ? 'open' : ''}`}>
           <div className="doc-sidebar-brand">
             <h2>PRG Auditores</h2>
@@ -277,10 +265,10 @@ export default function DocsPage() {
           </div>
         </aside>
 
-        {/* ── MAIN CONTENT ──────────────────────────────────────── */}
+        {}
         <main className="doc-main">
 
-          {/* ══════════════ INICIO ══════════════ */}
+          {}
           <section id="inicio" className="doc-section">
             <h1 className="doc-h1">Manual de Usuario — Sistema PRG</h1>
             <p className="doc-p">
@@ -298,7 +286,7 @@ export default function DocsPage() {
             </InfoCard>
           </section>
 
-          {/* ══════════════ ROLES ══════════════ */}
+          {}
           <section id="roles" className="doc-section">
             <h2 className="doc-h2">👥 Roles y Accesos</h2>
             <p className="doc-p">El sistema maneja 3 tipos de usuarios. Cada uno tiene acceso a módulos diferentes según su rol:</p>
@@ -348,7 +336,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ ADMIN ══════════════ */}
+          {}
           <section id="admin" className="doc-section">
             <h2 className="doc-h2">🛡️ Panel de Administración</h2>
             <p className="doc-p">El panel de administración es el corazón del sistema. Desde aquí se controla todo.</p>
@@ -421,7 +409,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ TRABAJADORES ══════════════ */}
+          {}
           <section id="trabajadores" className="doc-section">
             <h2 className="doc-h2">👷 Portal del Funcionario</h2>
             <p className="doc-p">Los funcionarios tienen acceso a 3 módulos principales:</p>
@@ -455,7 +443,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ EMPRESA ══════════════ */}
+          {}
           <section id="empresa" className="doc-section">
             <h2 className="doc-h2">🏢 Portal de Empresa</h2>
             <p className="doc-p">
@@ -476,7 +464,7 @@ export default function DocsPage() {
             </InfoCard>
           </section>
 
-          {/* ══════════════ CLIENTES ══════════════ */}
+          {}
           <section id="clientes" className="doc-section">
             <h2 className="doc-h2">📊 Portal de Clientes</h2>
             <p className="doc-p">El portal de clientes está disponible en <Kbd>/clientes</Kbd> y permite a cualquier persona consultar las actividades realizadas para una empresa.</p>
@@ -492,7 +480,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ ARCHIVOS ══════════════ */}
+          {}
           <section id="archivos" className="doc-section">
             <h2 className="doc-h2">📁 Archivos y SharePoint</h2>
             <p className="doc-p">El sistema tiene una integración profunda con Microsoft 365 (SharePoint / OneDrive) para monitorear y explorar archivos.</p>
@@ -520,7 +508,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ REPORTES ══════════════ */}
+          {}
           <section id="reportes" className="doc-section">
             <h2 className="doc-h2">📈 Reportes Automáticos</h2>
             <p className="doc-p">El sistema genera reportes automáticamente basándose en la actividad detectada en SharePoint.</p>
@@ -556,7 +544,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ CURSOS ══════════════ */}
+          {}
           <section id="cursos" className="doc-section">
             <h2 className="doc-h2">🎓 Cursos y Capacitaciones</h2>
             <p className="doc-p">El módulo de cursos permite crear presentaciones interactivas y asignarlas a empresas.</p>
@@ -581,7 +569,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ ENTREVISTAS ══════════════ */}
+          {}
           <section id="entrevistas" className="doc-section">
             <h2 className="doc-h2">📝 Entrevistas / Reclutamiento</h2>
             <p className="doc-p">Este módulo permite crear encuestas de reclutamiento, generar enlaces públicos para candidatos, y revisar sus respuestas.</p>
@@ -615,7 +603,7 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ ERRORES ══════════════ */}
+          {}
           <section id="errores" className="doc-section">
             <h2 className="doc-h2">⚠️ Errores Comunes y Soluciones</h2>
 
@@ -678,11 +666,11 @@ export default function DocsPage() {
             </Collapsible>
           </section>
 
-          {/* ══════════════ FAQ ══════════════ */}
+          {}
           <section id="faq" className="doc-section">
             <h2 className="doc-h2">❓ Preguntas Frecuentes</h2>
 
-            {/* Search */}
+            {}
             <div className="doc-search">
               <SearchIcon className="doc-icon" style={{ color: '#475569', width: 18, height: 18 }} />
               <input
@@ -703,7 +691,7 @@ export default function DocsPage() {
             ))}
           </section>
 
-          {/* ── FOOTER ──────────────────────────────────────────────── */}
+          {}
           <footer className="doc-footer">
             <p>© 2026 PRG Auditores — Tu confianza, nuestro compromiso</p>
             <p style={{ marginTop: 6 }}>Este documento es confidencial y de uso interno.</p>

@@ -1,24 +1,19 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { X, Maximize2, Minimize2, ChevronLeft, ChevronRight, MonitorPlay, CheckCircle2, User, Globe, Loader2, Folder, FileText } from 'lucide-react';
 import { getCompanyCourses, getCourses } from '../lib/auth';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
-
 const DEFAULT_FOLDER = 'Material PRG Auditores';
-
 const getFolderFromDescription = (desc) => {
     if (!desc) return DEFAULT_FOLDER;
     const match = desc.match(/^\[FOLDER:\s*(.*?)\]/);
     return match ? match[1].trim() : DEFAULT_FOLDER;
 };
-
 export default function CourseViewer({ companyId, company, onBack, adminPreview = false }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     const [courses, setCourses] = useState([]);
     const [folders, setFolders] = useState([]);
     const [currentFolder, setCurrentFolder] = useState(null);
@@ -29,15 +24,12 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
     const [fileLoading, setFileLoading] = useState(false);
     const contentRef = useRef(null);
     const iframeRef = useRef(null);
-
     useEffect(() => {
         loadCourses();
     }, [adminPreview, companyId]);
-
     const loadCourses = async () => {
         setLoading(true);
         let data = [];
-
         try {
             if (adminPreview) {
                 if (companyId) {
@@ -51,39 +43,29 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                 data = await getCompanyCourses(company.id);
             }
         } catch (error) {
-            console.error("Error loading courses:", error);
         }
-
         if (data && data.length > 0) {
             data.sort((a, b) => (a.position || 0) - (b.position || 0));
         }
         setCourses(data || []);
-
-        // Extract Folders
         const uniqueFolders = new Set();
         (data || []).forEach(c => {
             uniqueFolders.add(getFolderFromDescription(c.description));
         });
         setFolders([...uniqueFolders].sort());
-
-        // AUTO-ENTER if only one folder
         if (uniqueFolders.size === 1) {
             setCurrentFolder([...uniqueFolders][0]);
         }
-
         setLoading(false);
     };
-
     const openCourse = (course) => {
         setActiveCourse(course);
         setIsFullscreen(true);
         setShowFinalScreen(false);
         setFileLoading(true);
-
         setTimeout(() => {
             if (contentRef.current) contentRef.current.focus();
         }, 50);
-
         const focusInterval = setInterval(() => {
             if (iframeRef.current && !showFinalScreen) {
                 iframeRef.current.focus();
@@ -92,19 +74,15 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                 } catch (e) { }
             }
         }, 100);
-
         setTimeout(() => clearInterval(focusInterval), 2000);
-
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(e => {
-                console.log('Fullscreen request denied or failed:', e);
             });
         }
     };
-
     const closeCourse = () => {
         if (document.fullscreenElement) {
-            document.exitFullscreen().catch(e => console.log(e));
+            document.exitFullscreen().catch(e => );
         }
         setIsFullscreen(false);
         setTimeout(() => {
@@ -113,7 +91,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             setFileLoading(false);
         }, 300);
     };
-
     useEffect(() => {
         if (activeCourse && !fileLoading && iframeRef.current) {
             const focusIframe = () => {
@@ -128,20 +105,17 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             return () => { clearInterval(intervalId); clearTimeout(timeoutId); };
         }
     }, [activeCourse, fileLoading]);
-
     if (activeCourse) {
         const fileUrl = activeCourse.file_url?.toLowerCase() || '';
         const isPdf = fileUrl.endsWith('.pdf');
         const isOfficeRequest = fileUrl.endsWith('.ppt') || fileUrl.endsWith('.pptx') || fileUrl.endsWith('.doc') || fileUrl.endsWith('.docx') || fileUrl.endsWith('.xls') || fileUrl.endsWith('.xlsx');
         const isImage = fileUrl.endsWith('.jpg') || fileUrl.endsWith('.jpeg') || fileUrl.endsWith('.png') || fileUrl.endsWith('.gif') || fileUrl.endsWith('.webp');
-
         const getEmbedUrl = () => {
             if (isPdf) {
                 return `${activeCourse.file_url}#toolbar=0&view=FitH`;
             }
             return activeCourse.file_url;
         };
-
         return (
             <div
                 ref={contentRef}
@@ -161,7 +135,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                 >
                     <img src="/prg_logo_final.png" alt="Cerrar" className="h-24 w-auto object-contain drop-shadow-lg" />
                 </div>
-
                 <div className="flex-1 relative overflow-hidden flex items-center justify-center">
                     {fileLoading && !showFinalScreen && (
                         <div className="absolute inset-0 z-[55] bg-[#06080a] flex items-center justify-center">
@@ -171,7 +144,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                             </div>
                         </div>
                     )}
-
                     {showFinalScreen ? (
                         <div className="flex flex-col items-center justify-center text-center animate-scale-up p-8 z-50">
                             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 border border-green-500/30">
@@ -256,20 +228,16 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
             </div >
         );
     }
-
     const filteredCourses = currentFolder
         ? courses.filter(c => getFolderFromDescription(c.description) === currentFolder)
         : [];
-
     const half = Math.ceil(filteredCourses.length / 2);
     const leftCourses = filteredCourses.slice(0, half);
     const rightCourses = filteredCourses.slice(half);
-
     return (
         <div className="p-4 sm:p-6 animate-fade-in min-h-screen transition-colors" style={{ background: theme.background, color: theme.text }}>
-
             <div className="flex flex-col items-center sm:items-start mb-8 gap-4 max-w-6xl mx-auto">
-                {/* Header Navigation */}
+                {}
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 w-full">
                     {adminPreview && (
                         <button
@@ -290,7 +258,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                         </button>
                     )}
                 </div>
-
                 <div className="flex flex-col text-center sm:text-left">
                     <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>
                         {currentFolder ? currentFolder : (
@@ -299,7 +266,6 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                     </h1>
                 </div>
             </div>
-
             {loading ? (
                 <div className="flex justify-center items-center h-48">
                     <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
@@ -311,8 +277,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                 </div>
             ) : (
                 <div className="max-w-6xl mx-auto">
-
-                    {/* FOLDER VIEW (ROOT) */}
+                    {}
                     {!currentFolder && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {folders.map(folder => {
@@ -327,14 +292,12 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                                         <div className="w-14 h-14 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
                                             <Folder size={28} strokeWidth={2.5} />
                                         </div>
-
                                         <div className="w-full">
                                             <h3 className="text-lg font-black uppercase tracking-tight mb-1" style={{ color: theme.text }}>{folder}</h3>
                                             <p className="text-xs font-bold opacity-60 flex items-center gap-1">
                                                 <FileText size={12} /> {count} Clases
                                             </p>
                                         </div>
-
                                         <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
                                             <ChevronRight size={20} className="text-blue-500" />
                                         </div>
@@ -343,8 +306,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
                             })}
                         </div>
                     )}
-
-                    {/* FILE VIEW (INSIDE FOLDER) */}
+                    {}
                     {currentFolder && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 animate-fade-in-up">
                             <div className="space-y-3">
@@ -364,10 +326,8 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
         </div>
     );
 }
-
 function CourseRow({ course, onClick, theme }) {
     const IconComponent = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : LucideIcons.FileText;
-
     return (
         <button
             onClick={onClick}

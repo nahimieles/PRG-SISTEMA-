@@ -1,16 +1,13 @@
 import React, { useId } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-
 export default function LoginLogo({ className }) {
     const { isDark } = useTheme();
     const idSuffix = useId().replace(/:/g, '');
     const fill1 = isDark ? '#ffffff' : '#4f4f4f';
-
     const g234 = `grad234_${idSuffix}`;
     const g189 = `grad189_${idSuffix}`;
     const g189_2 = `grad189_2_${idSuffix}`;
     const g189_3 = `grad189_3_${idSuffix}`;
-
     return (
         <svg
             id="Capa_1"

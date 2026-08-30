@@ -137,7 +137,7 @@ const CustomDatePicker = ({ value, onChange, placeholder = "Seleccionar fecha...
                     <div className="grid grid-cols-7 gap-1">
                         {renderCalendarDays()}
                     </div>
-                    
+
                     <div className="mt-4 pt-3 border-t flex justify-end" style={{ borderColor: theme.border }}>
                         <button 
                             type="button" 

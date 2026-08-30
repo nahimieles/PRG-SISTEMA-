@@ -1,18 +1,12 @@
 'use client';
-
 import React, { createContext, useState, useEffect } from 'react';
-
 export const ThemeContext = createContext();
-
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    // 1. Initial Load: Read preference
     const saved = localStorage.getItem('theme');
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
     if (saved === 'dark') {
       setIsDark(true);
     } else if (saved === 'light') {
@@ -20,25 +14,17 @@ export function ThemeProvider({ children }) {
     } else {
       setIsDark(mediaQuery.matches);
     }
-    
     setMounted(true);
-
-    // Listen for OS theme changes
     const handleChange = (e) => {
-      // Only auto-switch if the user hasn't explicitly saved a preference
       if (!localStorage.getItem('theme')) {
         setIsDark(e.matches);
       }
     };
-
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
-
-  // 2. Sync DOM with State
   useEffect(() => {
     if (!mounted) return;
-
     const root = document.documentElement;
     if (isDark) {
       root.classList.add('dark');
@@ -47,12 +33,10 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark');
       root.style.colorScheme = 'light';
     }
-
     if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.setTheme) {
       window.electronAPI.setTheme(isDark);
     }
   }, [isDark, mounted]);
-
   const toggleTheme = () => {
     setIsDark(prev => {
       const newValue = !prev;
@@ -60,14 +44,12 @@ export function ThemeProvider({ children }) {
       return newValue;
     });
   };
-
   return (
     <ThemeContext.Provider value={{ isDark, setIsDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
 }
-
 export function useTheme() {
   const context = React.useContext(ThemeContext);
   if (!context) {

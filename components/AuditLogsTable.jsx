@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Download, RefreshCw, Upload, Trash2, Edit2, FolderPlus, Move, FileText, Clock, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,19 +6,14 @@ import { lightTheme, darkTheme } from '../lib/colors';
 import { getAuditLogs } from '../lib/audit';
 import { exportToExcel } from '../lib/auth';
 import CustomSelect from './CustomSelect';
-
 export default function AuditLogsTable() {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
-
-    // Filter and Pagination State
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
-
     const loadLogs = async () => {
         setLoading(true);
         try {
@@ -27,19 +21,16 @@ export default function AuditLogsTable() {
             const data = await getAuditLogs({ limit: 500 });
             setLogs(data || []);
         } catch (error) {
-            console.error('Error loading logs:', error);
         } finally {
             setLoading(false);
         }
     };
-
     useEffect(() => {
         loadLogs();
         // Auto-refresh every 30 seconds
         const interval = setInterval(loadLogs, 30000);
         return () => clearInterval(interval);
     }, []);
-
     // Derived State for Filtering and Pagination
     const filteredLogs = logs.filter(log => {
         if (!searchTerm) return true;
@@ -52,16 +43,13 @@ export default function AuditLogsTable() {
             (log.metadata?.description && log.metadata.description.toLowerCase().includes(searchLower))
         );
     });
-
     const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage);
-
     // Reset to page 1 when search or items per page changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, itemsPerPage]);
-
     const getActionIcon = (type) => {
         const iconClass = "w-4 h-4 sm:w-5 sm:h-5";
         switch (type) {
@@ -74,12 +62,10 @@ export default function AuditLogsTable() {
             default: return <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-800 rounded-full"><FileText className={`${iconClass} text-gray-600`} /></div>;
         }
     };
-
     const getActionText = (log) => {
         const strongStyle = { fontWeight: '600', color: theme.text };
         const name = <span style={strongStyle}>{log.worker_name || 'Desconocido'}</span>;
         const file = <span style={strongStyle}>{log.file_name}</span>;
-
         switch (log.action_type) {
             case 'UPLOAD': return <>{name} subió el archivo {file}</>;
             case 'DELETE': return <>{name} eliminó {file}</>;
@@ -90,7 +76,6 @@ export default function AuditLogsTable() {
             default: return <>{name} realizó una acción con {file}</>;
         }
     };
-
     const PaginationControls = () => (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 py-2 border-t mt-4" style={{ borderColor: theme.border }}>
             <span className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
@@ -119,7 +104,6 @@ export default function AuditLogsTable() {
             </div>
         </div>
     );
-
     return (
         <div className="animate-fade-in max-w-4xl mx-auto mb-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
@@ -127,8 +111,7 @@ export default function AuditLogsTable() {
                     <h3 className="text-base sm:text-lg lg:text-xl font-bold" style={{ color: theme.text }}>Actividad Reciente</h3>
                     <p className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>Últimos movimientos en archivos</p>
                 </div>
-
-                {/* Search and Items Per Page Setup */}
+                {}
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                     <div className="relative w-full sm:w-64">
                         <input
@@ -145,7 +128,6 @@ export default function AuditLogsTable() {
                         />
                         <SearchIcon className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     </div>
-
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                         <CustomSelect
                             value={itemsPerPage}
@@ -157,7 +139,6 @@ export default function AuditLogsTable() {
                                 {value: 50, label: '50 por pág'}
                             ]}
                         />
-
                         <div className="flex flex-row gap-1.5 sm:gap-2 flex-shrink-0 ml-auto sm:ml-0">
                             <button
                                 onClick={loadLogs}
@@ -177,9 +158,7 @@ export default function AuditLogsTable() {
                     </div>
                 </div>
             </div>
-
             {filteredLogs.length > 0 && <PaginationControls />}
-
             <div className="space-y-3 mt-4">
                 {paginatedLogs.length === 0 ? (
                     <div className="text-center py-8 sm:py-12 rounded-xl border border-dashed" style={{ borderColor: theme.border }}>
@@ -199,7 +178,6 @@ export default function AuditLogsTable() {
                             }}
                         >
                             {getActionIcon(log.action_type)}
-
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs sm:text-sm" style={{ color: theme.textSecondary }}>
                                     {getActionText(log)}
@@ -229,9 +207,7 @@ export default function AuditLogsTable() {
                     ))
                 )}
             </div>
-
             {filteredLogs.length > 0 && <PaginationControls />}
         </div>
     );
 }
-

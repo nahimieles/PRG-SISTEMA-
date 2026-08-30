@@ -24,7 +24,6 @@ export default function FuncionariosPage() {
   const theme = isDark ? darkTheme : lightTheme;
   const [activeTab, setActiveTab] = useState('actividades');
 
-  // Menú del sidebar para trabajadores
   const sidebarItems = [
     { id: 'actividades', label: 'Actividades', icon: ClipboardList },
     { id: 'perfil', label: 'Perfil', icon: User },
@@ -34,7 +33,7 @@ export default function FuncionariosPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [currentWorker, setCurrentWorker] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     companyName: '',
     businessUnitId: '',
@@ -109,14 +108,13 @@ export default function FuncionariosPage() {
     }
   }, [formData.activityId]);
 
-
   const handleLogin = async (username, password) => {
     const result = await loginUnifiedAction(username, password);
     if (result.success && result.role === 'worker') {
       const worker = result.user;
       setCurrentWorker(worker);
       setIsAuthenticated(true);
-      saveWorkerSession(worker); // Guardar sesión
+      saveWorkerSession(worker); 
       loadMyRecords(worker.id);
       loadInitialCatalogs(worker.id);
       return { success: true };
@@ -140,10 +138,9 @@ export default function FuncionariosPage() {
   const confirmDelete = async () => {
     const id = confirmModal.id;
     setConfirmModal({ show: false, id: null });
-    
-    // Usamos el Server Action que bypasea RLS y verifica propiedad
+
     const result = await deleteWorkerAuditRecordAction(id, currentWorker.id);
-    
+
     if (result && result.success) {
       setShowSuccess('success-Registro eliminado correctamente');
       if (selectedRecord && selectedRecord.id === id) {
@@ -155,7 +152,6 @@ export default function FuncionariosPage() {
     }
     setTimeout(() => setShowSuccess(''), 3000);
   };
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -172,7 +168,7 @@ export default function FuncionariosPage() {
     const subactivityName = subactivities.find(s => s.id === formData.subactivityId)?.name;
     const activityName = activities.find(a => a.id === formData.activityId)?.name;
     const businessUnitName = businessUnits.find(b => b.id === formData.businessUnitId)?.name;
-    
+
     const result = await addRecord({
       workerId: currentWorker.id,
       workerName: currentWorker.full_name,
@@ -212,7 +208,6 @@ export default function FuncionariosPage() {
     }
   };
 
-  // Mostrar loading mientras verifica sesión
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: theme.background }}>
@@ -227,12 +222,13 @@ export default function FuncionariosPage() {
 
   return (
     <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
-      {/* Sidebar */}
+      {}
       <Sidebar
         items={sidebarItems}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         userName={currentWorker?.full_name}
+        avatarUrl={currentWorker?.foto_url || currentWorker?.avatar_url}
         userRole="Funcionario"
         workerId={currentWorker?.id}
         onLogout={handleLogout}
@@ -240,7 +236,7 @@ export default function FuncionariosPage() {
         onHoverChange={setIsSidebarExpanded}
       />
 
-      {/* Contenido Principal */}
+      {}
       <main
         className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-8 page-transition"
         style={{
@@ -253,10 +249,10 @@ export default function FuncionariosPage() {
       >
         <div className="max-w-7xl mx-auto space-y-8">
 
-          {/* Tab: Actividades */}
+          {}
           {activeTab === "actividades" && (
             <div className="animate-fade-in space-y-8">
-              {/* Formulario Registrar Actividad */}
+              {}
               <div className="w-full">
                   <div 
                     className="relative z-50 rounded-3xl p-6 lg:p-8 backdrop-blur-xl border shadow-2xl transition-all duration-300 hover:shadow-3xl flex flex-col h-full" 
@@ -265,12 +261,12 @@ export default function FuncionariosPage() {
                         borderColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.5)" 
                     }}
                   >
-                    {/* Efectos de cristal y gradiente encapsulados */}
+                    {}
                     <div className="absolute inset-0 overflow-hidden rounded-3xl -z-10 pointer-events-none">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
                     </div>
-                    
+
                     <h3 className="text-2xl font-black tracking-tight mb-6 flex items-center gap-2" style={{ color: theme.text }}>
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
                             Registrar
@@ -298,7 +294,7 @@ export default function FuncionariosPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-5 flex-1 flex flex-col justify-between relative z-10">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        
+
                         <div className="space-y-1">
                             <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Cliente (Empresa)</label>
                             <CustomSelect 
@@ -322,7 +318,7 @@ export default function FuncionariosPage() {
                                 isDark={isDark}
                             />
                         </div>
-                        
+
                         <div className="space-y-1">
                             <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Actividad</label>
                             <CustomSelect 
@@ -356,7 +352,7 @@ export default function FuncionariosPage() {
                               isDark={isDark}
                           />
                         </div>
-                        
+
                         <div className="space-y-1">
                           <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>Fecha y Hora de Fin</label>
                           <CustomDateTimePicker 
@@ -413,7 +409,7 @@ export default function FuncionariosPage() {
                   </div>
               </div>
 
-              {/* Historial de Actividades (Bottom) */}
+              {}
               <div className="rounded-3xl shadow-xl p-6 md:p-8 backdrop-blur-xl border transition-all duration-300 hover:shadow-2xl" 
                    style={{ 
                        background: theme.surface, 
@@ -470,19 +466,29 @@ export default function FuncionariosPage() {
             </div>
           )}
 
-          {/* Tab: Perfil (WorkerTasks) */}
+          {}
           {activeTab === "perfil" && (
             <div className="animate-fade-in space-y-6">
                 <div className="rounded-3xl shadow-xl border p-6 lg:p-8" style={{ background: theme.surface, borderColor: theme.border }}>
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                            {currentWorker.full_name?.charAt(0) || "U"}
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-black" style={{ color: theme.text }}>{currentWorker.full_name}</h2>
-                        </div>
-                    </div>
-                    
+                  <div className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 mb-8">
+                      <div className="flex items-center gap-5">
+                          {currentWorker?.foto_url || currentWorker?.avatar_url ? (
+                              <img 
+                                src={currentWorker.foto_url || currentWorker.avatar_url} 
+                                alt={currentWorker.full_name} 
+                                className="w-16 h-16 rounded-full object-cover shadow-lg border-2 border-blue-500/20"
+                              />
+                          ) : (
+                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                                  {currentWorker?.full_name?.charAt(0) || "U"}
+                              </div>
+                          )}
+                          <div>
+                              <h2 className="text-2xl font-black" style={{ color: theme.text }}>{currentWorker?.full_name}</h2>
+                          </div>
+                      </div>
+                  </div>
+
                     <div className="border-t pt-8" style={{ borderColor: theme.border }}>
                         <WorkerTasks workerId={currentWorker.id} theme={theme} isDark={isDark} readOnly={true} />
                     </div>
@@ -490,10 +496,10 @@ export default function FuncionariosPage() {
             </div>
           )}
 
-          {/* Tab: Empresas */}
+          {}
           {activeTab === "empresas" && !selectedCompany && (() => {
             const filtered = companies.filter(c => c.name.toLowerCase().includes(searchCompanyTerm.toLowerCase()));
-            // Group companies by group_name (using group_id as key for navigation)
+
             const groupMap = {};
             const ungrouped = [];
             filtered.forEach(c => {
@@ -508,7 +514,7 @@ export default function FuncionariosPage() {
 
             return (
             <div className="animate-fade-in space-y-6">
-                {/* Top Bar */}
+                {}
                 <div className="flex items-center justify-between gap-2 mb-3">
                     {expandedGroup ? (
                         <div className="flex items-center gap-2">
@@ -536,7 +542,7 @@ export default function FuncionariosPage() {
                     </div>
                 </div>
 
-                {/* Search results mode */}
+                {}
                 {searchCompanyTerm.trim() && (
                     <div className="space-y-4">
                         {filtered.length === 0 ? (
@@ -574,7 +580,7 @@ export default function FuncionariosPage() {
                     </div>
                 )}
 
-                {/* Level 1: Group Cards (no search active) */}
+                {}
                 {!searchCompanyTerm.trim() && !expandedGroup && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {sortedGroups.map((group, index) => {
@@ -612,7 +618,7 @@ export default function FuncionariosPage() {
                             );
                         })}
 
-                        {/* Ungrouped companies as direct cards */}
+                        {}
                         {ungrouped.sort((a, b) => a.name.localeCompare(b.name)).map(company => (
                             <div key={company.id} onClick={() => setSelectedCompany(company)} className="group relative flex flex-col items-start p-4 rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg text-left h-full cursor-pointer" style={{ background: theme.surface, borderColor: theme.border }}>
                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', borderColor: theme.border }}>
@@ -640,7 +646,7 @@ export default function FuncionariosPage() {
                     </div>
                 )}
 
-                {/* Level 2: Companies inside expanded group */}
+                {}
                 {!searchCompanyTerm.trim() && expandedGroup && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {expandedGroup.companies.sort((a, b) => a.name.localeCompare(b.name)).map(company => (
@@ -704,7 +710,7 @@ export default function FuncionariosPage() {
                                 alert(data.message);
                             }
                         } catch (err) {
-                            console.error('Error finding folder:', err);
+
                             alert('Error al buscar carpeta en SharePoint');
                         } finally {
                             setArchivosLoading(null);
@@ -714,7 +720,7 @@ export default function FuncionariosPage() {
             </div>
           )}
 
-          {/* Modal de detalle de registro */}
+          {}
           {selectedRecord && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate" style={{ background: "rgba(0,0,0,0.7)" }} onClick={() => setSelectedRecord(null)}>
               <div className="w-full max-w-4xl max-h-[90vh] overflow-auto rounded-xl shadow-lg modal-scroll" style={{ background: theme.surface }} onClick={(e) => e.stopPropagation()}>

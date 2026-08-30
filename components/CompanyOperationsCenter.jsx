@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import {
   ChevronLeft,
@@ -41,8 +40,6 @@ import { resolvePlatformsForCompany } from "../lib/platforms/registry";
 import { checkCompanyCredentialsPublicAction } from "../lib/actions";
 import Toast from "./Toast";
 import CustomDatePicker from "./CustomDatePicker";
-
-// Platform icons mapping (consistent with CompanyManager)
 const PLATFORM_ICON_MAP = {
   FileText,
   Shield,
@@ -50,7 +47,6 @@ const PLATFORM_ICON_MAP = {
   Briefcase,
   Calculator,
 };
-
 export default function CompanyOperationsCenter({
   company,
   onBack,
@@ -72,7 +68,6 @@ export default function CompanyOperationsCenter({
   });
   const [savingCrm, setSavingCrm] = React.useState(false);
   const [toastMsg, setToastMsg] = React.useState(null);
-
   // Custom Tax Obligations
   const [customTaxObligations, setCustomTaxObligations] = React.useState([]);
   const [showTaxForm, setShowTaxForm] = React.useState(false);
@@ -83,16 +78,11 @@ export default function CompanyOperationsCenter({
   });
   const [savingTax, setSavingTax] = React.useState(false);
   const [showAllObligations, setShowAllObligations] = React.useState(false);
-
-  // Photos
   const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
   const galleryFileInputRef = React.useRef(null);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
-
-  // Platform credentials status
   const [platformStatus, setPlatformStatus] = React.useState({});
-
   const photos = React.useMemo(() => {
     const list = [];
     if (company?.interior_photo_url) list.push(company.interior_photo_url);
@@ -106,19 +96,14 @@ export default function CompanyOperationsCenter({
     company?.exterior_photo_url,
     company?.gallery_urls,
   ]);
-
-
   React.useEffect(() => {
     if (!company?.id) return;
-
     async function fetchData() {
       setLoadingActivities(true);
-      // Load credentials status
       const credRes = await checkCompanyCredentialsPublicAction(company.id);
       if (credRes?.success) {
         setPlatformStatus(credRes.status || {});
       }
-
       const { data, error } = await supabase
         .from("work_records")
         .select(
@@ -127,26 +112,20 @@ export default function CompanyOperationsCenter({
         .eq("company_id", company.id)
         .order("start_datetime", { ascending: false })
         .limit(5);
-
       if (!error && data) {
         setActivities(data);
       }
       setLoadingActivities(false);
-
       const { data: taxData, error: taxError } = await supabase
         .from("company_tax_obligations")
         .select("*")
         .eq("company_id", company.id)
         .order("due_date", { ascending: true });
-
       if (!taxError && taxData) {
         setCustomTaxObligations(taxData);
       }
     }
-
     fetchData();
-
-    // Initialize CRM data
     setCrmData({
       contact_name: company.contact_name || "",
       contact_email: company.contact_email || "",
@@ -154,23 +133,19 @@ export default function CompanyOperationsCenter({
       crm_notes: company.crm_notes || "",
     });
   }, [company]);
-
   const handleSaveCRM = async () => {
     setSavingCrm(true);
     const { error } = await supabase
       .from("companies")
       .update(crmData)
       .eq("id", company.id);
-
     setSavingCrm(false);
     if (error) {
       setToastMsg({ text: "Error al guardar CRM", type: "error" });
     } else {
       setToastMsg({ text: "Datos CRM actualizados", type: "success" });
-      // Actualizar company prop if possible, pero al menos local state ya está.
     }
   };
-
   const handleSaveTax = async () => {
     if (!newTax.title || !newTax.due_date) {
       setToastMsg({ text: "Complete los campos obligatorios", type: "error" });
@@ -188,7 +163,6 @@ export default function CompanyOperationsCenter({
       .insert([payload])
       .select()
       .single();
-
     setSavingTax(false);
     if (error) {
       setToastMsg({ text: "Error al guardar obligación", type: "error" });
@@ -199,14 +173,11 @@ export default function CompanyOperationsCenter({
       setToastMsg({ text: "Obligación agregada", type: "success" });
     }
   };
-
   const handlePhotoUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-
     setUploadingPhoto(true);
     const newUrls = [];
-
     for (const file of files) {
       const result = await uploadFile(file, company.id);
       if (result.success) {
@@ -215,7 +186,6 @@ export default function CompanyOperationsCenter({
         setToastMsg({ text: result.error, type: "error" });
       }
     }
-
     if (newUrls.length > 0) {
       const currentGallery = Array.isArray(company.gallery_urls)
         ? company.gallery_urls
@@ -225,9 +195,7 @@ export default function CompanyOperationsCenter({
         .from("companies")
         .update({ gallery_urls: updatedGallery })
         .eq("id", company.id);
-
       if (error) {
-        console.error("Gallery update error:", error);
         setToastMsg({
             text: "Error al actualizar galería: " + error.message,
             type: "error",
@@ -242,35 +210,29 @@ export default function CompanyOperationsCenter({
     setUploadingPhoto(false);
     if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
   };
-
   if (!company) return null;
-
   // Resolve platforms available for this company based on user permissions
   const companyPermisos = userPermissions[company.id] || [];
   const availablePlatforms = resolvePlatformsForCompany(
     companyPermisos,
     company.sistema_contable_slug,
   );
-
   const getPlatformBySlug = (slug) =>
     availablePlatforms.find((p) => p.slug === slug);
   const accountingPlatform = availablePlatforms.find(
     (p) => p.categoria === "contable",
   );
-
-  // UI Configuration for actions
   const actionCards = [
     {
       id: "archivos",
       title: "Archivos",
       subtitle: "SharePoint / OneDrive",
       icon: Folder,
-      color: "#3b82f6", // blue
+      color: "#3b82f6", 
       onClick: () => onOpenArchivos(company),
       loading: false,
     },
   ];
-
   const sriPlatform = getPlatformBySlug("sri");
   if (sriPlatform) {
     actionCards.push({
@@ -283,7 +245,6 @@ export default function CompanyOperationsCenter({
       loading: platformAccessLoading === `${company.id}-sri`,
     });
   }
-
   if (accountingPlatform) {
     actionCards.push({
       id: "contable",
@@ -295,55 +256,46 @@ export default function CompanyOperationsCenter({
       loading: platformAccessLoading === `${company.id}-${accountingPlatform.slug}`,
     });
   }
-
-  // Las siguientes plataformas se muestran siempre que se quiera, 
-  // o se podrían restringir por permisos también.
-  // Por ahora las dejamos visibles.
   actionCards.push({
     id: "supercias",
     title: "SuperCías",
     subtitle: "Portal corporativo",
     icon: Landmark,
-    color: "#eab308", // Yellow for SuperCias
+    color: "#eab308", 
     onClick: () => window.open("https://www.supercias.gob.ec/portalscvs/index.htm", "_blank"),
     loading: false,
   });
-
   actionCards.push({
     id: "min_trabajo",
     title: "Ministerio de Trabajo",
     subtitle: "Trámites laborales",
     icon: Briefcase,
-    color: "#f97316", // Orange for Min Trabajo
+    color: "#f97316", 
     onClick: () => window.open("https://sut.trabajo.gob.ec", "_blank"),
     loading: false,
   });
-
   actionCards.push({
     id: "iess",
     title: "IESS",
     subtitle: "Seguro Social",
     icon: Shield,
-    color: "#10b981", // Green for IESS
+    color: "#10b981", 
     onClick: () => window.open("https://www.iess.gob.ec/empleadores/", "_blank"),
     loading: false,
   });
-
-  // Power Automate Desktop Placeholder (Always visible)
   actionCards.push({
     id: "plantillas",
     title: "Plantillas y Flujos",
     subtitle: "Automatizaciones",
     icon: LayoutTemplate,
-    color: "#8b5cf6", // purple
+    color: "#8b5cf6", 
     onClick: () =>
       alert("El módulo de Plantillas y Automatizaciones está en preparación."),
     loading: false,
   });
-
   return (
     <div className="animate-fade-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header section */}
+      {}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
@@ -406,8 +358,7 @@ export default function CompanyOperationsCenter({
             </div>
           </div>
         </div>
-
-        {/* Fotos de la empresa */}
+        {}
         <div className="ml-auto hidden md:flex gap-3">
           <div className="flex gap-2">
             <input
@@ -418,7 +369,6 @@ export default function CompanyOperationsCenter({
               multiple
               onChange={handlePhotoUpload}
             />
-
             {photos.length > 0 && (
               <div
                 onClick={() => {
@@ -443,7 +393,6 @@ export default function CompanyOperationsCenter({
                 </div>
               </div>
             )}
-
             {!readOnly && (
               <div
                 onClick={() => galleryFileInputRef.current?.click()}
@@ -487,9 +436,8 @@ export default function CompanyOperationsCenter({
           </div>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Obligations & Summary */}
+        {}
         <div className="lg:col-span-1 space-y-6">
           <div
             className="rounded-2xl border shadow-sm p-5 transition-all"
@@ -502,7 +450,6 @@ export default function CompanyOperationsCenter({
               <AlertCircle size={16} className="text-amber-500" />
               Obligaciones Tributarias
             </h3>
-
             <div className="space-y-3">
               {(() => {
                 const allObligations = [
@@ -511,7 +458,6 @@ export default function CompanyOperationsCenter({
                 const visibleObligations = showAllObligations
                   ? allObligations
                   : allObligations.slice(0, 3);
-
                 if (allObligations.length === 0) {
                   return (
                     <div
@@ -529,7 +475,6 @@ export default function CompanyOperationsCenter({
                     </div>
                   );
                 }
-
                 return (
                   <>
                     {visibleObligations.map((ob) => (
@@ -577,7 +522,6 @@ export default function CompanyOperationsCenter({
                 );
               })()}
             </div>
-
             {!showTaxForm ? (
               !readOnly && (
                 <button
@@ -662,8 +606,7 @@ export default function CompanyOperationsCenter({
             )}
           </div>
         </div>
-
-        {/* Right Column: Actions Grid */}
+        {}
         <div className="lg:col-span-2">
           <div
             className="rounded-2xl border shadow-sm p-6"
@@ -676,7 +619,6 @@ export default function CompanyOperationsCenter({
               <LayoutTemplate size={16} className="text-blue-500" />
               Acciones Principales
             </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {actionCards.map((action, idx) => {
                 const Icon = action.icon;
@@ -691,12 +633,11 @@ export default function CompanyOperationsCenter({
                       borderColor: theme.border,
                     }}
                   >
-                    {/* Hover background effect */}
+                    {}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
                       style={{ backgroundColor: action.color }}
                     />
-
                     <div className="relative flex items-center gap-4 w-full z-10">
                       <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110"
@@ -747,10 +688,9 @@ export default function CompanyOperationsCenter({
           </div>
         </div>
       </div>
-
-      {/* CRM & History Section */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* CRM Panel */}
+        {}
         <div
           className="rounded-2xl border shadow-sm p-6"
           style={{ background: theme.surface, borderColor: theme.border }}
@@ -773,7 +713,6 @@ export default function CompanyOperationsCenter({
               </button>
             )}
           </div>
-
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -871,8 +810,7 @@ export default function CompanyOperationsCenter({
             </div>
           </div>
         </div>
-
-        {/* Historial Panel */}
+        {}
         <div
           className="rounded-2xl border shadow-sm p-6"
           style={{ background: theme.surface, borderColor: theme.border }}
@@ -886,7 +824,6 @@ export default function CompanyOperationsCenter({
               Historial Reciente
             </h3>
           </div>
-
           {loadingActivities ? (
             <div className="flex items-center justify-center p-8">
               <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -947,7 +884,6 @@ export default function CompanyOperationsCenter({
           )}
         </div>
       </div>
-
       {toastMsg && (
         <Toast
           message={toastMsg.text}
@@ -955,7 +891,7 @@ export default function CompanyOperationsCenter({
           onClose={() => setToastMsg(null)}
         />
       )}
-      {/* Lightbox Modal */}
+      {}
       {lightboxOpen && photos.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
           <button
@@ -964,7 +900,6 @@ export default function CompanyOperationsCenter({
           >
             <X size={24} />
           </button>
-
           {photos.length > 1 && (
             <button
               onClick={() =>
@@ -977,13 +912,11 @@ export default function CompanyOperationsCenter({
               <ChevronLeft size={24} />
             </button>
           )}
-
           <img
             src={photos[currentPhotoIndex]}
             className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
             alt={`Foto ${currentPhotoIndex + 1}`}
           />
-
           {photos.length > 1 && (
             <button
               onClick={() =>
@@ -1007,7 +940,6 @@ export default function CompanyOperationsCenter({
               </svg>
             </button>
           )}
-
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 text-white text-sm font-medium">
             {currentPhotoIndex + 1} / {photos.length}
           </div>

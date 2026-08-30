@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import Toast from './Toast';
 import DropdownMenu from './DropdownMenu';
@@ -23,37 +22,24 @@ import { normalizeRuc } from '../lib/security';
 import { resolvePlatformsForCompany, getAccountingPlatforms } from '../lib/platforms/registry';
 import CompanyOperationsCenter from './CompanyOperationsCenter';
 import CustomSelect from './CustomSelect';
-
 export default function CompanyManager({ isWorker = false }) {
-    // V3.12.0 - Groups Integration
-
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     const [loading, setLoading] = useState(true);
     const [companies, setCompanies] = useState([]);
     const [groups, setGroups] = useState([]);
-
-    // Navigation State
-    // Expanded Group can be a String ('auditoria') OR a Group Object ({id, name, ...})
     const [expandedGroup, setExpandedGroup] = useState(null);
     const [activeCompanyOperations, setActiveCompanyOperations] = useState(null);
-
-    // Hardcoded Types (Legacy Groups)
     const legacyGroups = [
         { id: 'contabilidad', name: 'Contabilidad', color: 'green', type: 'contabilidad' },
         { id: 'auditoria', name: 'Auditoría', color: 'blue', type: 'auditoria' },
         { id: 'especiales', name: 'Trabajos Especiales', color: 'purple', type: 'especiales' }
     ];
-
-    // Navigation helpers
     const handleGroupClick = (group) => {
         setExpandedGroup(group);
     };
-
     const handleBackToGroups = () => {
         if (expandedGroup && expandedGroup.category) {
-            // If we are in a sub-group that belongs to a legacy category, go back to category
             const parentCat = legacyGroups.find(lg => lg.type === expandedGroup.category);
             if (parentCat) {
                 setExpandedGroup(parentCat);
@@ -62,14 +48,8 @@ export default function CompanyManager({ isWorker = false }) {
         }
         setExpandedGroup(null);
     };
-
-
-
-    // Estado Formularios
     const [showModal, setShowModal] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-
-    // Form Data
     const [formData, setFormData] = useState({
         name: '',
         type: 'auditoria',
@@ -81,14 +61,12 @@ export default function CompanyManager({ isWorker = false }) {
         ruc: '',
         sistema_contable_slug: ''
     });
-
     const [message, setMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
     const [showAddMenu, setShowAddMenu] = useState(false);
     const addMenuRef = useRef(null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
     // Document upload modal state
     const [docModal, setDocModal] = useState(null); // { company, type: 'financieros'|'impuestos'|'informes' }
     const [docFile, setDocFile] = useState(null);
@@ -96,21 +74,16 @@ export default function CompanyManager({ isWorker = false }) {
     const [docUploading, setDocUploading] = useState(false);
     const [docDragging, setDocDragging] = useState(false);
     const fileInputRef = useRef(null);
-
     // Platform access state
     const [userPermissions, setUserPermissions] = useState({}); // { [empresaId]: ['sri', 'iess', ...] }
-    const [platformAccessLoading, setPlatformAccessLoading] = useState(null); // 'empresaId-slug' while loading
+    const [platformAccessLoading, setPlatformAccessLoading] = useState(null); 
     const [credentialModalCompany, setCredentialModalCompany] = useState(null);
-
-    // Lucide icon map for platform registry
     const PLATFORM_ICON_MAP = {
         FileText, Shield, Landmark, Briefcase, Calculator,
     };
-
     useEffect(() => {
         loadData();
     }, []);
-
     const loadData = async () => {
         setLoading(true);
         try {
@@ -126,30 +99,23 @@ export default function CompanyManager({ isWorker = false }) {
                 setUserPermissions(permisosResult.permisos || {});
             }
         } catch (error) {
-            console.error(error);
         } finally {
             setLoading(false);
         }
     };
-
-    // Platform access handler — uses extension if available, otherwise server-side Playwright
     const handlePlatformAccess = async (company, plataformaSlug) => {
         const admin = getAdminSession();
         if (!admin?.id) return;
-
-        // Opción 1: Si la extensión está instalada en el navegador, delegarle el trabajo
         if (typeof window !== 'undefined' && window.__EXTENSION_INSTALLED__) {
             const companyPermissions = userPermissions[company.id] || [];
             const allowedPlatforms = resolvePlatformsForCompany(companyPermissions, company.sistema_contable_slug);
             const platformObj = allowedPlatforms.find(p => p.slug === plataformaSlug);
             const targetUrl = platformObj ? platformObj.url : '';
-            
             const credentials = await getPlatformCredentialsAction(admin.id, company.id, plataformaSlug);
             if (!credentials.success) {
                 showToast(credentials.error || 'No se encontraron credenciales', 'error');
                 return;
             }
-
             showToast('Iniciando sesión vía Extensión...', 'info');
             window.postMessage({
                 type: 'TO_EXTENSION_LOGIN',
@@ -163,8 +129,6 @@ export default function CompanyManager({ isWorker = false }) {
             }, '*');
             return;
         }
-
-        // Opción 2: Si no hay extensión, usar la automatización de la App / Backend
         const loadingKey = `${company.id}-${plataformaSlug}`;
         setPlatformAccessLoading(loadingKey);
         try {
@@ -187,24 +151,16 @@ export default function CompanyManager({ isWorker = false }) {
             setPlatformAccessLoading(null);
         }
     };
-
     const handleSave = async (e) => {
         e.preventDefault();
         setMessage(null);
-
         try {
             const admin = getAdminSession();
             const requesterId = admin?.id;
             let result;
-
-            // The most reliable way to tell if we are saving a company or a group is 
-            // whether the 'type' field (legacy category) exists in our current form state
             const isSavingCompany = formData.type !== undefined;
-
             if (isSavingCompany) {
-                // SAVING COMPANY
                 if (editingItem) {
-                    // Update Company
                     const updates = {};
                     if (formData.name !== editingItem.name) updates.name = formData.name;
                     if ((formData.type !== editingItem.type)) updates.type = formData.type;
@@ -215,19 +171,15 @@ export default function CompanyManager({ isWorker = false }) {
                         updates.avatar_url = formData.avatar_url || null;
                         updates.logo_url = formData.avatar_url || null;
                     }
-
                     const currentUsername = (formData.username || '').trim();
                     const originalUsername = (editingItem.username || '').trim();
-
                     if (currentUsername !== originalUsername) updates.username = currentUsername || null;
                     if (formData.password && formData.password.trim() !== '') updates.password = formData.password;
-
                     if (Object.keys(updates).length === 0) {
                         setShowModal(false); setEditingItem(null); showToast('Sin cambios detectados'); return;
                     }
                     result = await updateCompanyAction(editingItem.id, updates, requesterId);
                 } else {
-                    // Create Company
                     result = await createCompanyAction({
                         name: formData.name,
                         type: formData.type,
@@ -240,7 +192,6 @@ export default function CompanyManager({ isWorker = false }) {
                     }, requesterId);
                 }
             } else {
-                // SAVING GROUP
                 const groupData = {
                     name: formData.name,
                     image_url: formData.avatar_url || null,
@@ -248,14 +199,12 @@ export default function CompanyManager({ isWorker = false }) {
                     username: formData.username || null,
                     password: formData.password || null
                 };
-
                 if (editingItem) {
                     result = await updateCompanyGroupAction(editingItem.id, groupData, requesterId);
                 } else {
                     result = await createCompanyGroupAction(groupData, requesterId);
                 }
             }
-
             if (result && result.success) {
                 showToast(editingItem ? 'Actualizado correctamente' : 'Creado correctamente');
                 setShowModal(false);
@@ -267,27 +216,22 @@ export default function CompanyManager({ isWorker = false }) {
                 showToast(errorMsg, 'error');
             }
         } catch (error) {
-            console.error('Unexpected error in handleSave:', error);
             showToast('Error inesperado al procesar la solicitud', 'error');
         }
     };
-
     const openConfirm = (title, action) => {
         setConfirmModal({ show: true, title, onConfirm: async () => { await action(); setConfirmModal({ show: false, title: '', onConfirm: null }); } });
     };
-
     const handleDelete = (id, isGroup = false) => {
         openConfirm('¿Estás seguro de eliminar este elemento?', async () => {
             const admin = getAdminSession();
             const requesterId = admin?.id;
             let result;
-
             if (!isGroup) {
                 result = await deleteCompanyAction(id, requesterId);
             } else {
                 result = await deleteCompanyGroupAction(id, requesterId);
             }
-
             if (result.success) { 
                 showToast('Eliminado correctamente'); 
                 loadData(); 
@@ -296,7 +240,6 @@ export default function CompanyManager({ isWorker = false }) {
             }
         });
     };
-
     const handleAvatarUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -307,19 +250,15 @@ export default function CompanyManager({ isWorker = false }) {
             const result = await uploadFile(file, tempId);
             if (result.success) { setFormData(prev => ({ ...prev, avatar_url: result.fileUrl })); showToast('Imagen subida correctamente'); }
             else { showToast(result.error || 'Error al subir imagen', 'error'); }
-        } catch (error) { console.error('Upload error:', error); showToast('Error inesperado', 'error'); }
+        } catch (error) {  showToast('Error inesperado', 'error'); }
         finally { setUploadingAvatar(false); }
     };
-
     const showToast = (text, type = 'success') => { setMessage({ text, type }); setTimeout(() => setMessage(null), 3000); };
-
     const openModal = (item = null, isGroup = false) => {
         setEditingItem(item);
         if (item) {
-            // Use 'type' field to detect company vs group - companies have 'type', groups don't
             const isCompany = item.type !== undefined && !isGroup;
             if (isCompany) {
-                // It is a company
                 setFormData({
                     name: item.name,
                     type: item.type || 'auditoria',
@@ -366,19 +305,15 @@ export default function CompanyManager({ isWorker = false }) {
         }
         setShowModal(true);
     };
-
     const normalizedSearch = searchTerm.trim().toLowerCase();
     const filteredCompanies = companies.filter(company => {
         if (!normalizedSearch) return true;
         const searchClean = normalizedSearch.trim();
         const rucClean = searchClean.replace(/\D/g, '');
-        
         const nameMatch = company.name.toLowerCase().includes(searchClean);
         const rucMatch = rucClean && company.ruc && company.ruc.includes(rucClean);
-        
         return nameMatch || rucMatch;
     });
-
     // SharePoint — auto-discover folder via Graph API
     const [archivosLoading, setArchivosLoading] = useState(null); // companyId while loading
     const handleOpenArchivos = async (company) => {
@@ -386,24 +321,20 @@ export default function CompanyManager({ isWorker = false }) {
             window.open(company.sharepoint_folder_url, '_blank');
             return;
         }
-
         const companyId = company.id;
         setArchivosLoading(companyId);
         try {
             const type = (company.type || '').toLowerCase();
             const res = await fetch(`/api/graph/find-folder?company=${encodeURIComponent(company.name)}&type=${type}&_t=${Date.now()}`);
             const data = await res.json();
-            
             if (data.url) {
                 window.open(data.url, '_blank');
-                
-                // Guardar la URL en la DB si la encontró con éxito para que sea instantáneo la próxima vez
                 if (data.found) {
                     const admin = getAdminSession();
                     const requesterId = admin?.id;
                     if (requesterId) {
                         await updateCompanyAction(companyId, { sharepoint_folder_url: data.url }, requesterId);
-                        loadData(); // Recargar para actualizar el UI
+                        loadData(); 
                     }
                 }
             }
@@ -411,20 +342,16 @@ export default function CompanyManager({ isWorker = false }) {
                 setMessage({ text: data.message, type: 'warning' });
             }
         } catch (err) {
-            console.error('Error finding folder:', err);
             setMessage({ text: 'Error al buscar carpeta en SharePoint', type: 'error' });
         } finally {
             setArchivosLoading(null);
         }
     };
-
-    // Document upload handler
     const DOC_TYPE_LABELS = {
         financieros: 'Estados Financieros',
         impuestos: 'Declaración de Impuestos',
         informes: 'Informes Analíticos'
     };
-
     const handleDocUpload = async () => {
         if (!docFile || !docModal) return;
         setDocUploading(true);
@@ -438,19 +365,15 @@ export default function CompanyManager({ isWorker = false }) {
             const { data, error } = await supabase.storage
                 .from('audit-files')
                 .upload(path, docFile, { cacheControl: '3600', upsert: true });
-
             if (error) throw error;
-
             const { data: urlData } = supabase.storage
                 .from('audit-files')
                 .getPublicUrl(path);
-
             const metaKey = `${docModal.type}_url`;
             const admin = getAdminSession();
             const requesterId = admin?.id;
             const updateRes = await updateCompanyAction(docModal.company.id, { [metaKey]: urlData.publicUrl }, requesterId);
             if (!updateRes.success) throw new Error(updateRes.error || 'Error al guardar URL en la base de datos');
-
             setMessage({ text: `${DOC_TYPE_LABELS[docModal.type]} subido correctamente`, type: 'success' });
             setDocModal(prev => ({
                 ...prev,
@@ -463,13 +386,11 @@ export default function CompanyManager({ isWorker = false }) {
             setDocName('');
             loadData();
         } catch (err) {
-            console.error('Upload error:', err);
             setMessage({ text: 'Error al subir archivo: ' + (err.message || ''), type: 'error' });
         } finally {
             setDocUploading(false);
         }
     };
-
     const handleDocDelete = async () => {
         if (!docModal) return;
         setDocUploading(true);
@@ -479,7 +400,6 @@ export default function CompanyManager({ isWorker = false }) {
             const requesterId = admin?.id;
             const updateRes = await updateCompanyAction(docModal.company.id, { [metaKey]: null }, requesterId);
             if (!updateRes.success) throw new Error(updateRes.error || 'Error al eliminar URL en la base de datos');
-            
             setMessage({ text: `Documento eliminado`, type: 'success' });
             setDocModal(prev => ({
                 ...prev,
@@ -496,14 +416,12 @@ export default function CompanyManager({ isWorker = false }) {
             setDocUploading(false);
         }
     };
-
     // Close add menu on outside click
     useEffect(() => {
         const handler = (e) => { if (addMenuRef.current && !addMenuRef.current.contains(e.target)) setShowAddMenu(false); };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
-
     const CompanyCard = ({ company, featured = false }) => {
         return (
             <div
@@ -538,9 +456,7 @@ export default function CompanyManager({ isWorker = false }) {
                 <div className="flex flex-wrap gap-1.5 text-[10px] font-bold tracking-tight uppercase">
                     {(() => {
                         const type = (company.type || 'otro').toLowerCase();
-                        // Estilo plano, sin colores excesivos
                         const style = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
-
                         return <span className={`px-2 py-0.5 rounded-full border ${style}`}>{type}</span>;
                     })()}
                     {company.ruc && (
@@ -549,12 +465,9 @@ export default function CompanyManager({ isWorker = false }) {
                         </span>
                     )}
                 </div>
-                
-
             </div>
         );
     };
-
     if (activeCompanyOperations) {
         return (
             <div className="animate-fade-in relative transition-all">
@@ -572,14 +485,12 @@ export default function CompanyManager({ isWorker = false }) {
             </div>
         );
     }
-
     return (
         <div className="animate-fade-in relative transition-all">
             {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
-
-            {/* Top Bar: Group title (left) + Search & Nuevo (right) */}
+            {}
             <div className="flex items-center justify-between gap-2 mb-3">
-                {/* Left: Back + Group Name (when inside a group) */}
+                {}
                 {expandedGroup ? (
                     <div className="flex items-center gap-2">
                         <button onClick={handleBackToGroups} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-gray-700 dark:hover:text-white">
@@ -593,8 +504,7 @@ export default function CompanyManager({ isWorker = false }) {
                         <h2 className="text-xl sm:text-2xl font-bold" style={{ color: theme.text }}>Grupos de Trabajo</h2>
                     </div>
                 )}
-
-                {/* Right: Search + Nuevo */}
+                {}
                 <div className="flex items-center gap-2">
                     <div className="relative group/search">
                         <input
@@ -653,13 +563,11 @@ export default function CompanyManager({ isWorker = false }) {
                     )}
                 </div>
             </div>
-
             {loading ? (
                 <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
             ) : (
-                /* === DASHBOARD VIEW === */
                 <>
-                    {/* LEVEL 1: GROUPS GRID */}
+                    {}
                     {!expandedGroup && normalizedSearch && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-1">
@@ -676,7 +584,6 @@ export default function CompanyManager({ isWorker = false }) {
                                     Limpiar búsqueda
                                 </button>
                             </div>
-
                             {filteredCompanies.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20 text-center rounded-[2rem] border-2 border-dashed animate-in zoom-in-95 duration-500" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
                                     <div className="w-20 h-20 rounded-3xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-6">
@@ -705,20 +612,15 @@ export default function CompanyManager({ isWorker = false }) {
                             )}
                         </div>
                     )}
-
                     {!expandedGroup && !normalizedSearch && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75">
-                            {/* Unified Groups Grid */}
                             <div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-                                    {/* DYAMIC GROUPS */}
                                     {groups.filter(g => !g.category).map((group, index) => {
                                         // Get companies in this group
                                         const groupCompanies = companies.filter(c => c.group_id === group.id);
                                         const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
                                         const moreCount = groupCompanies.length > 3 ? `+${groupCompanies.length - 3}` : '';
-
                                         return (
                                             <div
                                                 key={group.id}
@@ -757,8 +659,7 @@ export default function CompanyManager({ isWorker = false }) {
                                                         {groupCompanies.length} Empresas
                                                     </span>
                                                 </div>
-
-                                                {/* Member Preview */}
+                                                {}
                                                 {groupCompanies.length > 0 ? (
                                                     <div className="w-full mt-auto pt-3 border-t border-dashed border-gray-200 dark:border-gray-700">
                                                         <p className="text-xs text-gray-500 truncate dark:text-gray-400 font-medium">
@@ -773,14 +674,11 @@ export default function CompanyManager({ isWorker = false }) {
                                             </div>
                                         );
                                     })}
-
-                                    {/* LEGACY TYPES (If needed, or encourage migration) */}
+                                    {}
                                     {legacyGroups.map((lg, index) => {
-                                        const count = companies.filter(c => c.type === lg.type && !c.group_id).length; // Only count those NOT in a dynamic group to avoid dupes? Or count all?
-                                        // Let's count all logic matching type for backward compat
+                                        const count = companies.filter(c => c.type === lg.type && !c.group_id).length; 
                                         const typeCompanies = companies.filter(c => c.type === lg.type);
                                         const previewNames = typeCompanies.slice(0, 3).map(c => c.name).join(', ');
-
                                         return (
                                             <div
                                                 key={lg.id}
@@ -819,12 +717,10 @@ export default function CompanyManager({ isWorker = false }) {
                             </div>
                         </div>
                     )}
-
-                    {/* LEVEL 2: DETAILED LIST */}
+                    {}
                     {expandedGroup && (
                          <div className="animate-fade-in space-y-6">
-
-                            {/* LEVEL 2: SUB-GROUPS (Only for categories) */}
+                            {}
                             {(expandedGroup.type === 'contabilidad' || expandedGroup.type === 'auditoria') && (
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Grupos en {expandedGroup.name}</h4>
@@ -833,7 +729,6 @@ export default function CompanyManager({ isWorker = false }) {
                                             const groupCompanies = companies.filter(c => c.group_id === group.id);
                                             const previewNames = groupCompanies.slice(0, 3).map(c => c.name).join(', ');
                                             const moreCount = groupCompanies.length > 3 ? `+${groupCompanies.length - 3}` : '';
-
                                             return (
                                                 <div
                                                     key={group.id}
@@ -892,20 +787,15 @@ export default function CompanyManager({ isWorker = false }) {
                                     <h4 className="text-sm font-bold opacity-40 uppercase tracking-widest px-1">Empresas Directas</h4>
                                 </div>
                             )}
-
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {(() => {
-                                    const legacyTypes = ['contabilidad', 'auditoria']; // Only these are legacy type filters
+                                    const legacyTypes = ['contabilidad', 'auditoria']; 
                                     const groupCompanies = filteredCompanies.filter(c => {
-                                        // If it's a legacy type group (contabilidad/auditoria), filter by company type
-                                        // But only show those NOT in a specific sub-group to avoid clutter
                                         if (expandedGroup.type && legacyTypes.includes(expandedGroup.type)) {
                                             return c.type === expandedGroup.type && !c.group_id;
                                         }
-                                        // Otherwise, it's a dynamic group - filter by group_id
                                         return c.group_id === expandedGroup.id;
                                     });
-
                                     if (groupCompanies.length === 0) {
                                         return (
                                             <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
@@ -915,7 +805,6 @@ export default function CompanyManager({ isWorker = false }) {
                                             </div>
                                         );
                                     }
-
                                     return groupCompanies.map(company => (
                                         <div key={company.id}>
                                             <CompanyCard company={company} />
@@ -927,8 +816,7 @@ export default function CompanyManager({ isWorker = false }) {
                     )}
                 </>
             )}
-
-            {/* Modal Formulario */}
+            {}
             {showModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" style={{ background: theme.surface, borderColor: theme.border }}>
                     <div className="rounded-xl shadow-lg w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
@@ -937,7 +825,7 @@ export default function CompanyManager({ isWorker = false }) {
                                 {editingItem ? 'Editar' : 'Crear Nuevo'}
                             </h3>
                             <form onSubmit={handleSave} className="space-y-4">
-                                {/* Image Upload */}
+                                {}
                                 {!isWorker && (
                                     <div className="flex justify-center mb-4">
                                         <div className="relative group cursor-pointer">
@@ -966,7 +854,6 @@ export default function CompanyManager({ isWorker = false }) {
                                         </div>
                                     </div>
                                 )}
-
                                 {!isWorker && (
                                     <div>
                                         <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Nombre</label>
@@ -979,8 +866,7 @@ export default function CompanyManager({ isWorker = false }) {
                                         />
                                     </div>
                                 )}
-
-                                {/* Shared Credentials Section */}
+                                {}
                                 <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                                     <label className="block text-xs text-gray-500 mb-1 uppercase font-bold">Credenciales Globales</label>
                                     <div className="grid grid-cols-2 gap-2">
@@ -1004,8 +890,7 @@ export default function CompanyManager({ isWorker = false }) {
                                         />
                                     </div>
                                 </div>
-
-                                {/* Company Only Fields (Hidden for Groups) */}
+                                {}
                                 {!isWorker && ((!formData.category && !editingItem) || (editingItem && editingItem.type !== undefined)) && (
                                     <>
                                         <div>
@@ -1020,7 +905,6 @@ export default function CompanyManager({ isWorker = false }) {
                                                 ]}
                                             />
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Sistema Contable</label>
                                             <CustomSelect
@@ -1032,7 +916,6 @@ export default function CompanyManager({ isWorker = false }) {
                                                 ]}
                                             />
                                         </div>
-
                                         <div>
                                             <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>RUC</label>
                                             <input
@@ -1050,7 +933,6 @@ export default function CompanyManager({ isWorker = false }) {
                                                 Se usa para calcular vencimientos por noveno dígito.
                                             </p>
                                         </div>
-
                                         <div className="space-y-2">
                                             <label className="block text-sm font-medium" style={{ color: theme.textSecondary }}>Grupo de Empresas</label>
                                             <div
@@ -1069,7 +951,6 @@ export default function CompanyManager({ isWorker = false }) {
                                                         </div>
                                                         -- Sin Grupo asignado --
                                                     </button>
-
                                                     {groups.map(g => (
                                                         <button
                                                             key={g.id}
@@ -1099,7 +980,6 @@ export default function CompanyManager({ isWorker = false }) {
                                         </div>
                                     </>
                                 )}
-
                                 <div className="flex justify-end gap-3 mt-6">
                                     <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
                                     <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md">Guardar</button>
@@ -1109,15 +989,12 @@ export default function CompanyManager({ isWorker = false }) {
                     </div>
                 </div>
             )}
-
             {credentialModalCompany && (
                 <CredentialManager 
                     company={credentialModalCompany} 
                     onClose={() => setCredentialModalCompany(null)} 
                 />
             )}
-
-            {/* Confirmation Modal */}
             {
                 confirmModal.show && (
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex: 110 }}>
@@ -1132,8 +1009,6 @@ export default function CompanyManager({ isWorker = false }) {
                     </div>
                 )
             }
-
-            {/* Document Upload Modal */}
             {docModal && (() => {
                 const colors = {
                     financieros: { accent: '#10b981', bg: isDark ? 'rgba(16,185,129,0.08)' : '#ecfdf5', icon: <BarChart3 size={24} /> },
@@ -1145,7 +1020,7 @@ export default function CompanyManager({ isWorker = false }) {
                 return (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
                         <div className="rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border" style={{ background: theme.surface, borderColor: theme.border }}>
-                            {/* Header */}
+                            {}
                             <div className="flex items-center gap-3 p-5 border-b" style={{ borderColor: theme.border, background: c.bg }}>
                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ color: c.accent, background: isDark ? 'rgba(255,255,255,0.05)' : '#fff' }}>
                                     {c.icon}
@@ -1158,9 +1033,8 @@ export default function CompanyManager({ isWorker = false }) {
                                     <X size={18} style={{ color: theme.textSecondary }} />
                                 </button>
                             </div>
-
                             <div className="p-5 space-y-4">
-                                {/* Existing document card */}
+                                {}
                                 {existingUrl && (
                                     <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: `${c.accent}33`, background: c.bg }}>
                                         <div className="flex items-center gap-2">
@@ -1194,10 +1068,9 @@ export default function CompanyManager({ isWorker = false }) {
                                         No hay documento cargado
                                     </div>
                                 )}
-
                                 {!isWorker && (
                                     <>
-                                        {/* Drop zone */}
+                                        {}
                                         <div
                                             onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
                                             onDragLeave={() => setDocDragging(false)}
@@ -1241,8 +1114,7 @@ export default function CompanyManager({ isWorker = false }) {
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Custom Name Input */}
+                                        {}
                                         <div className="mt-3">
                                             <label className="text-sm font-semibold opacity-80 mb-1 block" style={{ color: theme.text }}>Nombre a mostrar</label>
                                             <input 
@@ -1257,8 +1129,7 @@ export default function CompanyManager({ isWorker = false }) {
                                                 Si se deja en blanco se utilizará el nombre original del archivo.
                                             </p>
                                         </div>
-
-                                        {/* Actions */}
+                                        {}
                                         <div className="flex gap-2 pt-1">
                                             <button
                                                 onClick={() => { setDocModal(null); setDocFile(null); }}

@@ -9,7 +9,7 @@ const COLORS = ['#3498db', '#27ae60', '#e74c3c', '#d4af37', '#9b59b6', '#1abc9c'
 
 export default function AdminDashboard({ theme, isDark }) {
     const [records, setRecords] = useState([]);
-    const [filterType, setFilterType] = useState('mes'); // 'mes', 'semana', 'custom'
+    const [filterType, setFilterType] = useState('mes'); 
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
 
@@ -22,7 +22,7 @@ export default function AdminDashboard({ theme, isDark }) {
             end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
         } else if (filterType === 'semana') {
             const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
             const first = new Date(d.setDate(diff));
             const last = new Date(d.setDate(first.getDate() + 6));
             start = first.toISOString().split('T')[0];
@@ -42,7 +42,7 @@ export default function AdminDashboard({ theme, isDark }) {
                 .select('company_name, worker_name, hours_worked')
                 .gte('created_at', `${dateRange.start}T00:00:00Z`)
                 .lte('created_at', `${dateRange.end}T23:59:59Z`);
-            
+
             if (data) setRecords(data);
         };
         fetchRecords();
@@ -78,7 +78,7 @@ export default function AdminDashboard({ theme, isDark }) {
 
     return (
         <div className="flex flex-col gap-4 sm:gap-8 animate-fade-in">
-            {/* Filtros */}
+            {}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-center p-4 rounded-3xl border shadow-sm transition-all" style={{ background: theme.surface, borderColor: theme.border }}>
                 <div className="flex gap-2">
                     <button 
@@ -112,7 +112,7 @@ export default function AdminDashboard({ theme, isDark }) {
                 )}
             </div>
 
-            {/* SECTION 1: DEDICACIÓN POR EMPRESA */}
+            {}
             <div className="p-3 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                     <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
@@ -149,7 +149,7 @@ export default function AdminDashboard({ theme, isDark }) {
                 </div>
             </div>
 
-            {/* SECTION 2: HORAS POR FUNCIONARIO */}
+            {}
             <div className="p-4 sm:p-6 rounded-3xl border shadow-sm transition-all hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100" style={{ background: theme.surface, borderColor: theme.border }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                     <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2" style={{ color: theme.text }}>
@@ -186,7 +186,7 @@ export default function AdminDashboard({ theme, isDark }) {
                 </div>
             </div>
 
-            {/* SECTION 3: INFORMES */}
+            {}
             <RealTimeMonitor />
         </div>
     );

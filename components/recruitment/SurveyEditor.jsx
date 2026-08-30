@@ -10,8 +10,6 @@ import Toast from '../Toast';
 import CustomSelect from '../CustomSelect';
 import { getAdminSession } from '../../lib/auth';
 import { saveSurveyQuestionsAction, getSurveyQuestionsAction } from '../../lib/actions';
-// Simple reordering without external libraries for now, using HTML5 Drag and Drop or just sort
-// since "no agregues nuevas features, arregla esto" - well, reordenar is requested.
 
 export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
   const { isDark } = useTheme();
@@ -22,8 +20,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  
-  // Drag and drop state
+
   const [draggedIdx, setDraggedIdx] = useState(null);
 
   const showToast = (text, type = 'success') => {
@@ -40,10 +37,10 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
           .eq('id', surveyId)
           .single();
         if (sErr) throw sErr;
-        
+
         const parentId = sData.parent_survey_id || sData.id;
         const qRes = await getSurveyQuestionsAction(surveyId, parentId);
-        
+
         if (!qRes.success) {
            throw new Error(qRes.error || 'Failed to fetch questions');
         }
@@ -51,7 +48,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
         setSurvey(sData);
         setQuestions(qRes.questions);
       } catch (err) {
-        console.error("CRITICAL ERROR FETCHING SURVEY:", err);
+
         showToast('Error cargando prueba: ' + err.message, 'error');
       } finally {
         setLoading(false);
@@ -104,13 +101,13 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
   };
 
   const handleDragOver = (e, index) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault(); 
   };
 
   const handleDrop = (e, index) => {
     e.preventDefault();
     if (draggedIdx === null || draggedIdx === index) return;
-    
+
     setQuestions(prev => {
       const newQs = [...prev];
       const items = newQs.splice(draggedIdx, 1);
@@ -120,22 +117,17 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
     setDraggedIdx(null);
   };
 
-
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 1. Create new version of Survey (inactivates old one)
+
       const { data: newSurveyId, error: sErr } = await supabase.rpc('create_new_survey_version', {
         p_old_survey_id: surveyId,
         p_title: survey.title,
         p_description: survey.description
       });
-      
+
       if (sErr) throw sErr;
-
-      // We no longer delete questions from the old survey, they stay there.
-      // 2. Insert new questions pointing to newSurveyId
-
 
       if (questions.length > 0) {
         const inserts = questions.map((q, idx) => ({
@@ -150,7 +142,6 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
         if (!res.success) throw new Error(res.error);
       }
 
-      // Fetch the newly created survey to update the local state correctly
       const { data: newlyCreatedSurvey } = await supabase
         .from('recruitment_surveys')
         .select('*')
@@ -159,16 +150,14 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
 
       if (newlyCreatedSurvey) {
         setSurvey(newlyCreatedSurvey);
-        // Important: we don't change `surveyId` prop as it's passed from parent,
-        // so clicking back goes to the list which will reload the latest active surveys.
-        // Or we could inform the parent to switch to the new ID, but simply returning to list is safest.
+
       }
       showToast('Prueba guardada y nueva versión creada correctamente.');
       setTimeout(() => {
-        onBack(); // Return to the list so it re-fetches the active surveys
+        onBack(); 
       }, 1500);
     } catch (err) {
-      console.error(err);
+
       showToast('Error al guardar: ' + err.message, 'error');
     } finally {
       setSaving(false);
@@ -189,7 +178,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
     <div className="space-y-6 animate-fade-in relative">
       <style>{`.main-page-header { display: none !important; }`}</style>
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
-      
+
       {headerPortalNode ? createPortal(
          <div className="flex justify-between items-center w-full">
            <button 
@@ -199,7 +188,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
            >
              <ArrowLeft size={16} /> Volver
            </button>
-           
+
            <button 
              onClick={handleSave}
              disabled={saving}
@@ -274,13 +263,13 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
                className={`flex gap-4 p-4 border rounded-xl shadow-sm transition ${draggedIdx === index ? 'opacity-50' : 'opacity-100'} cursor-move`} 
                style={{ borderColor: theme.border, background: theme.surface }}
             >
-               {/* Controls */}
+               {}
                <div className="flex flex-col items-center justify-center gap-2 border-r pr-4" style={{ borderColor: theme.border }}>
                   <GripVertical size={20} style={{ color: theme.textSecondary }} className="mb-2" />
                   <span className="font-bold text-lg" style={{ color: theme.textSecondary }}>{index + 1}</span>
                </div>
 
-               {/* Editor */}
+               {}
                <div className="flex-1 space-y-4">
                  <div className="flex justify-between gap-4">
                     <input 
@@ -311,7 +300,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
                     />
                  </div>
 
-                 {/* Options Config */}
+                 {}
                  {['multiple_choice', 'checkbox', 'dropdown', 'multi_text'].includes(q.type) && (
                    <div className="pl-4 border-l-2 border-blue-500 space-y-2">
                      <p className="text-xs font-bold text-gray-500 uppercase mb-2">{q.type === 'multi_text' ? 'Campos / Etiquetas' : 'Opciones'}</p>
@@ -370,7 +359,7 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
 
                </div>
 
-               {/* Actions */}
+               {}
                <div className="flex flex-col items-end justify-between border-l pl-4" style={{ borderColor: theme.border }}>
                   <button 
                     onClick={() => handleDeleteQuestion(q.id)}

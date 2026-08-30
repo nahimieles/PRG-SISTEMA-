@@ -25,7 +25,7 @@ export default function NotificationBell({ workerId = null }) {
             const isAdmin = Boolean(session?.id) && !isWorker;
 
             if (isWorker) {
-                // Trabajador: Fetch Notificaciones from DB
+
                 const { data, error } = await supabase
                     .from('notificaciones')
                     .select('*')
@@ -34,13 +34,12 @@ export default function NotificationBell({ workerId = null }) {
                     .limit(20);
 
                 if (error) {
-                    console.error('Error fetching notifications:', error);
+
                 } else if (data && isMounted) {
                     setNotifications(data);
                     setUnreadCount(data.filter(n => !n.leida).length);
                 }
 
-                // Subscripción a nuevas notificaciones
                 channel = supabase.channel('notificaciones_changes')
                     .on('postgres_changes', { 
                         event: 'INSERT', 
@@ -53,12 +52,12 @@ export default function NotificationBell({ workerId = null }) {
                     })
                     .subscribe();
             } else if (isAdmin) {
-                // Admin: Fetch Inactividad (Sin reportes recientes)
+
                 const workersWithout = await getWorkersWithoutReports(3);
                 if (workersWithout && workersWithout.length > 0 && isMounted) {
                     const readNotifs = JSON.parse(localStorage.getItem('adminReadNotifs') || '[]');
                     const deletedNotifs = JSON.parse(localStorage.getItem('adminDeletedNotifs') || '[]');
-                    
+
                     const adminNotifs = workersWithout
                         .filter(w => !deletedNotifs.includes(`admin-notif-${w.id}`))
                         .map((w) => ({
@@ -87,9 +86,8 @@ export default function NotificationBell({ workerId = null }) {
                 supabase.removeChannel(channel);
             }
         };
-    }, [workerId]); // removed adminSession from deps to avoid size change issues
+    }, [workerId]); 
 
-    // Cerrar al hacer click afuera
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -115,7 +113,7 @@ export default function NotificationBell({ workerId = null }) {
             .from('notificaciones')
             .update({ leida: true })
             .eq('id', id);
-        
+
         if (!error) {
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
@@ -124,9 +122,9 @@ export default function NotificationBell({ workerId = null }) {
 
     const markAllAsRead = async () => {
         if (unreadCount === 0) return;
-        
+
         const unreadIds = notifications.filter(n => !n.leida && !n.isAdminLocal).map(n => n.id);
-        
+
         if (unreadIds.length > 0) {
             await supabase
                 .from('notificaciones')
@@ -210,7 +208,7 @@ export default function NotificationBell({ workerId = null }) {
                             </button>
                         )}
                     </div>
-                    
+
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {notifications.length === 0 ? (
                             <div className="p-6 text-center text-sm" style={{ color: theme.textSecondary }}>

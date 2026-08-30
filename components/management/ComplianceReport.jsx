@@ -12,18 +12,15 @@ export default function ComplianceReport({ theme, isDark }) {
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth() + 1;
         const currentYear = currentDate.getFullYear();
-        
-        // Expected working days in the month (approx 22 for a normal month, 8 hours a day = 176)
+
         const EXPECTED_MONTHLY_HOURS = 160; 
 
         try {
-            // 1. Fetch Workers
+
             const { data: workers } = await supabase.from('workers').select('id, full_name, role').eq('estado_laboral', 'activo');
-            
-            // 2. Fetch Tasks for current month
+
             const { data: tasks } = await supabase.from('hr_tasks').select('*').eq('month', currentMonth).eq('year', currentYear);
-            
-            // 3. Fetch Hours for current month
+
             const startDate = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0];
             const endDate = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0];
             const { data: records } = await supabase
@@ -36,14 +33,12 @@ export default function ComplianceReport({ theme, isDark }) {
             const tasksArr = tasks || [];
             const recordsArr = records || [];
 
-            // Per-worker stats
             const wData = workersArr.map(w => {
-                // Tasks
+
                 const wTasks = tasksArr.filter(t => t.worker_id === w.id);
                 const wCompleted = wTasks.filter(t => t.status === 'completed').length;
-                const taskCompliance = wTasks.length === 0 ? 100 : Math.round((wCompleted / wTasks.length) * 100); // 100% if no tasks assigned
-                
-                // Hours
+                const taskCompliance = wTasks.length === 0 ? 100 : Math.round((wCompleted / wTasks.length) * 100); 
+
                 const wRecords = recordsArr.filter(r => r.worker_id === w.id);
                 const loggedHours = wRecords.reduce((acc, r) => acc + (parseFloat(r.hours_worked) || 0), 0);
                 const hoursCompliance = Math.min(100, Math.round((loggedHours / EXPECTED_MONTHLY_HOURS) * 100));
@@ -60,12 +55,11 @@ export default function ComplianceReport({ theme, isDark }) {
                 };
             });
 
-            // Sort by task compliance and hours descending
             wData.sort((a, b) => (b.taskCompliance + b.hoursCompliance) - (a.taskCompliance + a.hoursCompliance));
-            
+
             setWorkersData(wData);
         } catch (error) {
-            console.error('Error fetching compliance data:', error);
+
         } finally {
             setLoading(false);
         }

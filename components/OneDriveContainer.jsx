@@ -5,18 +5,14 @@ import OneDriveExplorer from "@/components/OneDriveExplorer";
 import SmartReportGenerator from "@/components/SmartReportGenerator";
 import { ArrowLeft, Building2, LogIn, LogOut } from 'lucide-react';
 import { useMsal } from "@azure/msal-react";
-
 import { getUnifiedSession } from "@/lib/auth";
-
 const OneDriveContainer = () => {
     const { instance, accounts } = useMsal();
     const isAuthenticated = accounts && accounts.length > 0;
-
     const [selectedSite, setSelectedSite] = useState(null);
     const [selectedDriveId, setSelectedDriveId] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [currentRole, setCurrentRole] = useState(null);
-
     useEffect(() => {
         const session = getUnifiedSession();
         if (session) {
@@ -24,27 +20,22 @@ const OneDriveContainer = () => {
             setCurrentRole(session.role);
         }
     }, []);
-
     const handleSiteSelect = (site, driveId) => {
         setSelectedSite(site);
         setSelectedDriveId(driveId);
     };
-
     const handleBackToSites = () => {
         setSelectedSite(null);
         setSelectedDriveId(null);
     };
-
     const handleLogin = () => {
         instance.loginPopup({ scopes: ["Files.ReadWrite.All", "Sites.Read.All"] })
-            .catch(e => console.error("Login failed:", e));
+            .catch(e => );
     };
-
     const handleLogout = () => {
         instance.logoutPopup()
-            .catch(e => console.error("Logout failed:", e));
+            .catch(e => );
     };
-
     return (
         <div className="space-y-6 animate-fade-in">
             <header className="mb-6 flex justify-between items-center">
@@ -74,8 +65,7 @@ const OneDriveContainer = () => {
                     </button>
                 )}
             </header>
-
-            {/* Contenido Principal */}
+            {}
             <section className="h-full">
                 {!isAuthenticated ? (
                     <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -96,7 +86,7 @@ const OneDriveContainer = () => {
                     </div>
                 ) : currentUser ? (
                     <OneDriveExplorer
-                        driveId={null} // Unified Mode starts at virtual root
+                        driveId={null} 
                         siteName={'Archivos'}
                         currentUser={currentUser}
                         role={currentRole}
@@ -111,5 +101,4 @@ const OneDriveContainer = () => {
         </div>
     );
 };
-
 export default OneDriveContainer;

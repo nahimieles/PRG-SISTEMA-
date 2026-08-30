@@ -1,8 +1,4 @@
--- ========================================================================================
--- MIGRACIÓN 004: MÓDULOS GERENCIALES (Tareas, Vacaciones, Capacitaciones, etc.)
--- ========================================================================================
 
--- 1. Incidencias
 CREATE TABLE IF NOT EXISTS incidencias (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
@@ -15,7 +11,6 @@ CREATE TABLE IF NOT EXISTS incidencias (
 );
 CREATE INDEX IF NOT EXISTS idx_incidencias_worker ON incidencias(worker_id);
 
--- 2. Tareas
 CREATE TABLE IF NOT EXISTS tareas (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     nombre TEXT NOT NULL,
@@ -34,7 +29,6 @@ CREATE TABLE IF NOT EXISTS tareas (
 CREATE INDEX IF NOT EXISTS idx_tareas_responsable ON tareas(responsable_id);
 CREATE INDEX IF NOT EXISTS idx_tareas_estado ON tareas(estado);
 
--- 3. Vacaciones
 CREATE TABLE IF NOT EXISTS vacaciones (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
@@ -51,7 +45,6 @@ CREATE TABLE IF NOT EXISTS vacaciones (
 CREATE INDEX IF NOT EXISTS idx_vacaciones_worker ON vacaciones(worker_id);
 CREATE INDEX IF NOT EXISTS idx_vacaciones_estado ON vacaciones(estado);
 
--- 4. Capacitaciones
 CREATE TABLE IF NOT EXISTS capacitaciones (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
@@ -70,12 +63,11 @@ CREATE TABLE IF NOT EXISTS capacitaciones (
 );
 CREATE INDEX IF NOT EXISTS idx_capacitaciones_worker ON capacitaciones(worker_id);
 
--- 5. Eventos de Calendario (Unificados)
 CREATE TABLE IF NOT EXISTS eventos_calendario (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     titulo TEXT NOT NULL,
     descripcion TEXT,
-    tipo TEXT NOT NULL, -- 'tributario', 'reunion', 'interno', 'capacitacion', 'vacacion'
+    tipo TEXT NOT NULL, 
     fecha DATE NOT NULL,
     hora TIME,
     hora_fin TIME,

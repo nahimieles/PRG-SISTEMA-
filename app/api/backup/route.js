@@ -4,7 +4,7 @@ import path from 'path';
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { targets } = body; // Array of { name, driveId }
+        const { targets } = body; 
 
         if (!targets || !Array.isArray(targets) || targets.length === 0) {
             return new Response(JSON.stringify({ error: "No targets provided" }), { status: 400 });
@@ -28,7 +28,7 @@ export async function POST(req) {
                 const RCLONE_REMOTE = "m365";
 
                 sendUpdate(`INICIO DE RESPALDO MASIVO\nDestino base: ${BACKUP_ROOT}\nRclone Remote: ${RCLONE_REMOTE}`);
-                
+
                 let targetIndex = 0;
 
                 const runNext = () => {
@@ -41,10 +41,10 @@ export async function POST(req) {
 
                     const target = targets[targetIndex];
                     sendUpdate(`\n[${targetIndex + 1}/${targets.length}] Sincronizando: ${target.name}...`);
-                    
+
                     const safeName = target.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[<>:"/\\|?*]/g, '_');
                     const destPath = path.join(BACKUP_ROOT, safeName);
-                    
+
                     const rcloneArgs = [
                         'sync', 
                         `${RCLONE_REMOTE},drive_id="${target.driveId}",drive_type="documentLibrary":/`, 
@@ -56,7 +56,7 @@ export async function POST(req) {
                         '--tpslimit', '10',
                         '--tpslimit-burst', '10',  
                         '--onedrive-chunk-size', '10M',
-                        '-v' // Verbose to get line-by-line output
+                        '-v' 
                     ];
 
                     try {
@@ -93,7 +93,6 @@ export async function POST(req) {
                     }
                 };
 
-                // Start the loop
                 runNext();
             },
             cancel() {

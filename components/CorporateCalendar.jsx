@@ -13,8 +13,7 @@ export default function CorporateCalendar({ theme, isDark }) {
     const [workers, setWorkers] = useState([]);
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
-    
-    // Form state
+
     const [formData, setFormData] = useState({
         titulo: '',
         descripcion: '',
@@ -36,20 +35,18 @@ export default function CorporateCalendar({ theme, isDark }) {
     const loadData = async () => {
         setLoading(true);
         try {
-            // Load events
+
             const { data: eventsData } = await supabase.from('eventos_calendario').select('*');
             if (eventsData) setEvents(eventsData);
 
-            // Load workers for select
             const { data: workersData } = await supabase.from('workers').select('id, full_name').eq('status', 'activo');
             if (workersData) setWorkers(workersData);
 
-            // Load companies for select
             const { data: companiesData } = await supabase.from('companies').select('id, name');
             if (companiesData) setCompanies(companiesData);
 
         } catch (error) {
-            console.error('Error loading calendar data:', error);
+
         } finally {
             setLoading(false);
         }
@@ -62,16 +59,16 @@ export default function CorporateCalendar({ theme, isDark }) {
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
     const getFirstDayOfMonth = (year, month) => {
         let day = new Date(year, month, 1).getDay();
-        return day === 0 ? 6 : day - 1; // 0 = Lunes
+        return day === 0 ? 6 : day - 1; 
     };
 
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    
+
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfMonth(year, month);
-    
+
     const days = [];
     for (let i = 0; i < firstDay; i++) days.push(null);
     for (let i = 1; i <= daysInMonth; i++) days.push(i);
@@ -106,10 +103,10 @@ export default function CorporateCalendar({ theme, isDark }) {
     const handleSaveEvent = async (e) => {
         e.preventDefault();
         try {
-            let color = '#3b82f6'; // blue (interno)
-            if (formData.tipo === 'reunion') color = '#a855f7'; // purple
-            if (formData.tipo === 'capacitacion') color = '#10b981'; // green
-            if (formData.tipo === 'vacacion') color = '#f59e0b'; // amber
+            let color = '#3b82f6'; 
+            if (formData.tipo === 'reunion') color = '#a855f7'; 
+            if (formData.tipo === 'capacitacion') color = '#10b981'; 
+            if (formData.tipo === 'vacacion') color = '#f59e0b'; 
 
             const payload = {
                 ...formData,
@@ -126,7 +123,7 @@ export default function CorporateCalendar({ theme, isDark }) {
             setShowModal(false);
             loadData();
         } catch (error) {
-            console.error('Error saving event:', error);
+
         }
     };
 
@@ -137,7 +134,7 @@ export default function CorporateCalendar({ theme, isDark }) {
             setShowModal(false);
             loadData();
         } catch (error) {
-            console.error('Error deleting event:', error);
+
         }
     };
 
@@ -159,7 +156,7 @@ export default function CorporateCalendar({ theme, isDark }) {
                         <p className="text-sm" style={{ color: theme.textSecondary }}>Gestiona reuniones, capacitaciones y eventos internos.</p>
                     </div>
                 </div>
-                
+
                 <button 
                     onClick={() => openModal()}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-bold text-sm bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
@@ -198,7 +195,7 @@ export default function CorporateCalendar({ theme, isDark }) {
                     {days.map((day, i) => {
                         const dayEvents = getEventsForDay(day);
                         const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
-                        
+
                         return (
                             <div 
                                 key={i} 
@@ -236,7 +233,6 @@ export default function CorporateCalendar({ theme, isDark }) {
                 </div>
             </div>
 
-            {/* Event Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div 
@@ -251,7 +247,7 @@ export default function CorporateCalendar({ theme, isDark }) {
                                 <X size={20} />
                             </button>
                         </div>
-                        
+
                         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                             <form id="event-form" onSubmit={handleSaveEvent} className="space-y-4">
                                 <div>
@@ -347,7 +343,7 @@ export default function CorporateCalendar({ theme, isDark }) {
                                 </div>
                             </form>
                         </div>
-                        
+
                         <div className="p-4 border-t flex justify-end gap-2" style={{ borderColor: theme.border, background: isDark ? 'rgba(0,0,0,0.2)' : '#f9fafb' }}>
                             {editingEvent && (
                                 <button 

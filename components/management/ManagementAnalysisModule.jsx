@@ -17,7 +17,7 @@ export default function ManagementAnalysisModule({ theme, isDark }) {
 
     return (
         <div className="flex flex-col h-full animate-fade-in">
-            {/* Header Tabs */}
+            {}
             <div className="flex flex-wrap gap-2 mb-6 border-b" style={{ borderColor: theme.border }}>
                 {tabs.map(tab => {
                     const Icon = tab.icon;
@@ -39,7 +39,7 @@ export default function ManagementAnalysisModule({ theme, isDark }) {
                 })}
             </div>
 
-            {/* Content Area */}
+            {}
             <div className="flex-1 w-full">
                 {activeSubTab === 'clientes' && <ClientActivities theme={theme} isDark={isDark} />}
                 {activeSubTab === 'horas' && <HoursAnalysis theme={theme} isDark={isDark} />}

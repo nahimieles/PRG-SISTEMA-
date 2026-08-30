@@ -18,14 +18,13 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
-  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc' by created_at
+  const [sortOrder, setSortOrder] = useState('desc'); 
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [availableVersions, setAvailableVersions] = useState([]);
   const [selectedVersion, setSelectedVersion] = useState('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Modal detail state
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [candidateResponses, setCandidateResponses] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -45,12 +44,11 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
           .select('id, version, created_at')
           .eq('parent_survey_id', parentId)
           .order('version', { ascending: false });
-          
+
         setAvailableVersions(allVersions || []);
-        
+
         const allIds = [parentId, ...(allVersions ? allVersions.map(v => v.id) : [])];
 
-        // Load candidates from all versions of this survey
         const { data: cands, error: cErr } = await supabase
           .from('recruitment_candidates')
           .select('*')
@@ -60,16 +58,15 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
         if (cErr) throw cErr;
         setCandidates(cands || []);
 
-        // Load ALL questions for context (from all versions)
         const { data: allQuestions } = await supabase
           .from('recruitment_questions')
           .select('*')
           .in('survey_id', allIds);
-          
+
         setQuestions(allQuestions || []);
 
       } catch (err) {
-        console.error("Error loading dashboard:", err);
+
         setError("No se pudieron cargar los datos del dashboard.");
       } finally {
         setLoading(false);
@@ -77,8 +74,6 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
     };
     fetchDashboardData();
   }, [survey.id]);
-
-  // States are no longer managed interactively
 
   const openCandidateDetail = async (candidate) => {
     setSelectedCandidate(candidate);
@@ -89,14 +84,13 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
         .from('recruitment_responses')
         .select('*')
         .eq('candidate_id', candidate.id);
-      
+
       if (error) throw error;
       const responses = data || [];
       setCandidateResponses(responses);
 
-      // Check for missing questions and fetch them via secure Server Action
       const missingQIds = [...new Set(responses.map(r => r.question_id).filter(id => !questions.find(q => q.id === id)))];
-      
+
       if (missingQIds.length > 0) {
         const adminSession = getAdminSession();
         if (adminSession) {
@@ -109,12 +103,12 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
             });
           }
         } else {
-          // Fallback to client if no admin session found for some reason
+
           const { data: missingQs } = await supabase
             .from('recruitment_questions')
             .select('*')
             .in('id', missingQIds);
-          
+
           if (missingQs && missingQs.length > 0) {
             setQuestions(prev => {
               const existingIds = new Set(prev.map(q => q.id));
@@ -131,7 +125,6 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
     }
   };
 
-  // Derived Metrics
   const stats = useMemo(() => {
     return { 
        total: candidates.length, 
@@ -139,14 +132,13 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
     };
   }, [candidates, questions]);
 
-  // Derived Filtered List
   const filteredCandidates = useMemo(() => {
     let result = candidates;
-    
+
     if (selectedVersion !== 'all') {
       result = result.filter(c => c.survey_id === selectedVersion);
     }
-    
+
     if (searchTerm) {
       result = result.filter(c => 
         c.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -191,7 +183,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
          </div>
       , headerPortalNode)}
 
-      {/* Header Info */}
+      {}
       <div className="p-6 rounded-xl shadow-sm border" style={{ borderColor: theme.border, background: theme.surface }}>
         <h2 className="text-2xl font-bold mb-2 text-blue-600">{survey.title}</h2>
         <p className="mb-6 max-w-3xl" style={{ color: theme.textSecondary }}>{survey.description}</p>
@@ -205,8 +197,8 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
              </div>
            </div>
          </div>
-      </div>      {/* Metricas */}
-      {/* Metricas */}
+      </div>      {}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl border flex flex-col items-center justify-center text-center" style={{ borderColor: theme.border, background: theme.surface }}>
             <div className="p-3 rounded-full bg-blue-100 mb-3">
@@ -224,11 +216,10 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
           </div>
       </div>
 
-
-      {/* Candidate Table Controls */}
+      {}
       <div className="rounded-xl shadow-sm border overflow-hidden" style={{ borderColor: theme.border, background: theme.surface }}>
         <div className="p-4 border-b flex flex-col sm:flex-row gap-4 justify-between items-center bg-black/5 dark:bg-white/5" style={{ borderColor: theme.border }}>
-          
+
           <div className="relative w-full sm:w-64">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: theme.textSecondary }} size={16} />
              <input 
@@ -253,7 +244,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                   </span>
                   <Filter size={14} style={{ color: theme.textSecondary }} className="ml-2 flex-shrink-0" />
                 </button>
-                
+
                 {isDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)}></div>
@@ -282,7 +273,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                   </>
                 )}
              </div>
-             
+
              <button 
                onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
                className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition text-sm font-medium"
@@ -295,9 +286,9 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
           </div>
         </div>
 
-        {/* Candidate List */}
+        {}
         <div className="overflow-x-auto">
-          {/* Desktop Table View */}
+          {}
           <table className="w-full text-left text-sm hidden sm:table" style={{ color: theme.text }}>
             <thead className="border-b" style={{ borderColor: theme.border, color: theme.textSecondary, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
               <tr>
@@ -342,7 +333,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
             </tbody>
           </table>
 
-          {/* Mobile Card View */}
+          {}
           <div className="sm:hidden divide-y" style={{ borderColor: theme.border }}>
             {filteredCandidates.length === 0 ? (
               <div className="p-8 text-center text-gray-500">No se encontraron candidatos.</div>
@@ -379,7 +370,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
       </div>
 
-      {/* Detaill Modal (Slide Over simulation or Modal) */}
+      {}
       {selectedCandidate && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fade-in transition-all">
            <div className="w-full max-w-2xl h-full shadow-2xl relative flex flex-col border-l" style={{ background: theme.background, borderColor: theme.border }}>
@@ -415,17 +406,16 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                      <p className="text-center text-gray-500 py-10">No se encontraron respuestas para este candidato.</p>
                    ) : (
                      candidateResponses.map((resp, i) => {
-                       // Find corresponding question for context
+
                        const q = questions.find(qu => qu.id === resp.question_id);
                        const displayVal = resp.response_value;
-                       
+
                        const renderValue = (val) => {
                          if (!val) return <p className="text-gray-500 italic">Sin respuesta</p>;
                          if (typeof val !== 'object') {
                            return <p className="text-lg whitespace-pre-wrap font-medium" style={{ color: theme.text }}>{String(val)}</p>;
                          }
-                         
-                         // Si es objeto (como preguntas de completar espacios u otros tipos compuestos)
+
                          return (
                            <div className="grid grid-cols-1 gap-2 mt-2">
                              {Object.entries(val).map(([k, v]) => (
@@ -439,7 +429,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                            </div>
                          );
                        };
-                       
+
                        return (
                          <div key={resp.id} className="rounded-xl border p-5 transition" style={{ borderColor: theme.border, background: theme.surface }}>
                            <p className="font-medium text-blue-600 dark:text-blue-400 mb-3 block border-b pb-2" style={{ borderColor: theme.border }}>

@@ -1,11 +1,9 @@
 "use client";
-
 import React, { useState, useEffect } from 'react';
 import { X, Download, ExternalLink, FileText, Image as ImageIcon, File, Loader2, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getPreviewUrl } from '@/lib/onedriveService';
-
 const FilePreview = ({ file, onClose, onDownload, driveId }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -13,22 +11,16 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
     const [error, setError] = useState(null);
     const [zoom, setZoom] = useState(100);
     const [previewUrl, setPreviewUrl] = useState(null);
-
     useEffect(() => {
         setLoading(true);
         setError(null);
         setPreviewUrl(null);
-
         const loadPreview = async () => {
             try {
                 const fileType = getFileType();
-
-                // For Office documents, get preview URL from Microsoft Graph
                 if (['word', 'excel', 'powerpoint', 'pdf'].includes(fileType)) {
-                    // Caching logic: check if we already have the preview URL for this file ID in session memory
                     const cacheKey = `preview_${file.id}`;
                     const cachedUrl = sessionStorage.getItem(cacheKey);
-
                     if (cachedUrl) {
                         setPreviewUrl(cachedUrl);
                     } else {
@@ -37,26 +29,20 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                             sessionStorage.setItem(cacheKey, url);
                             setPreviewUrl(url);
                         } else {
-                            // Fallback: try to use webUrl for SharePoint viewing
                             setPreviewUrl(file.webUrl);
                         }
                     }
                 }
                 setLoading(false);
             } catch (err) {
-                console.error("Error loading preview:", err);
                 setError("No se pudo cargar la vista previa");
                 setLoading(false);
             }
         };
-
-        // Small delay then load
         const timer = setTimeout(loadPreview, 300);
         return () => clearTimeout(timer);
     }, [file, driveId]);
-
     if (!file) return null;
-
     const getFileType = () => {
         const ext = file.name.split('.').pop().toLowerCase();
         if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) return 'image';
@@ -67,9 +53,7 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
         if (['txt', 'md', 'json', 'xml', 'csv', 'log'].includes(ext)) return 'text';
         return 'unknown';
     };
-
     const fileType = getFileType();
-
     const renderPreview = () => {
         if (loading) {
             return (
@@ -81,7 +65,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                 </div>
             );
         }
-
         if (error) {
             return (
                 <div className="flex-1 flex items-center justify-center">
@@ -98,7 +81,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                 </div>
             );
         }
-
         switch (fileType) {
             case 'image':
                 return (
@@ -116,12 +98,10 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                         />
                     </div>
                 );
-
             case 'pdf':
             case 'word':
             case 'excel':
             case 'powerpoint':
-                // Use the preview URL from Microsoft Graph or fallback to webUrl
                 const embedUrl = previewUrl || file.webUrl;
                 return (
                     <iframe
@@ -132,7 +112,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     />
                 );
-
             case 'text':
                 return (
                     <div className="flex-1 overflow-auto p-6">
@@ -149,7 +128,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                         </div>
                     </div>
                 );
-
             default:
                 return (
                     <div className="flex-1 flex items-center justify-center">
@@ -169,21 +147,17 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                 );
         }
     };
-
     const handleDownload = () => {
         if (onDownload) {
             onDownload(file);
         } else {
-            // Default download behavior - use download URL if available
             const downloadUrl = file['@microsoft.graph.downloadUrl'] || file.webUrl;
             window.open(downloadUrl, '_blank');
         }
     };
-
     const handleOpenInNewTab = () => {
         window.open(file.webUrl, '_blank');
     };
-
     return (
         <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
@@ -194,7 +168,7 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div
                     className="flex items-center justify-between p-4 border-b"
                     style={{ borderColor: theme.border }}
@@ -218,9 +192,8 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                             </p>
                         </div>
                     </div>
-
                     <div className="flex items-center gap-2">
-                        {/* Zoom controls for images */}
+                        {}
                         {fileType === 'image' && (
                             <>
                                 <button
@@ -243,7 +216,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                                 <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2" />
                             </>
                         )}
-
                         <button
                             onClick={handleDownload}
                             className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -264,7 +236,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                                 setError(null);
                                 setPreviewUrl(null);
                                 setTimeout(() => {
-                                    // Trigger reload by resetting state and ignoring cache
                                     const loadPreview = async () => {
                                         try {
                                             const fileType = getFileType();
@@ -275,7 +246,6 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                                             }
                                             setLoading(false);
                                         } catch (e) {
-                                            console.error(e);
                                             setLoading(false);
                                         }
                                     };
@@ -296,15 +266,12 @@ const FilePreview = ({ file, onClose, onDownload, driveId }) => {
                         </button>
                     </div>
                 </div>
-
-                {/* Preview Content */}
+                {}
                 {renderPreview()}
             </div>
         </div>
     );
 };
-
-// Add scale-in animation
 const styles = `
 @keyframes scale-in {
     from {
@@ -316,17 +283,13 @@ const styles = `
         transform: scale(1);
     }
 }
-
 .animate-scale-in {
     animation: scale-in 0.2s ease-out forwards;
 }
 `;
-
-// Inject styles
 if (typeof document !== 'undefined') {
     const styleSheet = document.createElement('style');
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
 }
-
 export default FilePreview;

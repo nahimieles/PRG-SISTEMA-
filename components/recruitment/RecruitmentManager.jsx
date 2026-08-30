@@ -22,7 +22,6 @@ export default function RecruitmentManager() {
   const [editingSurveyId, setEditingSurveyId] = useState(null);
   const [message, setMessage] = useState(null);
 
-  // New Survey Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newSurveyTitle, setNewSurveyTitle] = useState('');
   const [newSurveyDesc, setNewSurveyDesc] = useState('');
@@ -43,10 +42,10 @@ export default function RecruitmentManager() {
       const { success, surveys, error } = await getSurveysSummaryAction(adminSession.id);
 
       if (!success) throw new Error(error || "Error cargando encuestas");
-      
+
       setSurveys(surveys || []);
     } catch (err) {
-      console.error(err);
+
       showToast('Error al cargar pruebas: ' + err.message, 'error');
     } finally {
       setLoading(false);
@@ -73,9 +72,9 @@ export default function RecruitmentManager() {
           access_token: token,
           is_active: true
       }, getAdminSession()?.id);
-        
+
       if (!res.success) throw new Error(res.error);
-      
+
       showToast('Prueba creada exitosamente.');
       setShowCreateModal(false);
       setNewSurveyTitle('');
@@ -93,7 +92,7 @@ export default function RecruitmentManager() {
     try {
       const res = await updateSurveyStatusAction(id, !currentStatus, getAdminSession()?.id);
       if (!res.success) throw new Error(res.error);
-      
+
       setSurveys(surveys.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
       showToast(currentStatus ? 'Prueba desactivada' : 'Prueba activada');
     } catch (err) {
@@ -104,7 +103,7 @@ export default function RecruitmentManager() {
   const handleDelete = async (id) => {
     try {
       const res = await deleteSurveyAction(id, getAdminSession()?.id);
-      
+
       if (!res.success) throw new Error(res.error);
       showToast('Prueba eliminada');
       setSurveys(surveys.filter(s => s.id !== id));
@@ -133,7 +132,7 @@ export default function RecruitmentManager() {
     <div className="space-y-6">
       {message && <Toast message={message.text} type={message.type} onClose={() => setMessage(null)} />}
 
-      {/* Render the unified header via Portal into the layout's top bar */}
+      {}
       {headerPortalNode && createPortal(
         <div className="flex justify-end items-center w-full">
           <div className="flex gap-2">
@@ -156,8 +155,6 @@ export default function RecruitmentManager() {
           </div>
         </div>
       , headerPortalNode)}
-
-
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
@@ -219,7 +216,7 @@ export default function RecruitmentManager() {
         ) : (
           surveys.map(survey => (
             <div key={survey.id} className="rounded-xl shadow-md overflow-hidden flex flex-col border" style={{ borderColor: theme.border, background: theme.surface }}>
-              {/* Header Card */}
+              {}
               <div className="p-5 flex-1 relative">
                 <div className="absolute top-4 right-4 flex gap-2 items-center">
                   <span className={`px-2 py-1 text-[10px] font-bold rounded-md uppercase ${survey.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -230,7 +227,7 @@ export default function RecruitmentManager() {
                 <p className="text-xs mb-4 line-clamp-2 min-h-[32px]" style={{ color: theme.textSecondary }}>
                   {survey.description || 'Sin descripción'}
                 </p>
-                
+
                 <div className="flex items-center gap-4 text-sm mt-3">
                   <div className="flex items-center gap-1.5 font-medium" style={{ color: theme.textSecondary }}>
                     <Users size={16} /> 
@@ -238,8 +235,8 @@ export default function RecruitmentManager() {
                   </div>
                 </div>
               </div>
-              
-              {/* Actions Card */}
+
+              {}
               <div className="p-3 border-t grid grid-cols-2 gap-2" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
                 <button
                   onClick={() => setSelectedSurvey(survey)}

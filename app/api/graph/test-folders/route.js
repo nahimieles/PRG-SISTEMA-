@@ -23,7 +23,7 @@ async function getAllFoldersForSite(siteName, token) {
     const childrenUrl = `https://graph.microsoft.com/v1.0/drives/${docDrive.id}/root/children?$select=id,name,webUrl,folder&$top=999&_t=${Date.now()}`;
     const childrenRes = await fetch(childrenUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
     if (!childrenRes.ok) return { site: siteName, error: 'childrenRes fail: ' + childrenRes.status, folders: [] };
-    
+
     let folders = (await childrenRes.json()).value.filter(item => item.folder);
 
     if (siteName === 'PRGAUDITORESCLTDA.onmicrosoft.com') {

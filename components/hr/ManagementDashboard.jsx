@@ -21,16 +21,13 @@ export default function ManagementDashboard({ theme, isDark }) {
         const todayStr = currentDate.toISOString().split('T')[0];
 
         try {
-            // 1. Fetch Workers
+
             const { data: workers } = await supabase.from('workers').select('id, full_name, role').eq('status', 'activo');
-            
-            // 2. Fetch Tasks for current month
+
             const { data: tasks } = await supabase.from('hr_tasks').select('*').eq('month', currentMonth).eq('year', currentYear);
-            
-            // 3. Fetch Vacations
+
             const { data: vacations } = await supabase.from('hr_vacations').select('*').eq('status', 'approved');
-            
-            // 4. Fetch Trainings
+
             const { data: trainings } = await supabase.from('hr_trainings').select('*');
 
             const workersArr = workers || [];
@@ -38,15 +35,12 @@ export default function ManagementDashboard({ theme, isDark }) {
             const vacationsArr = vacations || [];
             const trainingsArr = trainings || [];
 
-            // Global Stats
             let completedT = tasksArr.filter(t => t.status === 'completed').length;
-            
-            // Active vacations (today is between start and end date)
+
             let activeV = vacationsArr.filter(v => {
                 return todayStr >= v.start_date && todayStr <= v.end_date;
             }).length;
 
-            // Upcoming trainings (from today onwards)
             let upTrainings = trainingsArr.filter(t => {
                 return t.date >= todayStr && t.status !== 'cancelled';
             }).length;
@@ -59,14 +53,13 @@ export default function ManagementDashboard({ theme, isDark }) {
                 upcomingTrainings: upTrainings
             });
 
-            // Per-worker stats
             const wData = workersArr.map(w => {
                 const wTasks = tasksArr.filter(t => t.worker_id === w.id);
                 const wCompleted = wTasks.filter(t => t.status === 'completed').length;
                 const productivity = wTasks.length === 0 ? 0 : Math.round((wCompleted / wTasks.length) * 100);
-                
+
                 const wVacation = vacationsArr.find(v => v.worker_id === w.id && todayStr >= v.start_date && todayStr <= v.end_date);
-                
+
                 return {
                     id: w.id,
                     name: w.full_name,
@@ -79,12 +72,11 @@ export default function ManagementDashboard({ theme, isDark }) {
                 };
             });
 
-            // Sort by productivity descending
             wData.sort((a, b) => b.productivity - a.productivity);
-            
+
             setWorkersData(wData);
         } catch (error) {
-            console.error('Error fetching management data:', error);
+
         } finally {
             setLoading(false);
         }
@@ -104,8 +96,8 @@ export default function ManagementDashboard({ theme, isDark }) {
 
     return (
         <div className="animate-fade-in space-y-6">
-            
-            {/* KPI Cards */}
+
+            {}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl border flex flex-col gap-1 shadow-sm" style={{ borderColor: theme.border, background: isDark ? 'rgba(59, 130, 246, 0.05)' : '#ffffff' }}>
                     <div className="flex items-center justify-between mb-1">
@@ -152,7 +144,7 @@ export default function ManagementDashboard({ theme, isDark }) {
                 </div>
             </div>
 
-            {/* Workers Grid */}
+            {}
             <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: theme.border, background: theme.surface }}>
                 <div className="px-6 py-4 border-b flex justify-between items-center" style={{ borderColor: theme.border, background: isDark ? 'rgba(0,0,0,0.2)' : '#f9fafb' }}>
                     <h3 className="font-bold text-sm flex items-center gap-2" style={{ color: theme.text }}>
@@ -161,7 +153,7 @@ export default function ManagementDashboard({ theme, isDark }) {
                     </h3>
                     <span className="text-xs font-bold uppercase px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full">Mes Actual</span>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="border-b" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : '#f3f4f6', color: theme.textSecondary }}>

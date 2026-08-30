@@ -1,8 +1,6 @@
 'use client';
-
 import React, { useEffect } from 'react';
 import { CheckCircle, X } from 'lucide-react';
-
 export default function Toast({ message, type = 'success', onClose }) {
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -10,7 +8,6 @@ export default function Toast({ message, type = 'success', onClose }) {
         }, 3000);
         return () => clearTimeout(timer);
     }, [onClose]);
-
     return (
         <div className="fixed bottom-6 right-6 z-[100] animate-toast-in">
             <div className={`px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 border ${type === 'success'

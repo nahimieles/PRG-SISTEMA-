@@ -1,19 +1,16 @@
--- SQL Migrations for HR Management Module (Gestión de Talento Humano)
 
--- 1. Tabla de Tareas (Pendientes y Realizadas)
 CREATE TABLE IF NOT EXISTS hr_tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
-    month INTEGER NOT NULL, -- 1-12
+    month INTEGER NOT NULL, 
     year INTEGER NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );
 
--- 2. Tabla de Capacitaciones
 CREATE TABLE IF NOT EXISTS hr_trainings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
@@ -24,7 +21,6 @@ CREATE TABLE IF NOT EXISTS hr_trainings (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Tabla de Vacaciones
 CREATE TABLE IF NOT EXISTS hr_vacations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
@@ -35,12 +31,10 @@ CREATE TABLE IF NOT EXISTS hr_vacations (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Habilitar RLS (Seguridad)
 ALTER TABLE hr_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hr_trainings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hr_vacations ENABLE ROW LEVEL SECURITY;
 
--- Políticas de lectura/escritura (Permitir todo a usuarios autenticados para propósitos del admin panel)
 CREATE POLICY "Enable all for authenticated users" ON hr_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all for authenticated users" ON hr_trainings FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all for authenticated users" ON hr_vacations FOR ALL TO authenticated USING (true) WITH CHECK (true);

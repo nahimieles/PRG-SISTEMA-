@@ -19,12 +19,10 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
     const [showPasswordsSet, setShowPasswordsSet] = useState({});
-    
-    // UI State
+
     const [selectedWorker, setSelectedWorker] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
-    // Form State
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -45,7 +43,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
             .from('workers')
             .select('*')
             .order('created_at', { ascending: false });
-            
+
         if (!error && data) {
             setWorkers(data);
         }
@@ -55,7 +53,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
     const handleCreateWorker = async (e) => {
         e.preventDefault();
         setSubmitting(true);
-        
+
         try {
             const result = await createWorkerAction(formData, adminSession?.id);
             if (result.success) {
@@ -69,7 +67,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
         } catch (error) {
             setToast({ type: 'error', message: 'Error de conexión' });
         }
-        
+
         setSubmitting(false);
     };
 
@@ -79,7 +77,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
 
     const confirmDelete = async () => {
         if (!workerToDelete) return;
-        
+
         const result = await deleteWorkerAction(workerToDelete, adminSession?.id);
         if (result.success) {
             setToast({ type: 'success', message: 'Funcionario eliminado' });
@@ -246,7 +244,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
                                 <p className="text-sm font-medium opacity-70 mb-4" style={{ color: theme.textSecondary }}>
                                     {worker.cargo || 'Sin cargo'}
                                 </p>
-                                
+
                                 <div className="space-y-2 text-xs">
                                     <div className="flex items-center gap-2" style={{ color: theme.textSecondary }}>
                                         <Mail size={14} />
@@ -269,7 +267,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Modal de confirmación de eliminación */}
+            {}
             {workerToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div 
@@ -280,7 +278,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
                             <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400">
                                 <AlertTriangle size={24} />
                             </div>
-                            
+
                             <div>
                                 <h3 className="text-lg font-bold mb-2" style={{ color: theme.text }}>
                                     Eliminar funcionario
@@ -289,7 +287,7 @@ export default function WorkerManager({ adminSession, searchTerm, showForm, setS
                                     ¿Estás seguro de que deseas eliminar a este funcionario? Esto también eliminará de forma permanente sus registros y accesos.
                                 </p>
                             </div>
-                            
+
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setWorkerToDelete(null)}

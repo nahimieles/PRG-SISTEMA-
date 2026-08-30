@@ -1,5 +1,3 @@
--- Migration: add RUC to companies and seed known values from RUC EMPRESAS.xlsx
--- Run in Supabase SQL Editor after deploying the app changes.
 
 ALTER TABLE public.companies
   ADD COLUMN IF NOT EXISTS ruc TEXT;
@@ -12,7 +10,6 @@ ALTER TABLE public.companies
 
 CREATE INDEX IF NOT EXISTS idx_companies_ruc ON public.companies(ruc);
 
--- Existing values are not overwritten. If a company already has a RUC, this leaves it untouched.
 UPDATE public.companies SET ruc = '0917776312001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('PRG AUDITORES C. LTDA.'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0992178310001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('BEDESCHI'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0990955611001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('HUANPROCA'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
@@ -31,7 +28,7 @@ UPDATE public.companies SET ruc = '0956715536001' WHERE regexp_replace(upper(coa
 UPDATE public.companies SET ruc = '0993326739001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('CLIZEGA'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0992711841001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('PLASTICOS Y PERFILES'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0190353249001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('DISMEDIC'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
--- Duplicate Excel name skipped for manual review: PRG AUDITORES C. LTDA. -> 0993270253001
+
 UPDATE public.companies SET ruc = '1391932356001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('EQUIMEDI'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0992745150001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('VISTAMARINA'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '0915307755001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('EDUARDO GOMEZ'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
@@ -63,5 +60,4 @@ UPDATE public.companies SET ruc = '0802094508001' WHERE regexp_replace(upper(coa
 UPDATE public.companies SET ruc = '0956715502001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('ANDREA CABRAL'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 UPDATE public.companies SET ruc = '1311488108001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = regexp_replace(upper('JANETH ARACELY ALAVA ESMERALDAS'),'[^A-Z0-9]','', 'g') AND ruc IS NULL;
 
--- Optional check: companies still without RUC
 SELECT id, name, type FROM public.companies WHERE ruc IS NULL ORDER BY name;

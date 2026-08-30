@@ -9,7 +9,7 @@ import { lightTheme, darkTheme } from '../lib/colors';
 export default function SystemSettingsManager({ session }) {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
-  
+
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,7 +33,7 @@ export default function SystemSettingsManager({ session }) {
         }
         throw error;
       }
-      
+
       setSettings(data || []);
       const initialData = {};
       data.forEach(s => {
@@ -41,7 +41,7 @@ export default function SystemSettingsManager({ session }) {
       });
       setFormData(initialData);
     } catch (err) {
-      console.error('Error loading settings:', err);
+
       setMessage({ type: 'error', text: 'Error al cargar la configuración.' });
     } finally {
       setLoading(false);
@@ -75,11 +75,11 @@ export default function SystemSettingsManager({ session }) {
         .upsert(updates, { onConflict: 'key' });
 
       if (error) throw error;
-      
+
       setMessage({ type: 'success', text: 'Configuración guardada correctamente.' });
       loadSettings();
     } catch (err) {
-      console.error('Error saving settings:', err);
+
       setMessage({ type: 'error', text: 'Error al guardar la configuración.' });
     } finally {
       setSaving(false);
@@ -177,7 +177,7 @@ export default function SystemSettingsManager({ session }) {
                 />
                 <p className="text-xs mt-1" style={{ color: theme.textSecondary }}>Cantidad de días generados por cada año de trabajo.</p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: theme.text }}>
                   Acumulación de Vacaciones

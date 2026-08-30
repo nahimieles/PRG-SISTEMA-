@@ -22,9 +22,8 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const [activeTab, setActiveTab] = useState('tareas'); // 'tareas', 'capacitaciones', 'vacaciones', 'analisis'
+    const [activeTab, setActiveTab] = useState('tareas'); 
 
-    // Initial fields for Phase 4
     const [formData, setFormData] = useState({
         cargo: worker.cargo || '',
         departamento: worker.departamento || '',
@@ -48,12 +47,11 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
         try {
             setUploadingAvatar(true);
             const uploadRes = await uploadFile(file, `avatar-${worker.id}`);
-            
+
             if (!uploadRes.success) {
                 throw new Error(uploadRes.error || 'Error al subir la imagen');
             }
-            
-            // Save directly to the user profile
+
             const result = await updateWorkerAction(worker.id, { avatar_url: uploadRes.fileUrl }, adminSession?.id);
             if (result.success) {
                 setProfileData(prev => ({ ...prev, avatar_url: uploadRes.fileUrl }));
@@ -62,7 +60,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                 throw new Error('Error al guardar foto en la base de datos');
             }
         } catch (error) {
-            console.error("Error al subir foto:", error);
+
             setToast({ type: 'error', message: 'Error al actualizar la foto de perfil' });
         } finally {
             setUploadingAvatar(false);
@@ -111,7 +109,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Main Info */}
+                {}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="rounded-2xl border shadow-sm p-6 text-center" style={{ background: theme.surface, borderColor: theme.border }}>
                         <div className="relative w-24 h-24 mx-auto mb-4 group">
@@ -122,7 +120,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                                     profileData.full_name?.charAt(0)?.toUpperCase() || profileData.username?.charAt(0)?.toUpperCase() || '?'
                                 )}
                             </div>
-                            
+
                             <label className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                 <input 
                                     type="file" 
@@ -140,7 +138,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                         </div>
                         <h3 className="text-xl font-bold mb-1" style={{ color: theme.text }}>{profileData.full_name}</h3>
                         <p className="text-sm opacity-70 mb-4" style={{ color: theme.textSecondary }}>@{profileData.username}</p>
-                        
+
                         <div className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-6" style={{ 
                             background: profileData.estado_laboral === 'activo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                             color: profileData.estado_laboral === 'activo' ? '#10b981' : '#ef4444' 
@@ -165,7 +163,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                     </div>
                 </div>
 
-                {/* Right Column - Details & Edit */}
+                {}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="rounded-2xl border shadow-sm p-6" style={{ background: theme.surface, borderColor: theme.border }}>
                         <div className="flex justify-between items-center mb-6">
@@ -384,7 +382,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                                 </button>
                             ))}
                         </div>
-                        
+
                         {activeTab === 'tareas' && (
                             <WorkerTasks workerId={worker.id} theme={theme} isDark={isDark} />
                         )}
@@ -400,7 +398,7 @@ export default function WorkerProfile({ worker, onBack, theme, isDark, adminSess
                         {activeTab === 'analisis' && (
                             <WorkerAnalysis workerId={worker.id} theme={theme} isDark={isDark} />
                         )}
-                        
+
                         {activeTab === 'accesos' && (
                             <WorkerAccessControl workerId={worker.id} theme={theme} isDark={isDark} />
                         )}

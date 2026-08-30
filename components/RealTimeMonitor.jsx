@@ -11,11 +11,7 @@ import { getAuditLogs, deleteAuditLog, deleteMultipleAuditLogs, clearAllAuditLog
 import { getRecords, getWorkerRecords, getWorkerSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import CustomSelect from './CustomSelect';
-
-// ─── Config ───────────────────────────────────────────────────────────────────
-const MAX_EVENTS = 100; // Maximum events kept in memory/UI
-
-// ─── Action badge styles ──────────────────────────────────────────────────────
+const MAX_EVENTS = 100; 
 const ACTION_STYLES = {
     CREATED: { bg: 'bg-green-100  dark:bg-green-900/30', text: 'text-green-700  dark:text-green-400', label: 'CREADO' },
     MODIFIED: { bg: 'bg-blue-100   dark:bg-blue-900/30', text: 'text-blue-700   dark:text-blue-400', label: 'MODIFICADO' },
@@ -24,7 +20,6 @@ const ACTION_STYLES = {
     MOVED: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', label: 'MOVIDO' },
     MANUAL: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-700 dark:text-indigo-400', label: 'MANUAL' },
 };
-
 function ActionBadge({ action }) {
     const style = ACTION_STYLES[action] || ACTION_STYLES.MODIFIED;
     return (
@@ -33,7 +28,6 @@ function ActionBadge({ action }) {
         </span>
     );
 }
-
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     try {
@@ -45,7 +39,6 @@ function formatDate(dateStr) {
         return dateStr;
     }
 }
-
 function shortenPath(path) {
     if (!path || path === '/') return null;
     try {
@@ -58,7 +51,6 @@ function shortenPath(path) {
             .replace(/^\/sites\/[^/]+\/[^/]+\//i, '') || null;
     }
 }
-
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
     const [events, setEvents] = useState([]);
@@ -68,10 +60,8 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
     const [itemsPerPage, setItemsPerPage] = useState(5);
     const [dateRange, setDateRange] = useState({ from: '', to: '' });
     const [showFilters, setShowFilters] = useState(false);
-
-
-    const [status, setStatus] = useState('connecting'); // 'connecting' | 'connected' | 'error'
-    const [selected, setSelected] = useState(new Set()); // Set of event UIDs
+    const [status, setStatus] = useState('connecting'); 
+    const [selected, setSelected] = useState(new Set()); 
     const [selectMode, setSelectMode] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
@@ -80,20 +70,14 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
     const retryRef = useRef(null);
     const esRef = useRef(null);
     const uidCounter = useRef(0);
-
-    // Reset pagination when filter or page size changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, selectedWorker, itemsPerPage, dateRange]);
-
-
     const connect = useCallback(() => {
         if (esRef.current) {
             supabase.removeChannel(esRef.current);
         }
-        
         setStatus('connecting');
-
         const channel = supabase
             .channel('audit-logs-realtime')
             .on('postgres_changes', { 
@@ -101,14 +85,11 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                 schema: 'public', 
                 table: 'audit_logs' 
             }, payload => {
-                console.log('[RealTime] New log received:', payload.new);
                 const log = payload.new;
-                
                 let actionMsg = log.metadata?.changeType;
                 if (!actionMsg) {
                     actionMsg = log.action_type?.replace('AUTO_', '') || 'MODIFIED';
                 }
-                
                 const data = {
                     dbId: log.id,
                     _uid: `rt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -122,11 +103,9 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     fileId: log.metadata?.fileId,
                     webUrl: log.metadata?.webUrl
                 };
-
                 setEvents(prev => [data, ...prev].slice(0, MAX_EVENTS));
             })
             .subscribe((status) => {
-                console.log('[RealTime] Channel status:', status);
                 if (status === 'SUBSCRIBED') {
                     setStatus('connected');
                     if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
@@ -137,11 +116,8 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     retryRef.current = setTimeout(connect, delay);
                 }
             });
-
         esRef.current = channel;
     }, []);
-
-    // ── Reusable function to reload events from database ─────────────────────
     const reloadFromDB = useCallback(async () => {
         try {
             const logs = await getAuditLogs({ 
@@ -149,11 +125,8 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                 startDate: dateRange.from ? new Date(dateRange.from).toISOString() : null,
                 endDate: dateRange.to ? new Date(dateRange.to).toISOString() : null
             });
-
-
             uidCounter.current = 0;
             let combined = [];
-
             if (logs && logs.length > 0) {
                 combined = combined.concat(logs.map(log => {
                     let actionMsg = log.metadata?.changeType;
@@ -176,52 +149,34 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     };
                 }));
             }
-
-
-
             combined.sort((a, b) => new Date(b.date) - new Date(a.date));
             setEvents(combined.slice(0, 500));
         } catch (err) {
-            console.error('Failed to reload from DB:', err);
         }
     }, []);
-
     useEffect(() => {
-        // Load initial data then connect to realtime
         reloadFromDB().then(() => {
             connect();
         });
-
         const performAutoSync = async () => {
-            // Only sync if the tab is visible to avoid unnecessary background load
             if (document.visibilityState !== 'visible') return;
-            
             setIsBackgroundSyncing(true);
             try {
                 await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
                 await reloadFromDB();
             } catch (err) {
-                console.warn('[AutoSync] Background scan failed:', err.message);
             } finally {
                 setIsBackgroundSyncing(false);
             }
         };
-
-        // Execute immediately when the user enters the panel to guarantee 100% fresh data
         performAutoSync();
-
-        // Auto-poll every 2 minutes to keep data fresh while active
         const autoSyncInterval = setInterval(performAutoSync, 2 * 60 * 1000);
-
         return () => {
             if (esRef.current) supabase.removeChannel(esRef.current);
             if (retryRef.current) clearTimeout(retryRef.current);
             clearInterval(autoSyncInterval);
         };
     }, [connect, reloadFromDB, dateRange]);
-
-
-    // ── Selection helpers ─────────────────────────────────────────────────────
     const toggleSelect = (uid) => {
         setSelected(prev => {
             const next = new Set(prev);
@@ -229,79 +184,54 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             return next;
         });
     };
-
     const selectAll = () => setSelected(new Set(events.map(e => e._uid)));
     const clearSelection = () => setSelected(new Set());
-
     const allSelected = events.length > 0 && selected.size === events.length;
-
-    // ── Delete actions ────────────────────────────────────────────────────────
     const deleteEvent = async (uid) => {
         const eventToDelete = events.find(e => e._uid === uid);
-
-        // Optimistically remove from UI
         setEvents(prev => prev.filter(e => e._uid !== uid));
         setSelected(prev => { const n = new Set(prev); n.delete(uid); return n; });
-
-        // Delete from DB if it's a historical record
         if (eventToDelete && eventToDelete.dbId) {
             await deleteAuditLog(eventToDelete.dbId);
             if (onLogsChanged) onLogsChanged();
         }
     };
-
     const deleteSelected = async () => {
         const eventsToDelete = events.filter(e => selected.has(e._uid));
         const dbIdsToDelete = eventsToDelete.map(e => e.dbId).filter(Boolean);
-
-        // Optimistically remove from UI
         setEvents(prev => prev.filter(e => !selected.has(e._uid)));
         setSelected(new Set());
-
-        // Delete from DB
         if (dbIdsToDelete.length > 0) {
             await deleteMultipleAuditLogs(dbIdsToDelete);
             if (onLogsChanged) onLogsChanged();
         }
     };
-
     const clearAll = async () => {
-        // Optimistically remove from UI
         setEvents([]);
         setSelected(new Set());
         setSelectMode(false);
         setCurrentPage(1);
-
-        // Delete all from DB
         await clearAllAuditLogs();
         if (onLogsChanged) onLogsChanged();
     };
-
-    // ── Manual Sync ───────────────────────────────────────────────────────────
     const handleManualSync = async () => {
         setIsSyncing(true);
         try {
             const res = await fetch('/api/graph/delta', { method: 'POST', cache: 'no-store' });
             const data = await res.json().catch(() => null);
-            console.log('[ManualSync] Scan result:', data);
-
-            // ALWAYS reload from database - don't rely on WebSocket
             await reloadFromDB();
             if (onLogsChanged) onLogsChanged();
         } catch (err) {
-            console.error('Error manual sync:', err);
         } finally {
             setIsSyncing(false);
         }
     };
-
     const handleExportExcel = async () => {
         if (!events || events.length === 0) return;
         try {
             const ExcelJS = (await import('exceljs')).default;
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Reportes Automáticos');
-
             worksheet.columns = [
                 { header: 'Archivo', key: 'fileName', width: 40 },
                 { header: 'Acción', key: 'action', width: 15 },
@@ -311,13 +241,10 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                 { header: 'Ruta', key: 'filePath', width: 50 },
                 { header: 'Enlace', key: 'webUrl', width: 50 }
             ];
-
             const headerRow = worksheet.getRow(1);
             headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3498DB' } };
-
             const recordsToExport = filteredEvents || events;
-
             recordsToExport.forEach(ev => {
                 worksheet.addRow({
                     fileName: ev.fileName,
@@ -329,7 +256,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     webUrl: ev.webUrl || ''
                 });
             });
-
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = URL.createObjectURL(blob);
@@ -339,38 +265,24 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
-            console.error('Error exporting to Excel:', err);
             alert('Hubo un error al generar el Excel.');
         }
     };
-
-    // ── Filter and Pagination variables ───────────────────────────────────────
-
-    // System names to filter from dropdown (old DB entries)
     const SYSTEM_NAME_FILTER = [
         'sharepoint', 'microsoft office', 'pushchannel', 'system',
         'desconocido', 'usuario desconocido', 'onedrive', 'app@sharepoint'
     ];
-
-    // Calculate unique workers for the dropdown (filtering system names)
     const uniqueWorkers = React.useMemo(() => {
         const workers = events.map(ev => ev.user).filter(Boolean);
         return [...new Set(workers)]
             .filter(name => !SYSTEM_NAME_FILTER.some(sys => name.toLowerCase().includes(sys)))
             .sort();
     }, [events]);
-
-    // 1. Filter the events
     const filteredEvents = events.filter(ev => {
-        // Filter by worker
         if (selectedWorker && ev.user !== selectedWorker) return false;
-
-        // Filter by search term
         if (!searchTerm) return true;
-
         const searchLower = searchTerm.toLowerCase();
         const translatedAction = ACTION_STYLES[ev.action]?.label?.toLowerCase() || '';
-
         return (
             (ev.fileName && ev.fileName.toLowerCase().includes(searchLower)) ||
             (ev.user && ev.user.toLowerCase().includes(searchLower)) ||
@@ -379,40 +291,31 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             (translatedAction && translatedAction.includes(searchLower))
         );
     });
-
     // ── Smart Merging: consecutive edits of same file by same user ──────────
     // Groups events where the same person modifies the same file within a 60-min
     // window (no other file in between by that user). Shows time range.
     const MERGE_WINDOW_MS = 60 * 60 * 1000; // 60 minutes
-
     // ── Smart Merging (computed directly, no useMemo) ─────────────────────────
     // Helper: strip diacritics so "Rodríguez" matches "Rodriguez"
     const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
     const mergedEvents = (() => {
         if (filteredEvents.length === 0) return [];
-
         const result = [];
-
         for (let i = 0; i < filteredEvents.length; i++) {
             const ev = filteredEvents[i];
             const evAction = (ev.action || '').toUpperCase();
-
             // Check if we can merge into the last result item
             const last = result.length > 0 ? result[result.length - 1] : null;
-
             if (last) {
                 const lastAction = (last.action || '').toUpperCase();
                 const sameAction = lastAction === evAction;
                 const sameFile = last.fileName === ev.fileName;
                 const sameUser = norm(last.user) === norm(ev.user);
                 const sameCompany = norm(last.company) === norm(ev.company);
-
                 if (sameAction && sameFile && sameUser && sameCompany) {
                     const lastTime = new Date(last._mergeEndDate || last.date).getTime();
                     const evTime = new Date(ev.date).getTime();
                     const diff = Math.abs(lastTime - evTime);
-
                     if (diff <= MERGE_WINDOW_MS) {
                         // Merge: expand the time range
                         const allDates = [
@@ -432,26 +335,18 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     }
                 }
             }
-
             result.push({ ...ev, _merged: false });
         }
-
         return result;
     })();
-
     const totalPages = Math.max(1, Math.ceil(mergedEvents.length / itemsPerPage));
     const validCurrentPage = Math.min(currentPage, totalPages);
-
     // Render safety
     if (currentPage !== validCurrentPage && mergedEvents.length > 0) {
         setCurrentPage(validCurrentPage);
     }
-
     const startIndex = (validCurrentPage - 1) * itemsPerPage;
     const paginatedEvents = mergedEvents.slice(startIndex, startIndex + itemsPerPage);
-
-
-
     const PaginationBlock = () => (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 py-3 px-5" style={{ color: theme.textSecondary }}>
             <span className="text-xs font-medium tracking-wide" style={{ letterSpacing: '0.02em' }}>
@@ -480,8 +375,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
             </div>
         </div>
     );
-
-    // Action accent colors for left border
     const ACTION_ACCENTS = {
         CREATED: '#22c55e',
         MODIFIED: '#3b82f6',
@@ -489,7 +382,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
         RENAMED: '#f59e0b',
         MOVED: '#a855f7',
     };
-
     const ACTION_STYLES = {
         CREATED: { label: 'Creado', color: '#22c55e' },
         MODIFIED: { label: 'Modificado', color: '#3b82f6' },
@@ -497,31 +389,25 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
         RENAMED: { label: 'Renombrado', color: '#f59e0b' },
         MOVED: { label: 'Movido', color: '#a855f7' },
     };
-
-
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="rounded-2xl overflow-hidden" style={{
             background: theme.surface,
             border: `1px solid ${theme.border}`,
             boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
         }}>
-            {/* ── Header ── */}
+            {}
             <div className="px-4 sm:px-5 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4" style={{ borderBottom: `1px solid ${theme.border}` }}>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <h3 className="text-base font-bold tracking-tight" style={{ color: theme.text, letterSpacing: '-0.02em' }}>
                         Informes
                     </h3>
-
                     <div className="flex items-center" title={status === 'connected' ? 'En línea' : 'Conectando...'}>
                         <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)] animate-pulse' : 'bg-amber-400'}`} />
                     </div>
-                    
                     {isBackgroundSyncing && (
                         <RefreshCw className="w-3 h-3 animate-spin opacity-40" style={{ color: theme.text }} />
                     )}
                 </div>
-
                 <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
                     <button
                         onClick={() => setShowFilters(!showFilters)}
@@ -535,7 +421,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                         <Calendar className="w-3.5 h-3.5" />
                         <span>Filtros</span>
                     </button>
-
                     {events.length > 0 && (
                         <>
                             <button
@@ -550,7 +435,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                 <Download className="w-3.5 h-3.5" />
                                 <span className="sm:inline">Excel</span>
                             </button>
-
                             {!isWorker && (
                                 <>
                                     <button
@@ -565,7 +449,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                         <CheckSquare className="w-3.5 h-3.5" />
                                         <span className="hidden lg:inline">{selectMode ? 'Cancelar' : 'Seleccionar'}</span>
                                     </button>
-
                                     {selectMode && selected.size > 0 && (
                                         <button
                                             onClick={deleteSelected}
@@ -580,7 +463,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                             <span>{selected.size}</span>
                                         </button>
                                     )}
-
                                     <button
                                         onClick={clearAll}
                                         className="p-2 rounded-xl transition-all border"
@@ -599,9 +481,7 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     )}
                 </div>
             </div>
-
-
-            {/* ── Apple-style Filter Drawer ── */}
+            {}
             {showFilters && (
                 <div className="px-5 py-4 space-y-4 animate-fade-in" style={{
                     background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)',
@@ -626,7 +506,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
                             </div>
                         </div>
-
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Rango de Fechas</label>
                             <div className="flex items-center gap-2">
@@ -661,7 +540,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                 )}
                             </div>
                         </div>
-
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold tracking-wider opacity-40 ml-1">Trabajador</label>
                             <CustomSelect
@@ -678,12 +556,9 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     </div>
                 </div>
             )}
-
-
-            {/* Top pagination */}
+            {}
             {events.length > 0 && <PaginationBlock />}
-
-            {/* ── Select-all row ── */}
+            {}
             {selectMode && events.length > 0 && (
                 <div className="px-5 py-2 flex items-center gap-2 text-xs font-medium" style={{
                     background: isDark ? 'rgba(59,130,246,0.06)' : '#f0f7ff',
@@ -703,8 +578,7 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     </button>
                 </div>
             )}
-
-            {/* ── Event List ── */}
+            {}
             <div className="overflow-y-auto" style={{ maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '22rem' : '36rem' }}>
                 {paginatedEvents.length === 0 ? (
                     <div className="text-center py-16 px-6">
@@ -728,7 +602,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                             const accentColor = ACTION_ACCENTS[actionKey] || '#3b82f6';
                             const actionStyle = ACTION_STYLES[actionKey] || ACTION_STYLES.MODIFIED;
                             const path = ev.folderPath || ev.parentPath || '';
-
                             return (
                                 <div
                                     key={ev._uid}
@@ -740,11 +613,10 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                         animationDelay: `${index * 40}ms`,
                                     }}
                                 >
-                                    {/* Left accent bar */}
+                                    {}
                                     <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full hidden sm:block" style={{ background: accentColor, opacity: 0.7 }} />
-
                                     <div className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-3 pl-4 sm:pl-5 pr-4 py-2 sm:py-3.5">
-                                        {/* Header area for mobile (name + badge) */}
+                                        {}
                                         <div className="flex sm:hidden w-full justify-between items-center mb-1">
                                             <span
                                                 className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider"
@@ -759,8 +631,7 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                             </span>
                                             <span className="text-[10px] opacity-40 font-medium">{formatDate(ev.date).split(',')[0]}</span>
                                         </div>
-
-                                        {/* Checkbox */}
+                                        {}
                                         {selectMode && (
                                             <button
                                                 onClick={() => toggleSelect(ev._uid)}
@@ -773,9 +644,8 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                 }
                                             </button>
                                         )}
-
                                         <div className="flex-1 min-w-0">
-                                            {/* Row 1: File name + date */}
+                                            {}
                                             <div className="flex justify-between items-start gap-3 mb-1">
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <FileText className="w-4 h-4 flex-shrink-0" style={{ color: accentColor, opacity: 0.8 }} />
@@ -795,16 +665,14 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                     {formatDate(ev.date)}
                                                 </span>
                                             </div>
-
-                                            {/* Row 2: Path */}
+                                            {}
                                             {path && (
                                                 <div className="flex items-center gap-1.5 mb-2 sm:ml-6 text-[11px]" style={{ color: theme.textSecondary, opacity: 0.45 }}>
                                                     <FolderOpen className="w-3 h-3 flex-shrink-0" />
                                                     <span className="truncate">{path}</span>
                                                 </div>
                                             )}
-
-                                            {/* Row 3: User + Company + Badge */}
+                                            {}
                                             <div className="flex items-center gap-y-2 gap-x-3 sm:ml-6 flex-wrap">
                                                 <div className="flex items-center gap-1.5 text-[11px] sm:text-xs" style={{ color: theme.text }}>
                                                     <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white flex-shrink-0" style={{ background: accentColor, opacity: 0.85 }}>
@@ -812,12 +680,10 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                     </div>
                                                     <span className="font-semibold truncate max-w-[80px] sm:max-w-none">{ev.user}</span>
                                                 </div>
-
                                                 <div className="flex items-center gap-1 text-[11px]" style={{ color: theme.textSecondary }}>
                                                     <Building2 className="w-3 h-3 opacity-40 flex-shrink-0" />
                                                     <span className="truncate max-w-[120px] sm:max-w-[160px]">{ev.company}</span>
                                                 </div>
-
                                                 <span
                                                     className="hidden sm:inline text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider"
                                                     style={{
@@ -830,7 +696,6 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                                                 >
                                                     {actionStyle.label}
                                                 </span>
-
                                                 <div className="flex items-center gap-2 ml-auto">
                                                     {ev.webUrl && (
                                                         <a
@@ -857,14 +722,12 @@ export default function RealTimeMonitor({ onLogsChanged, isWorker = false }) {
                     </div>
                 )}
             </div>
-
-            {/* Bottom pagination */}
+            {}
             {events.length > 0 && (
                 <div style={{ borderTop: `1px solid ${theme.border}` }}>
                     <PaginationBlock />
                 </div>
             )}
-
             <style>{`
                 @keyframes rtmFadeIn {
                     from { opacity: 0; transform: translateY(-4px); }

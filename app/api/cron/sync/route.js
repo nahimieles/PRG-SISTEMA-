@@ -9,17 +9,14 @@ export async function GET(req) {
     try {
         const authHeader = req.headers.get('authorization');
         const cronSecret = process.env.CRON_SECRET;
-        
-        // Verificamos que venga de Vercel Cron
+
         if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        console.log('[Cron Sync] Executing automatic background sync...');
-        
         const result = await runDeltaScanAllDrives();
         await manageGraphSubscriptions();
-        
+
         return NextResponse.json({
             success: true,
             scanned: !result.skipped,
@@ -28,7 +25,7 @@ export async function GET(req) {
             timestamp: new Date().toISOString(),
         });
     } catch (err) {
-        console.error('[Cron Sync] Error:', err.message, err.stack);
+
         return NextResponse.json({ success: false, error: err.message }, { status: 500 });
     }
 }

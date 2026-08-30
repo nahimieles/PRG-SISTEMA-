@@ -15,8 +15,7 @@ export default function WorkerAnalysis({ workerId, theme, isDark }) {
         setLoading(true);
         const currentDate = new Date();
         const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-        
-        // 1. Fetch work records for hours
+
         const { data: records } = await supabase
             .from('work_records')
             .select('hours_worked')
@@ -25,7 +24,6 @@ export default function WorkerAnalysis({ workerId, theme, isDark }) {
 
         const totalHrs = records ? records.reduce((acc, curr) => acc + (Number(curr.hours_worked) || 0), 0) : 0;
 
-        // 2. Fetch tasks for this month
         const { data: tasks } = await supabase
             .from('hr_tasks')
             .select('status')

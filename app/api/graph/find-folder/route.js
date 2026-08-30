@@ -1,13 +1,3 @@
-/**
- * /api/graph/find-folder/route.js
- *
- * Searches for a company folder across CONTABILIDAD1, CONTABILIDAD2, CONTABILIDAD3
- * (or AUDITORIA) SharePoint sites and returns the direct URL.
- *
- * Query params:
- *   company  — company name (e.g. "DISMEDIC")
- *   type     — "contabilidad" | "auditoria"
- */
 
 import { getAppToken } from '../../../../lib/graphServerService';
 import { NextResponse } from 'next/server';
@@ -31,7 +21,7 @@ async function getSiteId(siteName, token) {
     });
 
     if (!res.ok) {
-        console.warn(`[FindFolder] Could not resolve site "${siteName}": ${res.status}`);
+
         return null;
     }
 
@@ -62,12 +52,11 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
         folders = (data.value || []).filter(item => item.folder);
     }
 
-    // Special case for AUDITORIA: perform a deep search because companies are nested
     if (siteName === 'AUDITORIA') {
         const ignoredWords = new Set(['grupo', 's.a.', 's.a', 'cia', 'ltda', 'company', 'inc', 'el', 'la', 'los', 'las', 'de', 'y', 'group', 'group.']);
         const words = companyName.split(/\s+/).filter(w => w.length > 2 && !ignoredWords.has(w.toLowerCase()));
         const searchTerm = words.length > 0 ? words[0] : companyName;
-        
+
         const searchUrl = `https://graph.microsoft.com/v1.0/drives/${docDrive.id}/root/search(q='${encodeURIComponent(searchTerm)}')?$select=id,name,webUrl,folder&$top=200&_t=${Date.now()}`;
         const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
         if (searchRes.ok) {
@@ -77,7 +66,6 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
         }
     }
 
-    // Special case for PRG AUDITORES site: also fetch MARIA TERESA/Contabilidad
     if (siteName === 'PRGAUDITORESCLTDA.onmicrosoft.com') {
         const mtFolder = folders.find(f => f.name.toUpperCase().includes('MARIA TERESA'));
         if (mtFolder) {
@@ -88,7 +76,7 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
                 const mtChildren = mtData.value || [];
 
                 if (type.includes('audi')) {
-                    // Buscar '02 Auditoria' o 'Auditoria'
+
                     const audiFolder = mtChildren.find(f => f.name.toUpperCase().includes('AUDITORIA') || f.name.toUpperCase().includes('02 AUDITORIA'));
                     if (audiFolder) {
                         const audiChildrenUrl = `https://graph.microsoft.com/v1.0/drives/${docDrive.id}/items/${audiFolder.id}/children?$select=id,name,webUrl,folder&$top=999&_t=${Date.now()}`;
@@ -100,7 +88,7 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
                         }
                     }
                 } else {
-                    // Buscar 'Contabilidad'
+
                     const contaFolder = mtChildren.find(f => f.name.toUpperCase().includes('CONTABILIDAD'));
                     if (contaFolder) {
                         const contaChildrenUrl = `https://graph.microsoft.com/v1.0/drives/${docDrive.id}/items/${contaFolder.id}/children?$select=id,name,webUrl,folder&$top=999&_t=${Date.now()}`;
@@ -116,7 +104,6 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
         }
     }
 
-    // Special case for CONTABILIDAD1: ENRIQUE PALMA (Grupo Palma sub-companies)
     if (siteName === 'CONTABILIDAD1' && !type.includes('audi')) {
         const palmaFolder = folders.find(f => f.name.toUpperCase().includes('ENRIQUE PALMA'));
         if (palmaFolder) {
@@ -126,7 +113,6 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
         }
     }
 
-    // Special case for CONTABILIDAD2: SCHAFFRY (Grupo Schaffry sub-companies) and '09 OTRAS EMPRESAS'
     if (siteName === 'CONTABILIDAD2' && !type.includes('audi')) {
         const schaffryFolder = folders.find(f => f.name.toUpperCase().includes('SCHAFFRY'));
         if (schaffryFolder) {
@@ -135,7 +121,7 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
             if (sRes.ok) {
                 const sChildren = (await sRes.json()).value.filter(i => i.folder);
                 folders = folders.concat(sChildren);
-                
+
                 const otrasFolder = sChildren.find(f => f.name.toUpperCase().includes('09 OTRAS EMPRESAS'));
                 if (otrasFolder) {
                     const oUrl = `https://graph.microsoft.com/v1.0/drives/${docDrive.id}/items/${otrasFolder.id}/children?$select=id,name,webUrl,folder&$top=999&_t=${Date.now()}`;
@@ -146,7 +132,6 @@ async function getAllFoldersForSite(siteName, type, companyName, token) {
         }
     }
 
-    // Attach siteName to each folder for tracking
     return folders.map(f => ({ ...f, site: siteName }));
 }
 
@@ -161,8 +146,7 @@ export async function GET(request) {
         }
 
         const token = await getAppToken();
-        
-        // Determinar en qué sitios buscar según el tipo
+
         let sitesToSearch = [];
         if (type.includes('audi')) {
             sitesToSearch = ['AUDITORIA', 'PRGAUDITORESCLTDA.onmicrosoft.com'];
@@ -175,11 +159,8 @@ export async function GET(request) {
             ];
         }
 
-        // 1. Fetch folders from the relevant sites in parallel
         const nestedResults = await Promise.all(sitesToSearch.map(site => getAllFoldersForSite(site, type, companyName, token)));
         const allFolders = nestedResults.flat();
-        
-        console.log(`[FindFolder] companyName: "${companyName}", type: "${type}", sites: ${sitesToSearch.length}, allFolders: ${allFolders.length}`);
 
         if (allFolders.length === 0) {
             const fallbackSite = type.includes('audi') ? 'AUDITORIA' : 'CONTABILIDAD1';
@@ -190,10 +171,8 @@ export async function GET(request) {
             });
         }
 
-        // 2. Exact match
         let bestMatch = allFolders.find(f => f.name.toLowerCase() === companyName.toLowerCase());
-        
-        // 3. Substring match
+
         if (!bestMatch) {
             bestMatch = allFolders.find(f => {
                 const folderName = f.name.toLowerCase();
@@ -202,11 +181,10 @@ export async function GET(request) {
             });
         }
 
-        // 4. Significant word fallback match
         if (!bestMatch) {
             const ignoredWords = new Set(['grupo', 's.a.', 's.a', 'cia', 'ltda', 'company', 'inc', 'el', 'la', 'los', 'las', 'de', 'y', 'group', 'group.']);
             const words = companyName.split(/\s+/).filter(w => w.length > 2 && !ignoredWords.has(w.toLowerCase()));
-            
+
             if (words.length > 0) {
                 bestMatch = allFolders.find(f => f.name.toLowerCase().includes(words[0].toLowerCase()));
             }
@@ -216,7 +194,6 @@ export async function GET(request) {
             return NextResponse.json({ found: true, site: bestMatch.site, url: bestMatch.webUrl });
         }
 
-        // Fallback if truly not found
         const fallbackSite = type.includes('audi') ? 'AUDITORIA' : 'CONTABILIDAD1';
         return NextResponse.json({
             found: false,
@@ -225,7 +202,7 @@ export async function GET(request) {
         });
 
     } catch (err) {
-        console.error('[FindFolder] Error:', err.message);
+
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

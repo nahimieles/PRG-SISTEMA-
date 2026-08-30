@@ -1,17 +1,13 @@
 'use client';
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X, Users, AlertCircle, Clock, FileText, Building2, BadgeCheck } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import { getCompanies } from '../lib/auth';
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS_OF_WEEK = ['L','M','X','J','V','S','D'];
 const daysInMonth = (month) => new Date(2026, month + 1, 0).getDate();
 const firstDayOffset = (month) => { const d = new Date(2026, month, 1).getDay(); return d === 0 ? 6 : d - 1; };
-
 export const RAW_OBLIGATIONS = [
   { id: 'm1', obligacion: 'Declaración mensual de IVA', frecuencia: 'Mensual', sujeto: 'Personas naturales y Sociedades', plazo: 'Según noveno dígito del RUC, desde el día 10 del mes siguiente al período declarado.', detalle: 'Formulario 104 / 104A. Debe incluir todas las ventas gravadas con tarifa 12%, 15% y 0%, así como las compras y retenciones del período.', months: 'all', days: [10,12,14,16,18,20,22,24,26,28], color: '#22c55e' },
   { id: 'm2', obligacion: 'Retenciones en la fuente IR', frecuencia: 'Mensual', sujeto: 'Personas naturales y Sociedades', plazo: 'Según noveno dígito del RUC, desde el día 10 del mes siguiente.', detalle: 'Formulario 103. Incluye retenciones por servicios profesionales, arriendos, honorarios y demás conceptos sujetos a retención.', months: 'all', days: [10,12,14,16,18,20,22,24,26,28], color: '#3b82f6' },
@@ -33,14 +29,12 @@ export const RAW_OBLIGATIONS = [
   { id: 's5', obligacion: 'Anticipo utilidades no dist.', frecuencia: 'Semestral', sujeto: 'Sociedades', plazo: 'Según noveno dígito del RUC, agosto-octubre.', detalle: 'Anticipo del impuesto a la renta sobre utilidades no distribuidas de ejercicios anteriores.', months: [7,8,9], days: [10,11], color: '#dc2626' },
   { id: 'a12', obligacion: '2da proyección gastos pers.', frecuencia: 'Anual', sujeto: 'Personas naturales', plazo: 'Hasta 30 de junio o 30 de septiembre.', detalle: 'Segunda presentación de la proyección de gastos personales para ajustar retenciones del segundo semestre.', months: [5,8], days: [30], color: '#7c3aed' },
 ];
-
 const FREQ_COLORS = {
   Mensual: { bg: '#22c55e', light: 'rgba(34,197,94,0.08)', lightBorder: 'rgba(34,197,94,0.2)' },
   Anual: { bg: '#3b82f6', light: 'rgba(59,130,246,0.08)', lightBorder: 'rgba(59,130,246,0.2)' },
   Semestral: { bg: '#f59e0b', light: 'rgba(245,158,11,0.08)', lightBorder: 'rgba(245,158,11,0.2)' },
   Semanal: { bg: '#a855f7', light: 'rgba(168,85,247,0.08)', lightBorder: 'rgba(168,85,247,0.2)' },
 };
-
 export default function TaxCalendar2026() {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
@@ -48,75 +42,56 @@ export default function TaxCalendar2026() {
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
   const [modalDay, setModalDay] = useState(null);
   const [companies, setCompanies] = useState([]);
-
   useEffect(() => {
     loadCompanies();
   }, []);
-
   const loadCompanies = async () => {
     try {
       const data = await getCompanies();
       setCompanies(data || []);
     } catch (err) {
-      console.error('Error loading companies for calendar:', err);
     }
   };
-
-  // Close modal on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') setModalDay(null); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
   const dayObligationsMap = useMemo(() => {
     const map = {};
     const total = daysInMonth(selectedMonth);
     for (let d = 1; d <= total; d++) map[d] = [];
-    
     RAW_OBLIGATIONS.forEach(ob => {
       if (ob.months !== 'all' && !ob.months.includes(selectedMonth)) return;
-      
       ob.days.forEach(day => { 
         if (day >= 1 && day <= total) {
-          // Check which companies match this deadline
           const matchingCompanies = companies.filter(c => {
             if (!c.ruc) return false;
             const ninthDigit = c.ruc[8];
-            
-            // Standard Ecuadorian deadline logic:
-            // 1=10, 2=12, 3=14, 4=16, 5=18, 6=20, 7=22, 8=24, 9=26, 0=28
             const deadlineDay = ninthDigit === '0' ? 28 : (parseInt(ninthDigit) * 2 + 8);
             return deadlineDay === day;
           });
-
           map[day].push({ ...ob, matchingCompanies }); 
         } 
       });
     });
     return map;
   }, [selectedMonth, companies]);
-
   const totalDays = daysInMonth(selectedMonth);
   const offset = firstDayOffset(selectedMonth);
   const isToday = (day) => today.getFullYear() === 2026 && today.getMonth() === selectedMonth && today.getDate() === day;
   const modalObligations = modalDay ? (dayObligationsMap[modalDay] || []) : [];
-
-  // Sort obligations to put the ones with matching companies first
   const sortedModalObligations = useMemo(() => {
     return [...modalObligations].sort((a, b) => (b.matchingCompanies?.length || 0) - (a.matchingCompanies?.length || 0));
   }, [modalObligations]);
-
   const [isClosing, setIsClosing] = useState(false);
-
   const handleCloseModal = () => {
     setIsClosing(true);
     setTimeout(() => {
       setModalDay(null);
       setIsClosing(false);
-    }, 400); // Duration of the exit animation
+    }, 400); 
   };
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -141,14 +116,13 @@ export default function TaxCalendar2026() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); }
       `}} />
-
-      {/* Calendar Grid Container */}
+      {}
       <div className="rounded-3xl sm:rounded-[2.5rem] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-1000" style={{
         background: theme.surface,
         border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'}`,
         boxShadow: isDark ? '0 10px 40px rgba(0,0,0,0.2)' : '0 10px 40px rgba(0,0,0,0.04)',
       }}>
-        {/* Header */}
+        {}
         <div className="px-5 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-[1.25rem] flex items-center justify-center shadow-inner" style={{
@@ -163,7 +137,7 @@ export default function TaxCalendar2026() {
               <p className="text-[10px] sm:text-[11px] font-bold opacity-30 uppercase tracking-[0.2em]" style={{ color: theme.textSecondary }}>SRI Ecuador</p>
             </div>
           </div>
-          {/* Month nav */}
+          {}
           <div className="flex items-center gap-1 bg-gray-100/50 dark:bg-white/5 p-1 rounded-2xl border border-transparent w-full sm:w-auto justify-between sm:justify-start">
             <button onClick={() => { setSelectedMonth(m => (m - 1 + 12) % 12); }} className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl transition-all hover:bg-white dark:hover:bg-white/10 hover:shadow-sm" style={{ color: theme.text }}>
               <ChevronLeft size={16} />
@@ -174,8 +148,7 @@ export default function TaxCalendar2026() {
             </button>
           </div>
         </div>
-
-        {/* Month selector - Dynamic Pills */}
+        {}
         <div className="px-5 sm:px-8 pb-6 overflow-x-auto scrollbar-hide">
           <div className="flex gap-2 min-w-max">
             {MONTHS.map((m, idx) => {
@@ -195,10 +168,9 @@ export default function TaxCalendar2026() {
             })}
           </div>
         </div>
-
-        {/* Calendar grid */}
+        {}
         <div className="px-4 sm:px-8 py-4 sm:py-6 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
-          {/* Day headers */}
+          {}
           <div className="grid grid-cols-7 gap-1 sm:gap-3 mb-4 sm:mb-6">
             {DAYS_OF_WEEK.map(d => (
               <div key={d} className="text-center text-[9px] sm:text-[11px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em]" style={{ color: theme.textSecondary, opacity: 0.4 }}>
@@ -206,20 +178,17 @@ export default function TaxCalendar2026() {
               </div>
             ))}
           </div>
-
-          {/* Day cells */}
+          {}
           <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
             {Array.from({ length: offset }).map((_, i) => (
               <div key={`off-${i}`} className="h-11 sm:h-14" />
             ))}
-
             {Array.from({ length: totalDays }).map((_, i) => {
               const day = i + 1;
               const obs = dayObligationsMap[day] || [];
               const hasOb = obs.length > 0;
               const hasMatchingCompanies = obs.some(o => o.matchingCompanies?.length > 0);
               const isTodayCell = isToday(day);
-
               return (
                 <button
                   key={day}
@@ -251,8 +220,7 @@ export default function TaxCalendar2026() {
             })}
           </div>
         </div>
-
-        {/* Legend */}
+        {}
         <div className="px-4 sm:px-8 py-4 flex flex-wrap items-center gap-4 sm:gap-8 justify-center bg-gray-50/30 dark:bg-black/10 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
           <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider" style={{ color: theme.textSecondary }}>
             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -268,10 +236,7 @@ export default function TaxCalendar2026() {
           </div>
         </div>
       </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          MODAL: Day Obligations
-      ══════════════════════════════════════════════════════════════ */}
+      {}
       {modalDay && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-6"
@@ -293,7 +258,7 @@ export default function TaxCalendar2026() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
+            {}
             <div className="px-6 sm:px-12 py-6 sm:py-10 flex items-center justify-between" style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` }}>
               <div>
                 <p className="text-[10px] sm:text-[11px] font-black text-blue-500 uppercase tracking-[0.2em] sm:tracking-[0.3em] mb-1 sm:mb-2">Control de Obligaciones</p>
@@ -309,11 +274,9 @@ export default function TaxCalendar2026() {
                 <X size={20} />
               </button>
             </div>
-
-            {/* Modal Body */}
+            {}
             <div className="px-6 sm:px-12 py-6 sm:py-10 overflow-y-auto custom-scrollbar scroll-smooth" style={{ maxHeight: 'calc(90vh - 120px)' }}>
-              
-              {/* Linked Companies Section */}
+              {}
               {modalObligations.some(o => o.matchingCompanies?.length > 0) && (
                 <div className="mb-8 sm:mb-12">
                   <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -339,8 +302,7 @@ export default function TaxCalendar2026() {
                   </div>
                 </div>
               )}
-
-              {/* Detailed Obligations List */}
+              {}
               <div className="space-y-6 sm:space-y-10">
                 {sortedModalObligations.map((ob) => (
                   <div key={ob.id} className="group relative p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border transition-all hover:shadow-xl" 
@@ -348,7 +310,6 @@ export default function TaxCalendar2026() {
                       borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
                       background: ob.matchingCompanies?.length > 0 ? (isDark ? 'rgba(59,130,246,0.03)' : 'rgba(59,130,246,0.01)') : 'transparent'
                     }}>
-                    
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 sm:gap-8">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -372,7 +333,6 @@ export default function TaxCalendar2026() {
                            </p>
                         </div>
                       </div>
-
                       <div className="flex-shrink-0 w-full md:w-64 space-y-6">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-blue-500/50">

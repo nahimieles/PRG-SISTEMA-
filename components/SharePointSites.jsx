@@ -7,27 +7,20 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { lightTheme, darkTheme } from "@/lib/colors";
 import { Loader2, Users, ArrowRight, Search, RefreshCw } from 'lucide-react';
 import { useSharePointData } from "@/contexts/SharePointContext";
-
-
-// Helper to normalize strings
 const normalize = (str) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
-
 const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => {
     const { instance, accounts } = useMsal();
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     // Use preloaded data from context
     const { sites: preloadedSites, loading: preloading, loadSites: preloadSites, isInitialized } = useSharePointData();
-
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [groupSelection, setGroupSelection] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-
     // Use preloaded sites if available, otherwise load manually
     useEffect(() => {
         if (isInitialized && preloadedSites.length > 0) {
@@ -39,7 +32,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             }
         }
     }, [accounts, role, currentUser, isInitialized, preloadedSites]);
-
     const loadSites = async () => {
         setLoading(true);
         try {
@@ -48,26 +40,21 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             try {
                 response = await instance.acquireTokenSilent(request);
             } catch (err) {
-                console.warn("Silent token acquisition failed in SharePointSites:", err);
                 if (err.name === "InteractionRequiredAuthError" || err.errorCode === 'monitor_window_timeout') {
                     response = await instance.acquireTokenPopup(request);
                 } else {
                     throw err;
                 }
             }
-
             initializeGraphClient(response.accessToken);
             const fetchedSites = await getFollowedSites();
             setSites(processSites(fetchedSites));
         } catch (err) {
-            console.error("Error loading sites:", err);
             setError("No se pudieron cargar los grupos. Asegúrate de 'Seguir' los sitios en SharePoint.");
         } finally {
             setLoading(false);
         }
     };
-
-    // Filter and Group Sites
     const processSites = (rawSites) => {
         const processed = [];
         const contabilidadGroup = {
@@ -76,32 +63,20 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             isGroup: true,
             subSites: []
         };
-
         const seenIds = new Set();
-
         rawSites.forEach(site => {
             if (seenIds.has(site.id)) return;
             seenIds.add(site.id);
-
             const name = normalize(site.displayName);
-
-            // 1. PRG AUDITORES: Check FIRST before any blacklist — the site name
-            //    includes "CIA LTDA" which would otherwise match the blacklist below.
             if (name.includes('prg')) {
                 const isAdmin = role === 'admin' ||
                     (currentUser?.username?.toLowerCase() === 'valeria');
                 if (isAdmin) {
                     processed.push(site);
                 }
-                // Workers do not see PRG AUDITORES
                 return;
             }
-
-            // 2. BLACKLIST: Exclude other noisy "C LTDA" / "CIA LTDA" sites
-            //    (only runs for non-PRG sites now)
             if (name.includes('c ltda') || name.includes('cia ltda') || name.includes('cia. ltda')) return;
-
-            // 3. CONTABILIDAD: Group all "Contabilidad" sites (Restricted to admins)
             if (name.includes('contabilidad')) {
                 const isAdmin = role === 'admin' ||
                     (currentUser?.username?.toLowerCase() === 'valeria');
@@ -110,8 +85,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                 }
                 return;
             }
-
-            // 4. AUDITORIA: Restricted to admins
             if (name.includes('auditoria')) {
                 const isAdmin = role === 'admin' ||
                     (currentUser?.username?.toLowerCase() === 'valeria');
@@ -120,30 +93,22 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                 }
                 return;
             }
-
-            // 5. OTHERS: Strict whitelist — hide unknown sites
             return;
         });
-
         if (contabilidadGroup.subSites.length > 0) {
             processed.push(contabilidadGroup);
         }
-
         return processed.sort((a, b) => a.displayName.localeCompare(b.displayName));
     };
-
     const handleCardClick = (item) => {
         if (item.isGroup) {
-            setGroupSelection(item.subSites); // Abrir modal de selección
+            setGroupSelection(item.subSites); 
         } else {
             handleSiteClick(item);
         }
     };
-
-    // Duplicate useEffect and state moved to top
-
     const handleSiteClick = async (site) => {
-        setLoading(true); // Temporary loading state while fetching drive
+        setLoading(true); 
         try {
             const driveId = await getSiteDefaultDrive(site.id);
             onSelectSite(site, driveId);
@@ -153,8 +118,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             setLoading(false);
         }
     };
-
-    // Helper to generate consistent colors based on site name (Style mimic)
     const getSiteColor = (name) => {
         const colors = [
             "bg-teal-600", "bg-orange-600", "bg-pink-700", "bg-indigo-600",
@@ -166,21 +129,16 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
         }
         return colors[Math.abs(hash) % colors.length];
     };
-
-    // Helper to get initials
     const getInitials = (name) => {
         return name.substring(0, 2).toUpperCase();
     };
-
     if (accounts.length === 0) {
         const handleLogin = async () => {
             try {
                 await instance.loginPopup(loginRequest);
             } catch (error) {
-                console.error("Login failed:", error);
             }
         };
-
         return (
             <div className="flex flex-col items-center justify-center p-10 h-64 text-center rounded-xl border border-dashed"
                 style={{ borderColor: theme.border, background: theme.surface }}>
@@ -200,7 +158,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             </div>
         );
     }
-
     if (loading && sites.length === 0) {
         return (
             <div className="flex justify-center items-center h-48">
@@ -209,7 +166,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             </div>
         );
     }
-
     if (error) {
         return (
             <div className="p-8 text-center bg-red-50 rounded-xl border border-red-100">
@@ -218,7 +174,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             </div>
         );
     }
-
     if (sites.length === 0) {
         return (
             <div
@@ -233,15 +188,10 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
             </div>
         );
     }
-
-    // searchTerm moved to top
-
-    // ... (rest of logic)
-
     return (
         <>
             <div className="space-y-4">
-                {/* Search Bar for Sites */}
+                {}
                 <div className="flex gap-2 mb-4">
                     <div className="relative flex-1">
                         <input
@@ -273,8 +223,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                         Sincronizar
                     </button>
                 </div>
-
-                {/* Folder Grid View */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {sites
                         .filter(site => site.displayName.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -295,7 +243,6 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                                         </span>
                                     )}
                                 </div>
-
                                 <div className="text-center w-full">
                                     <h4 className="font-semibold text-sm truncate w-full px-2" style={{ color: theme.text }} title={site.displayName}>
                                         {site.displayName}
@@ -307,15 +254,13 @@ const SharePointSites = ({ onSelectSite, role, currentUser, mode = 'full' }) => 
                             </div>
                         ))}
                 </div>
-
                 {sites.filter(site => site.displayName.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
                     <div className="text-center py-10 opacity-50">
                         <p>No se encontraron grupos con ese nombre.</p>
                     </div>
                 )}
             </div>
-
-            {/* Modal de Selección de Grupo (Contabilidad) */}
+            {}
             {
                 groupSelection && (
                     <div

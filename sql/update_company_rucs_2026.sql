@@ -1,12 +1,9 @@
--- Actualización masiva de RUCs basada en la lista oficial proporcionada
--- Este script utiliza normalización de nombres para asegurar que coincidan a pesar de diferencias de formato.
 
 DO $$
 BEGIN
-    -- PRG AUDITORES (Caso especial con dos RUCs posibles, priorizamos el principal)
+
     UPDATE public.companies SET ruc = '0917776312001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = 'PRGAUDITORESCLTDA' AND ruc IS NULL;
-    
-    -- Resto de empresas
+
     UPDATE public.companies SET ruc = '0992178310001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = 'BEDESCHI' AND ruc IS NULL;
     UPDATE public.companies SET ruc = '0990955611001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = 'HUANPROCA' AND ruc IS NULL;
     UPDATE public.companies SET ruc = '0993385218001' WHERE regexp_replace(upper(coalesce(name,'')),'[^A-Z0-9]','', 'g') = 'MEDICOVER' AND ruc IS NULL;

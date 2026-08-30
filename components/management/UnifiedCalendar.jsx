@@ -16,7 +16,7 @@ export default function UnifiedCalendar({ theme, isDark }) {
                     </h3>
                     <p className="text-xs" style={{ color: theme.textSecondary }}>Gestión de eventos internos, reuniones y obligaciones tributarias.</p>
                 </div>
-                
+
                 <div className="flex p-1 rounded-xl w-full sm:w-auto" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                     <button 
                         onClick={() => setView('corporate')}

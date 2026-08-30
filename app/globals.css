@@ -6,7 +6,6 @@
   --primary-light: #2e5194;
   --accent: #4a90d9;
 }
-
 html,
 body {
   margin: 0;
@@ -15,7 +14,6 @@ body {
   height: 100%;
   overflow-x: hidden;
 }
-
 body {
   margin: 0;
   padding: 0;
@@ -23,49 +21,31 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
-
-/* ============================================
-   SCROLLBAR PERSONALIZADA 
-   ============================================ */
-
-/* Webkit browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--primary) 0%, var(--primary-light) 100%);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, var(--primary-light) 0%, var(--accent) 100%);
   background-clip: padding-box;
 }
-
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
-
-/* Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--primary) transparent;
 }
-
-/* ============================================
-   CUSTOM SELECT / DROPDOWN STYLES
-   ============================================ */
-
-/* Base select styling — Apple-like appearance */
 select {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -80,17 +60,13 @@ select {
   font-weight: 500;
   letter-spacing: -0.01em;
 }
-
 select:hover {
   filter: brightness(0.97);
 }
-
 select:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
-
-/* Light mode option styling */
 select option {
   background: #ffffff;
   color: #1f2937;
@@ -98,17 +74,13 @@ select option {
   font-weight: 500;
   font-size: 13px;
 }
-
 select option:checked {
   background: #eff6ff;
   color: #2563eb;
 }
-
 select option:hover {
   background: #f3f4f6;
 }
-
-/* Dark mode select adjustments */
 @media (prefers-color-scheme: dark) {
   select option {
     background: #1e293b;
@@ -119,329 +91,234 @@ select option:hover {
     color: #60a5fa;
   }
 }
-
-/* Force dark mode options when in dark theme */
 .dark select option,
 [data-theme="dark"] select option {
   background: #1e293b;
   color: #e2e8f0;
 }
-
 .dark select option:checked,
 [data-theme="dark"] select option:checked {
   background: #1e3a5f;
   color: #60a5fa;
 }
-
-/* Dark mode chevron */
 .dark select,
 [data-theme="dark"] select {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 14 18 9'%3e%3c/polyline%3e%3c/svg%3e");
 }
-
-/* Modal scrollbar más sutil */
 .modal-scroll::-webkit-scrollbar {
   width: 6px;
-  /* Sminor for mobile */
 }
-
 .modal-scroll::-webkit-scrollbar-thumb {
   background: rgba(100, 100, 100, 0.3);
   border-radius: 8px;
 }
-
 .modal-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.5);
 }
-
-/* Responsive Table Helper */
 .responsive-table-wrapper {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: 1rem;
 }
-
-/* ============================================
-   ANIMACIONES Y EFECTOS PROFESIONALES
-   ============================================ */
-
-/* Animaciones sutiles y profesionales */
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
 }
-
 @keyframes slideInUp {
   from {
     opacity: 0;
     transform: translateY(20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 @keyframes slideInDown {
   from {
     opacity: 0;
     transform: translateY(-20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 @keyframes slideInLeft {
   from {
     opacity: 0;
     transform: translateX(-20px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes slideInRight {
   from {
     opacity: 0;
     transform: translateX(20px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes scaleIn {
   from {
     opacity: 0;
     transform: scale(0.95);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
-
 @keyframes pulseGlow {
-
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
   }
-
   50% {
     box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.2);
   }
 }
-
-/* Animation Classes */
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out forwards;
 }
-
 .animate-slide-up {
   animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-slide-down {
   animation: slideInDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-slide-left {
   animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-slide-right {
   animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-scale-in {
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-pulse-glow {
   animation: pulseGlow 2s ease-in-out infinite;
 }
-
-/* Staggered animations for lists */
 .stagger-1 {
   animation-delay: 0.05s;
 }
-
 .stagger-2 {
   animation-delay: 0.1s;
 }
-
 .stagger-3 {
   animation-delay: 0.15s;
 }
-
 .stagger-4 {
   animation-delay: 0.2s;
 }
-
 .stagger-5 {
   animation-delay: 0.25s;
 }
-
 .stagger-6 {
   animation-delay: 0.3s;
 }
-
 .stagger-7 {
   animation-delay: 0.35s;
 }
-
 .stagger-8 {
   animation-delay: 0.4s;
 }
-
-/* Transiciones suaves para elementos interactivos */
 .transition-all-smooth {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* Page transition wrapper */
 .page-transition {
   animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-/* Hover effects cards */
 .card-hover-effect {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
 }
-
 .card-hover-effect:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.1);
 }
-
-/* Button micro-interactions — Apple-style */
 button,
 .btn {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-
 button:not(:disabled):hover,
 .btn:not(:disabled):hover {
   opacity: 0.85;
 }
-
 button:not(:disabled):active,
 .btn:not(:disabled):active {
   transform: scale(0.97);
   opacity: 0.75;
 }
-
-/* Animaciones sutiles globales — Apple timing */
 * {
   transition: background-color 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), color 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
-
 a {
   transition: color 0.2s ease, opacity 0.2s ease;
 }
-
 input,
 textarea,
 select {
   transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
 }
-
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
   box-shadow: 0 0 0 4px rgba(32, 59, 112, 0.12);
 }
-
 button {
   transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
   cursor: pointer;
 }
-
 button:hover:not(:disabled) {
   opacity: 0.85;
 }
-
 button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
-
 button:active:not(:disabled) {
   transform: scale(0.97);
   opacity: 0.75;
 }
-
-/* ============================================
-   GRADIENTES Y FONDOS
-   ============================================ */
-
 .gradient-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
 }
-
 .gradient-bg {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
-
-/* Sombras profesionales */
 .shadow-professional {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
-
 .shadow-elevated {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-
-/* ============================================
-   TABLAS PROFESIONALES
-   ============================================ */
-
 table {
   border-collapse: separate;
   border-spacing: 0;
 }
-
 tbody tr {
   transition: background-color 0.15s ease;
 }
-
-/* ============================================
-   CARDS Y CONTENEDORES
-   ============================================ */
-
 .card-professional {
   border-radius: 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-
 .card-professional:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.06);
 }
-
-/* ============================================
-   INPUTS PROFESIONALES
-   ============================================ */
-
 .input-professional {
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -449,16 +326,10 @@ tbody tr {
   font-size: 14px;
   transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-
 .input-professional:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(32, 59, 112, 0.08);
 }
-
-/* ============================================
-   BADGES Y ETIQUETAS
-   ============================================ */
-
 .badge {
   display: inline-flex;
   align-items: center;
@@ -468,15 +339,9 @@ tbody tr {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-
-/* ============================================
-   UTILIDADES
-   ============================================ */
-
 .text-balance {
   text-wrap: balance;
 }
-
 .truncate-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -484,33 +349,20 @@ tbody tr {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-/* ============================================
-   DASHBOARD LAYOUT CON SIDEBAR
-   ============================================ */
-
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
 }
-
 .dashboard-content {
   flex: 1;
   margin-left: 0;
   transition: margin-left 0.3s ease;
 }
-
 @media (min-width: 1024px) {
   .dashboard-content {
     margin-left: 72px;
-    /* Collapsed sidebar width */
   }
 }
-
-/* ============================================
-   CARDS ESTILO MODERNO
-   ============================================ */
-
 .stat-card {
   border-radius: 20px;
   padding: 1.5rem;
@@ -518,7 +370,6 @@ tbody tr {
   overflow: hidden;
   transition: box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-
 .stat-card::before {
   content: '';
   position: absolute;
@@ -530,28 +381,20 @@ tbody tr {
   background: rgba(255, 255, 255, 0.05);
   transform: translate(20px, -20px);
 }
-
 .stat-card:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
-
 .glass-card {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
 }
-
-/* ============================================
-   TABLAS MODERNAS
-   ============================================ */
-
 .modern-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
 }
-
 .modern-table thead th {
   padding: 1rem;
   text-align: left;
@@ -560,24 +403,16 @@ tbody tr {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-
 .modern-table tbody tr {
   transition: background-color 0.15s ease;
 }
-
 .modern-table tbody td {
   padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-
 .modern-table tbody tr:last-child td {
   border-bottom: none;
 }
-
-/* ============================================
-   FORMULARIOS MEJORADOS
-   ============================================ */
-
 .modern-input {
   width: 100%;
   padding: 0.65rem 1rem;
@@ -587,21 +422,14 @@ tbody tr {
   color: inherit;
   transition: all 0.2s ease;
 }
-
 .modern-input:focus {
   outline: none;
   border-color: var(--primary);
   background: rgba(255, 255, 255, 0.08);
 }
-
 .modern-input::placeholder {
   color: rgba(255, 255, 255, 0.4);
 }
-
-/* ============================================
-   BOTONES MEJORADOS
-   ============================================ */
-
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
@@ -612,12 +440,10 @@ tbody tr {
   border: none;
   cursor: pointer;
 }
-
 .btn-primary:hover {
   opacity: 0.9;
   box-shadow: 0 4px 14px rgba(32, 59, 112, 0.25);
 }
-
 .btn-secondary {
   background: rgba(255, 255, 255, 0.1);
   color: white;
@@ -628,11 +454,9 @@ tbody tr {
   border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
 }
-
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
 }
-
 .btn-danger {
   background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
   color: white;
@@ -643,16 +467,10 @@ tbody tr {
   border: none;
   cursor: pointer;
 }
-
 .btn-danger:hover {
   opacity: 0.9;
   box-shadow: 0 6px 16px rgba(231, 76, 60, 0.2);
 }
-
-/* ============================================
-   ALERTAS Y BADGES
-   ============================================ */
-
 .alert-warning {
   background: rgba(212, 175, 55, 0.15);
   border: 1px solid rgba(212, 175, 55, 0.3);
@@ -660,7 +478,6 @@ tbody tr {
   border-radius: 12px;
   padding: 1rem;
 }
-
 .alert-error {
   background: rgba(231, 76, 60, 0.15);
   border: 1px solid rgba(231, 76, 60, 0.3);
@@ -668,7 +485,6 @@ tbody tr {
   border-radius: 12px;
   padding: 1rem;
 }
-
 .alert-success {
   background: rgba(46, 204, 113, 0.15);
   border: 1px solid rgba(46, 204, 113, 0.3);
@@ -676,7 +492,6 @@ tbody tr {
   border-radius: 12px;
   padding: 1rem;
 }
-
 .badge-primary {
   display: inline-flex;
   align-items: center;
@@ -687,7 +502,6 @@ tbody tr {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
 }
-
 .badge-success {
   display: inline-flex;
   align-items: center;
@@ -698,7 +512,6 @@ tbody tr {
   background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
   color: white;
 }
-
 .badge-warning {
   display: inline-flex;
   align-items: center;
@@ -709,21 +522,14 @@ tbody tr {
   background: linear-gradient(135deg, #d4af37 0%, #f39c12 100%);
   color: white;
 }
-
-/* ============================================
-   ANIMACIONES ADICIONALES
-   ============================================ */
-
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
   }
-
   100% {
     background-position: 200% 0;
   }
 }
-
 .skeleton {
   background: linear-gradient(90deg,
       rgba(255, 255, 255, 0.05) 25%,
@@ -733,23 +539,19 @@ tbody tr {
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
 }
-
 @keyframes pulse-ring {
   0% {
     transform: scale(0.8);
     opacity: 1;
   }
-
   100% {
     transform: scale(1.3);
     opacity: 0;
   }
 }
-
 .pulse-indicator {
   position: relative;
 }
-
 .pulse-indicator::before {
   content: '';
   position: absolute;
@@ -763,44 +565,31 @@ tbody tr {
   opacity: 0.3;
   animation: pulse-ring 1.5s infinite;
 }
-
-/* ============================================
-   MODERN ENHANCEMENTS
-   ============================================ */
-
-/* Typography — Apple-like refinements */
 body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
-
 h1, h2, h3 {
   letter-spacing: -0.025em;
   font-weight: 700;
 }
-
 h1 {
   letter-spacing: -0.03em;
 }
-
 p, span, label {
   letter-spacing: -0.01em;
 }
-
-/* Glassmorphism Utilities */
 .glass {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
-
 .glass-dark {
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 .glass-card {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
@@ -808,357 +597,259 @@ p, span, label {
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
-
-/* Improved Hover Effects — Apple-style */
 .hover-lift {
   transition: box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
-
 .hover-lift:hover {
   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
 }
-
 .hover-glow {
   transition: box-shadow 0.3s ease;
 }
-
 .hover-glow:hover {
   box-shadow: 0 0 20px rgba(32, 59, 112, 0.4);
 }
-
-/* Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-
-/* Modern Shadows — Apple diffuse style */
 .shadow-soft {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
-
 .shadow-medium {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
-
 .shadow-large {
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
 }
-
 .shadow-xl {
   box-shadow: 0 16px 60px rgba(0, 0, 0, 0.1);
 }
-
-/* Smooth Scrolling */
 html {
   scroll-behavior: smooth;
 }
-
-/* Better Focus States — Apple-style ring */
 *:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px rgba(32, 59, 112, 0.2);
   border-radius: 8px;
 }
-
-/* Improved Transitions */
 .transition-smooth {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .transition-bounce {
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
-
-/* Loading Spinner */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
-
 .spinner {
   animation: spin 1s linear infinite;
 }
-
-/* Fade In Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 @keyframes fadeInDown {
   from {
     opacity: 0;
     transform: translateY(-20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 @keyframes fadeInLeft {
   from {
     opacity: 0;
     transform: translateX(-20px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes fadeInRight {
   from {
     opacity: 0;
     transform: translateX(20px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 .animate-fadeInUp {
   animation: fadeInUp 0.5s ease-out;
 }
-
 .animate-fadeInDown {
   animation: fadeInDown 0.5s ease-out;
 }
-
 .animate-fadeInLeft {
   animation: fadeInLeft 0.5s ease-out;
 }
-
 .animate-fadeInRight {
   animation: fadeInRight 0.5s ease-out;
 }
-
-/* Scale Animation */
 @keyframes scaleIn {
   from {
     opacity: 0;
     transform: scale(0.9);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
-
 .animate-scaleIn {
   animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* Pulse Animation */
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
   }
-
   50% {
     opacity: 0.5;
   }
 }
-
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-
-/* Bounce Animation */
 @keyframes bounce {
-
   0%,
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-10px);
   }
 }
-
 .animate-bounce {
   animation: bounce 1s infinite;
 }
-
-/* Gradient Backgrounds */
 .bg-gradient-primary {
   background: linear-gradient(135deg, hsl(220, 55%, 48%) 0%, hsl(220, 60%, 38%) 100%);
 }
-
 .bg-gradient-secondary {
   background: linear-gradient(135deg, hsl(45, 70%, 45%) 0%, hsl(45, 75%, 38%) 100%);
 }
-
 .bg-gradient-success {
   background: linear-gradient(135deg, hsl(145, 70%, 45%) 0%, hsl(145, 75%, 35%) 100%);
 }
-
 .bg-gradient-ocean {
   background: linear-gradient(135deg, hsl(200, 80%, 50%) 0%, hsl(175, 70%, 45%) 100%);
 }
-
 .bg-gradient-sunset {
   background: linear-gradient(135deg, hsl(35, 95%, 50%) 0%, hsl(5, 80%, 50%) 100%);
 }
-
 .bg-gradient-purple {
   background: linear-gradient(135deg, hsl(270, 75%, 55%) 0%, hsl(270, 80%, 45%) 100%);
 }
-
-/* Animated Gradient Background */
 @keyframes gradient-shift {
   0% {
     background-position: 0% 50%;
   }
-
   50% {
     background-position: 100% 50%;
   }
-
   100% {
     background-position: 0% 50%;
   }
 }
-
 .bg-gradient-animated {
   background: linear-gradient(270deg, hsl(220, 55%, 48%), hsl(200, 80%, 50%), hsl(270, 75%, 55%));
   background-size: 600% 600%;
   animation: gradient-shift 15s ease infinite;
 }
-
-/* Improved Scrollbar for Thin Variant */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: rgba(100, 100, 100, 0.3);
   border-radius: 10px;
 }
-
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.5);
 }
-
-/* Hide Scrollbar */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-/* Responsive Typography */
 @media (max-width: 640px) {
   html {
     font-size: 14px;
   }
 }
-
 @media (min-width: 1920px) {
   html {
     font-size: 18px;
   }
 }
-
-/* Print Styles */
 @media print {
   .no-print {
     display: none !important;
   }
 }
-
-/* ============================================
-   TOAST NOTIFICATIONS
-   ============================================ */
-
 @keyframes toastSlideIn {
   from {
     opacity: 0;
     transform: translateX(100%);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
-
 @keyframes toastSlideOut {
   from {
     opacity: 1;
     transform: translateX(0);
   }
-
   to {
     opacity: 0;
     transform: translateX(100%);
   }
 }
-
 .toast-enter {
   animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .toast-exit {
   animation: toastSlideOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
-
-/* ============================================
-   MOBILE UI FIXES
-   ============================================ */
-
-/* Prevent horizontal overflow */
 @media (max-width: 768px) {
-
-  /* Viewport fixes */
   html,
   body {
     max-width: 100vw;
     overflow-x: hidden;
   }
-
-  /* Dashboard content spacing */
   .dashboard-content {
     margin-left: 0 !important;
     padding: 16px !important;
     padding-top: 70px !important;
   }
-
-  /* Header row should stay horizontal */
   .dashboard-content>div:first-child {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 12px !important;
   }
-
-  /* Keep notification/account row horizontal */
   .dashboard-content>div:first-child>div:last-child {
     flex-direction: row !important;
     flex-wrap: nowrap !important;
@@ -1166,23 +857,15 @@ html {
     width: 100%;
     gap: 8px;
   }
-
-  /* Smaller notification badge */
   .dashboard-content>div:first-child>div:last-child>div {
     transform: scale(0.9);
   }
-
-  /* User profile card smaller on mobile */
   .dashboard-content>div:first-child>div:last-child>div:last-child {
     padding: 6px 10px !important;
   }
-
-  /* Hide username text on mobile, show only avatar */
   .dashboard-content>div:first-child>div:last-child>div:last-child>div.hidden {
     display: none !important;
   }
-
-  /* Improve inputs */
   input,
   textarea,
   select {
@@ -1190,23 +873,17 @@ html {
     min-height: 44px;
   }
 }
-
-/* Very small screens */
 @media (max-width: 480px) {
   .dashboard-content {
     padding: 12px !important;
     padding-top: 70px !important;
   }
-
-  /* Titles smaller */
   h1 {
     font-size: 1.25rem !important;
   }
-
   h2 {
     font-size: 1.1rem !important;
   }
-
   h3 {
     font-size: 1rem !important;
   }

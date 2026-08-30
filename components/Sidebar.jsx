@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -22,7 +21,6 @@ import ThemeToggle from './ThemeToggle';
 import { lightTheme, darkTheme } from '../lib/colors';
 import LoginLogo from './LoginLogo';
 import NotificationBell from './NotificationBell';
-
 export default function Sidebar({
     items = [],
     activeTab,
@@ -33,8 +31,8 @@ export default function Sidebar({
     onLogout,
     onProfileClick,
     showBackButton = true,
-    onHoverChange, // Add this
-    workerId = null // Add this
+    onHoverChange, 
+    workerId = null 
 }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
@@ -42,35 +40,25 @@ export default function Sidebar({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [profilePic, setProfilePic] = useState(null);
-
-    // Fetch Microsoft Graph Profile Picture
     useEffect(() => {
         async function fetchProfilePic() {
             try {
-                // If we are authenticated via MSAL, we could use the instance here.
-                // For now, we simulate or fetch if a token is available in local storage/session.
-                // Assuming `acquireTokenSilent` or a similar backend route is available.
                 const msalToken = sessionStorage.getItem('msal_token') || localStorage.getItem('msal_token');
                 if (!msalToken) return;
-
                 const res = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
                     headers: { Authorization: `Bearer ${msalToken}` }
                 });
-                
                 if (res.ok) {
                     const blob = await res.blob();
                     setProfilePic(URL.createObjectURL(blob));
                 }
             } catch (error) {
-                console.error("Error fetching MS profile pic:", error);
             }
         }
         if (userName) {
             fetchProfilePic();
         }
     }, [userName]);
-
-    // Iconos por defecto según el id del item
     const defaultIcons = {
         actividades: FileText,
         asistencia: Clock,
@@ -80,14 +68,11 @@ export default function Sidebar({
         reportes: Calendar,
         dashboard: LayoutDashboard
     };
-
     const sidebarBg = isDark ? '#0d1117' : '#0f172a';
     const sidebarItemBg = isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)';
-
     const renderMenuItem = (item, index, expanded = true) => {
         const Icon = item.icon || defaultIcons[item.id] || FileText;
         const isActive = activeTab === item.id;
-
         return (
             <button
                 key={item.id || index}
@@ -115,11 +100,10 @@ export default function Sidebar({
             </button>
         );
     };
-
     const SidebarContent = ({ expanded = true }) => (
         <>
-            {/* Logo/Brand */}
-            {/* Logo/Brand */}
+            {}
+            {}
             <div className={`flex items-center ${expanded ? 'px-4 py-4' : 'justify-center py-4'} transition-all duration-300`}>
                 <div className={`flex items-center justify-center w-full transition-all duration-300`}>
                     <LoginLogo
@@ -128,18 +112,15 @@ export default function Sidebar({
                     />
                 </div>
             </div>
-
-            {/* Navegación */}
+            {}
             <nav className={`flex-1 ${expanded ? 'px-3' : 'px-2'} space-y-1 mt-2`}>
                 {items.map((item, index) => renderMenuItem(item, index, expanded))}
             </nav>
-
-            {/* Separador */}
+            {}
             <div className="border-t border-gray-700/50 mx-4 my-4"></div>
-
-            {/* Sección inferior */}
+            {}
             <div className={`${expanded ? 'px-3' : 'px-2'} pb-4 space-y-2`}>
-                {/* Usuario */}
+                {}
                 {userName && expanded && (
                     <button
                         onClick={onProfileClick}
@@ -173,8 +154,7 @@ export default function Sidebar({
                         )}
                     </button>
                 )}
-
-                {/* Tema y Notificaciones */}
+                {}
                 <div className={`flex items-center ${expanded ? 'justify-between px-4' : 'justify-center flex-col gap-2'} py-2`}>
                     {expanded && <span className="text-sm text-gray-400">Preferencias</span>}
                     <div className={`flex items-center ${expanded ? 'gap-2' : 'flex-col gap-3'}`}>
@@ -182,8 +162,7 @@ export default function Sidebar({
                         <ThemeToggle />
                     </div>
                 </div>
-
-                {/* Botón volver */}
+                {}
                 {showBackButton && (
                     <Link
                         href="/"
@@ -194,8 +173,7 @@ export default function Sidebar({
                         {expanded && <span className="text-sm">Volver al inicio</span>}
                     </Link>
                 )}
-
-                {/* Cerrar sesión */}
+                {}
                 {onLogout && (
                     <button
                         onClick={onLogout}
@@ -209,10 +187,9 @@ export default function Sidebar({
             </div>
         </>
     );
-
     return (
         <>
-            {/* Sidebar Desktop - Collapsible on hover */}
+            {}
             <aside
                 className="hidden lg:flex flex-col fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out"
                 style={{
@@ -230,8 +207,7 @@ export default function Sidebar({
                 }}
             >
                 <SidebarContent expanded={isExpanded} />
-
-                {/* Expand indicator */}
+                {}
                 <div
                     className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-6 h-6 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center cursor-pointer hover:bg-gray-600 transition-colors"
                     style={{ opacity: isExpanded ? 0 : 0.7 }}
@@ -239,8 +215,7 @@ export default function Sidebar({
                     <ChevronRight className="w-4 h-4 text-gray-300" />
                 </div>
             </aside>
-
-            {/* Mobile Header */}
+            {}
             <div
                 className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 border-b border-white/5"
                 style={{ background: sidebarBg }}
@@ -254,21 +229,16 @@ export default function Sidebar({
                     </button>
                     <LoginLogo className="w-20 sm:w-24 h-auto" />
                 </div>
-
-                {/* Perfil movido al SidebarContent interno */}
-                
+                {}
             </div>
-
-
-            {/* Mobile Menu Overlay */}
+            {}
             {isMobileMenuOpen && (
                 <div
                     className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
-
-            {/* Mobile Sidebar */}
+            {}
             <aside
                 className={`lg:hidden fixed left-0 top-14 bottom-0 w-64 z-50 transform transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
@@ -276,8 +246,7 @@ export default function Sidebar({
             >
                 <SidebarContent expanded={true} />
             </aside>
-
-            {/* Spacer for mobile header */}
+            {}
             <div className="lg:hidden h-14"></div>
         </>
     );

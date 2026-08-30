@@ -5,24 +5,6 @@ import { ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../lib/colors';
 
-/**
- * DropdownMenu — Componente dropdown reutilizable.
- * 
- * Características:
- *   - Cierra al hacer clic fuera
- *   - Navegación por teclado (↑ ↓ Enter Escape)
- *   - Animación suave
- *   - Responsive
- *   - Reutiliza theme del ThemeContext
- * 
- * @param {Object} props
- * @param {React.ReactNode} props.children - Contenido del botón trigger
- * @param {Array} props.items - Array de { label, icon: LucideIcon, color, onClick, disabled }
- * @param {string} [props.buttonClassName] - Clases adicionales para el botón
- * @param {Object} [props.buttonStyle] - Estilos inline adicionales para el botón
- * @param {string} [props.align] - 'left' | 'right' (default: 'left')
- * @param {boolean} [props.disabled] - Deshabilitar el dropdown
- */
 export default function DropdownMenu({ 
     children, 
     items = [], 
@@ -40,7 +22,6 @@ export default function DropdownMenu({
     const containerRef = useRef(null);
     const itemRefs = useRef([]);
 
-    // Cerrar al hacer clic fuera
     useEffect(() => {
         const handler = (e) => {
             if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -52,7 +33,6 @@ export default function DropdownMenu({
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Navegación por teclado
     const handleKeyDown = useCallback((e) => {
         if (!isOpen) {
             if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
@@ -91,7 +71,6 @@ export default function DropdownMenu({
         }
     }, [isOpen, items, focusIndex]);
 
-    // Focus management
     useEffect(() => {
         if (focusIndex >= 0 && itemRefs.current[focusIndex]) {
             itemRefs.current[focusIndex].focus();
@@ -108,11 +87,11 @@ export default function DropdownMenu({
                     e.stopPropagation(); 
                     if (!disabled) {
                         if (!isOpen) {
-                            // Calcular espacio disponible abajo para decidir dirección
+
                             if (containerRef.current) {
                                 const rect = containerRef.current.getBoundingClientRect();
                                 const spaceBelow = window.innerHeight - rect.bottom;
-                                // Asumimos un menú promedio de 200px. Si hay menos de 220px, abrimos hacia arriba.
+
                                 setOpenDirection(spaceBelow < 220 ? 'up' : 'down');
                             }
                             setIsOpen(true);

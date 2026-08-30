@@ -18,17 +18,17 @@ export default function CompanyInformation({ company }) {
   const getFilesForCategory = (categoryId) => {
     const urlKey = `${categoryId}_url`;
     const url = company?.[urlKey];
-    
+
     if (!url) return [];
-    
+
     const urlParts = url.split('/');
     const rawFileName = urlParts[urlParts.length - 1] || 'documento';
     let cleanFileName = rawFileName.split('?')[0];
     cleanFileName = decodeURIComponent(cleanFileName);
     const ext = cleanFileName.split('.').pop()?.toLowerCase();
-    
+
     const displayTitle = cleanFileName.replace(/-\d{13}\.[^.]+$/, '').replace(/_/g, ' ');
-    
+
     return [
       { 
         id: categoryId, 
@@ -44,9 +44,9 @@ export default function CompanyInformation({ company }) {
 
   const getFileIcon = (type, categoryColor) => {
     let iconColor = categoryColor;
-    if (type === 'pdf') iconColor = '#ef4444'; // red-500
-    else if (type === 'xlsx' || type === 'xls') iconColor = '#10b981'; // emerald-500
-    else if (type === 'doc' || type === 'docx') iconColor = '#2563eb'; // blue-600
+    if (type === 'pdf') iconColor = '#ef4444'; 
+    else if (type === 'xlsx' || type === 'xls') iconColor = '#10b981'; 
+    else if (type === 'doc' || type === 'docx') iconColor = '#2563eb'; 
 
     switch(type) {
       case 'pdf': return <FileText color={iconColor} size={24} />;
@@ -61,7 +61,7 @@ export default function CompanyInformation({ company }) {
       {categories.map((cat) => {
         const Icon = cat.icon;
         const fileCount = company?.[`${cat.id}_url`] ? 1 : 0;
-        
+
         return (
           <button
             key={cat.id}
@@ -73,7 +73,7 @@ export default function CompanyInformation({ company }) {
               boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.05)'
             }}
           >
-            
+
             <div className="relative z-10 flex flex-col h-full">
               <div 
                 className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 shadow-sm"
@@ -81,15 +81,15 @@ export default function CompanyInformation({ company }) {
               >
                 <Icon size={28} />
               </div>
-              
+
               <h3 className="text-2xl font-bold mb-2" style={{ color: theme.text }}>
                 {cat.label}
               </h3>
-              
+
               <p className="text-sm font-medium opacity-80" style={{ color: theme.textSecondary }}>
                 {fileCount} {fileCount === 1 ? 'documento disponible' : 'documentos disponibles'}
               </p>
-              
+
               <div className="mt-6 pt-4 border-t flex items-center justify-between transition-colors" style={{ borderColor: theme.border, color: cat.color }}>
                 <span className="text-sm font-semibold">Ver documentos</span>
                 <ArrowLeft className="w-5 h-5 transform rotate-180 transition-transform group-hover:translate-x-2" />
@@ -152,13 +152,13 @@ export default function CompanyInformation({ company }) {
                   {getFileIcon(file.type, categoryInfo.color)}
                 </div>
               </div>
-              
+
               <div className="flex-1 mb-4">
                 <h4 className="font-bold text-base line-clamp-2 leading-tight mb-2" style={{ color: theme.primary }} title={file.name}>
                   {file.name}
                 </h4>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2 mt-auto">
                 <button 
                   className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5 border"
@@ -186,7 +186,7 @@ export default function CompanyInformation({ company }) {
             </div>
           ))}
         </div>
-        
+
         {files.length === 0 && (
           <div className="py-16 text-center flex flex-col items-center justify-center rounded-2xl border border-dashed" style={{ borderColor: theme.border, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
             <FolderOpen size={48} style={{ color: theme.textSecondary }} className="mb-4 opacity-50" />
@@ -200,13 +200,13 @@ export default function CompanyInformation({ company }) {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
+      {}
       {!activeCategory && (
         <div className="p-8 rounded-2xl shadow-sm border relative overflow-hidden animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
-          {/* Abstract background design */}
+          {}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 transform translate-x-1/2 -translate-y-1/2"></div>
           <div className="absolute bottom-0 right-32 w-48 h-48 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 transform translate-x-1/2 translate-y-1/2"></div>
-          
+
           <div className="relative z-10">
             <h1 className="text-3xl font-bold mb-2 tracking-tight" style={{ color: theme.text }}>
               Bienvenido, <span style={{ color: '#3b82f6' }}>{company?.name || 'Cliente'}</span>
@@ -218,10 +218,10 @@ export default function CompanyInformation({ company }) {
         </div>
       )}
 
-      {/* Main Content Area */}
+      {}
       {activeCategory ? renderFileList() : renderCategorySelection()}
 
-      {/* File Viewer Modal */}
+      {}
       {viewingFile && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -242,7 +242,7 @@ export default function CompanyInformation({ company }) {
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-hidden bg-gray-100 dark:bg-gray-900">
               {viewingFile.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                 <div className="w-full h-full flex items-center justify-center p-4">

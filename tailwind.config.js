@@ -1,24 +1,1 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-    content: [
-        "./app/**/*.{js,ts,jsx,tsx,mdx}",
-        "./components/**/*.{js,ts,jsx,tsx,mdx}",
-        "./contexts/**/*.{js,ts,jsx,tsx,mdx}",
-        "./lib/**/*.{js,ts,jsx,tsx,mdx}",
-    ],
-    darkMode: 'class',
-    theme: {
-        extend: {
-            colors: {
-                background: "var(--background)",
-                foreground: "var(--foreground)",
-            },
-            borderRadius: {
-                'xl': '0.5rem',
-                '2xl': '0.6rem',
-                '3xl': '0.75rem',
-            },
-        },
-    },
-    plugins: [],
-};
+module.exports = {    content: [        "./app/**/*.{js,ts,jsx,tsx,mdx}",        "./components/**/*.{js,ts,jsx,tsx,mdx}",        "./contexts/**/*.{js,ts,jsx,tsx,mdx}",        "./lib/**/*.{js,ts,jsx,tsx,mdx}",    ],    darkMode: 'class',    theme: {        extend: {            colors: {                background: "var(--background)",                foreground: "var(--foreground)",            },            borderRadius: {                'xl': '0.5rem',                '2xl': '0.6rem',                '3xl': '0.75rem',            },        },    },    plugins: [],};

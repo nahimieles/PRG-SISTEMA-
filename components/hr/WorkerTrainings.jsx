@@ -11,7 +11,7 @@ export default function WorkerTrainings({ workerId, theme, isDark }) {
     const [showForm, setShowForm] = useState(false);
     const [adding, setAdding] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(null);
-    
+
     const [newTraining, setNewTraining] = useState({ 
         title: '', 
         date: new Date().toISOString().split('T')[0],
@@ -57,7 +57,7 @@ export default function WorkerTrainings({ workerId, theme, isDark }) {
         e.preventDefault();
         if (!newTraining.title.trim()) return;
         setAdding(true);
-        
+
         if (newTraining.id) {
             const { data } = await supabase.from('hr_trainings').update({
                 title: newTraining.title,
@@ -81,8 +81,7 @@ export default function WorkerTrainings({ workerId, theme, isDark }) {
             }).select().single();
 
             if (error) {
-                console.error(error);
-                // Graceful fail without native alert
+
             } else if (data) {
                 setTrainings([data, ...trainings].sort((a,b) => new Date(b.date) - new Date(a.date)));
                 setNewTraining({ title: '', date: new Date().toISOString().split('T')[0], status: 'scheduled', notes: '' });
@@ -96,7 +95,7 @@ export default function WorkerTrainings({ workerId, theme, isDark }) {
         switch(status) {
             case 'completed': return 'bg-emerald-500';
             case 'cancelled': return 'bg-red-500';
-            default: return 'bg-amber-500'; // scheduled
+            default: return 'bg-amber-500'; 
         }
     };
 

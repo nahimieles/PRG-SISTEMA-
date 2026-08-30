@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Plus, Clock, Play, Square, X, Download, Trash2, Eye, FileText, ClipboardList, PieChart, Building2 } from 'lucide-react';
@@ -13,16 +12,13 @@ import { addRecord, deleteRecord, calculateHours, uploadFile, getWorkerRecords, 
 import { loginUnifiedAction } from '../../lib/actions.js';
 import OneDriveContainer from '../../components/OneDriveContainer';
 import dynamic from 'next/dynamic';
-
 const RealTimeMonitor = dynamic(() => import('../../components/RealTimeMonitor'), { ssr: false });
 const CompanyManager = dynamic(() => import('../../components/CompanyManager'), { ssr: false });
 const CourseViewer = dynamic(() => import('../../components/CourseViewer'), { ssr: false });
-
 const SearchableSelect = ({ options, value, onChange, placeholder, isDark, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
-
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -32,15 +28,12 @@ const SearchableSelect = ({ options, value, onChange, placeholder, isDark, theme
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   useEffect(() => {
     if (!isOpen) {
       setSearch(value);
     }
   }, [value, isOpen]);
-
   const filteredOptions = options.filter(opt => opt.toLowerCase().includes(search.toLowerCase()));
-
   return (
     <div ref={wrapperRef} className="relative">
       <input
@@ -88,14 +81,11 @@ const SearchableSelect = ({ options, value, onChange, placeholder, isDark, theme
     </div>
   );
 };
-
 export default function FuncionariosPage() {
   const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
-  const [activeTab, setActiveTab] = useState('dashboards'); // Changed default
-
-  // Menú del sidebar para trabajadores
+  const [activeTab, setActiveTab] = useState('dashboards'); 
   const sidebarItems = [
     { id: 'dashboards', label: 'Dashboards y Actividades', icon: PieChart },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
@@ -117,16 +107,12 @@ export default function FuncionariosPage() {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null); // Estado para el modal
-
-
   // Estado para asistencia
   const [activeAttendance, setActiveAttendance] = useState(null);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-
-  // Verificar sesión al montar el componente
   useEffect(() => {
     const savedSession = getWorkerSession();
     if (savedSession) {
@@ -140,8 +126,6 @@ export default function FuncionariosPage() {
     }
     setCheckingSession(false);
   }, []);
-
-  // Cronómetro para asistencia activa
   useEffect(() => {
     let interval;
     if (activeAttendance) {
@@ -159,30 +143,27 @@ export default function FuncionariosPage() {
     }
     return () => clearInterval(interval);
   }, [activeAttendance]);
-
   const loadAttendanceData = async (workerId) => {
     const active = await getActiveAttendance(workerId);
     setActiveAttendance(active);
     const records = await getWorkerAttendanceRecords(workerId);
     setAttendanceRecords(records);
   };
-
   const handleLogin = async (username, password) => {
     const result = await loginUnifiedAction(username, password);
     if (result.success && result.role === 'worker') {
       const worker = result.user;
       setCurrentWorker(worker);
       setIsAuthenticated(true);
-      saveWorkerSession(worker); // Guardar sesión
+      saveWorkerSession(worker); 
       loadMyRecords(worker.id);
-      loadAttendanceData(worker.id); // Cargar asistencia al login
+      loadAttendanceData(worker.id); 
       const companiesData = await getCompanies();
       setCompanies(companiesData);
       return { success: true };
     }
     return result;
   };
-
   const handleLogout = () => {
     router.push('/');
     clearWorkerSession();
@@ -192,13 +173,10 @@ export default function FuncionariosPage() {
     setActiveAttendance(null);
     setAttendanceRecords([]);
   };
-
   const loadMyRecords = async (workerId) => {
     const records = await getWorkerRecords(workerId);
     setMyRecords(records);
   };
-
-  // Handlers de asistencia
   const handleStartAttendance = async () => {
     setAttendanceLoading(true);
     const result = await startAttendance(currentWorker.id, currentWorker.full_name);
@@ -208,7 +186,6 @@ export default function FuncionariosPage() {
     }
     setAttendanceLoading(false);
   };
-
   const handleStopAttendance = async () => {
     if (!activeAttendance) return;
     setAttendanceLoading(true);
@@ -220,20 +197,15 @@ export default function FuncionariosPage() {
     }
     setAttendanceLoading(false);
   };
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     const hoursWorked = calculateHours(formData.startDateTime, formData.endDateTime);
-
     if (hoursWorked < 0) {
       setShowSuccess('error-La fecha de fin debe ser posterior al inicio');
       setLoading(false);
       return;
     }
-
     let fileData = { filePath: null, fileUrl: null };
     if (file) {
       fileData = await uploadFile(file, `${currentWorker.id}-${Date.now()}`);
@@ -243,7 +215,6 @@ export default function FuncionariosPage() {
         return;
       }
     }
-
     const result = await addRecord({
       workerId: currentWorker.id,
       workerName: currentWorker.full_name,
@@ -256,9 +227,7 @@ export default function FuncionariosPage() {
       filePath: fileData.filePath,
       fileUrl: fileData.fileUrl
     });
-
     setLoading(false);
-
     if (result.success) {
       setShowSuccess('success');
       setFormData({
@@ -276,7 +245,6 @@ export default function FuncionariosPage() {
       setShowSuccess('error-Error al guardar el registro');
     }
   };
-
   const handleDeleteRecord = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro?')) {
       const success = await deleteRecord(id);
@@ -290,7 +258,6 @@ export default function FuncionariosPage() {
       setTimeout(() => setShowSuccess(''), 3000);
     }
   };
-
   // Mostrar loading mientras verifica sesión
   if (checkingSession) {
     return (
@@ -308,14 +275,12 @@ export default function FuncionariosPage() {
       </div>
     );
   }
-
   if (!isAuthenticated) {
     return null;
   }
-
   return (
     <div className="dashboard-layout" style={{ background: theme.background, minHeight: '100vh' }}>
-      {/* Sidebar */}
+      {}
       <Sidebar
         items={sidebarItems}
         activeTab={activeTab}
@@ -325,8 +290,7 @@ export default function FuncionariosPage() {
         showBackButton={false}
         onHoverChange={setIsSidebarExpanded}
       />
-
-      {/* Contenido Principal */}
+      {}
       <main
         className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-4 lg:p-8 page-transition"
         style={{
@@ -337,15 +301,12 @@ export default function FuncionariosPage() {
           minHeight: '100vh'
         }}
       >
-
         <div className="max-w-7xl mx-auto">
-
           {activeTab === 'dashboards' && (
             <div className="animate-fade-in space-y-8">
               <RealTimeMonitor isWorker={true} />
-              
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Formulario Registrar Actividad */}
+                {}
                 <div className="xl:col-span-1">
                   <div className="rounded-xl shadow-lg p-6 h-full border" style={{ background: theme.surface, borderColor: theme.border }}>
                     <h3 className="text-xl font-bold mb-4" style={{ color: theme.primary }}>Registrar Actividad Manual</h3>
@@ -369,7 +330,6 @@ export default function FuncionariosPage() {
                           theme={theme}
                         />
                       </div>
-                      
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Sistema / Actividad</label>
                         <SearchableSelect
@@ -381,7 +341,6 @@ export default function FuncionariosPage() {
                           theme={theme}
                         />
                       </div>
-
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Fecha Inicio</label>
@@ -404,7 +363,6 @@ export default function FuncionariosPage() {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Descripción (opcional)</label>
                         <textarea
@@ -415,7 +373,6 @@ export default function FuncionariosPage() {
                           style={{ background: isDark ? 'rgba(0,0,0,0.2)' : '#fff', borderColor: theme.border, color: theme.text }}
                         ></textarea>
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{ color: theme.textSecondary }}>Evidencia (Opcional)</label>
                         <input
@@ -426,7 +383,6 @@ export default function FuncionariosPage() {
                           style={{ color: theme.textSecondary }}
                         />
                       </div>
-
                       <button
                         type="submit"
                         disabled={loading}
@@ -437,8 +393,7 @@ export default function FuncionariosPage() {
                     </form>
                   </div>
                 </div>
-
-                {/* Tabla Mis Actividades */}
+                {}
                 <div className="xl:col-span-2">
                   <div
                     className="rounded-xl shadow-lg p-4 md:p-6 h-full border flex flex-col"
@@ -516,22 +471,17 @@ export default function FuncionariosPage() {
               </div>
             </div>
           )}
-
           {activeTab === 'empresas' && (
             <div className="animate-fade-in space-y-6">
               <CompanyManager isWorker={true} />
             </div>
           )}
-
           {activeTab === 'cursos' && (
             <div className="animate-fade-in">
               <CourseViewer adminPreview={true} />
             </div>
           )}
-
-
-
-          {/* Modal de detalle de registro */}
+          {}
           {selectedRecord && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-animate"
@@ -543,7 +493,7 @@ export default function FuncionariosPage() {
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Header del modal */}
+                {}
                 <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
                   <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
                     Detalle de Actividad
@@ -556,10 +506,9 @@ export default function FuncionariosPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
-                {/* Contenido del modal */}
+                {}
                 <div className="p-6 space-y-6">
-                  {/* Información del registro */}
+                  {}
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Empresa</p>
@@ -586,14 +535,12 @@ export default function FuncionariosPage() {
                       <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
                     </div>
                   </div>
-
-                  {/* Descripción */}
+                  {}
                   <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                     <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
                     <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
                   </div>
-
-                  {/* Visor de archivo */}
+                  {}
                   {selectedRecord.file_url ? (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
@@ -609,7 +556,7 @@ export default function FuncionariosPage() {
                         </a>
                       </div>
                       <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
-                        {/* Visor según tipo de archivo */}
+                        {}
                         {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                           <img
                             src={selectedRecord.file_url}
@@ -623,7 +570,6 @@ export default function FuncionariosPage() {
                             title="Vista previa PDF"
                           />
                         ) : (
-                          /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
                           <iframe
                             src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
                             className="w-full h-96"
@@ -638,8 +584,7 @@ export default function FuncionariosPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Footer del modal */}
+                {}
                 <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
                   <button
                     onClick={() => handleDeleteRecord(selectedRecord.id)}

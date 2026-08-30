@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { X, Save, Lock, Trash2, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -11,33 +10,27 @@ import {
     checkCompanyCredentialsAction
 } from '../lib/actions';
 import { getAdminSession } from '../lib/auth';
-
 export default function CredentialManager({ company, onClose }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-    
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(null);
-    const [status, setStatus] = useState({}); // { [slug]: boolean }
-    const [credentials, setCredentials] = useState({}); // { [slug]: { username: '', password: '' } }
+    const [status, setStatus] = useState({}); 
+    const [credentials, setCredentials] = useState({}); 
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-
     const allStandard = getStandardPlatforms().filter(p => p.requiereCredenciales);
     const accounting = company.sistema_contable_slug ? getAccountingPlatform(company.sistema_contable_slug) : null;
     const platforms = accounting && accounting.requiereCredenciales ? [...allStandard, accounting] : allStandard;
-
     useEffect(() => {
         loadStatus();
     }, []);
-
     const loadStatus = async () => {
         setLoading(true);
         setError('');
         try {
             const admin = getAdminSession();
             if (!admin) throw new Error('No autorizado');
-
             const res = await checkCompanyCredentialsAction(admin.id, company.id);
             if (res.success) {
                 setStatus(res.status);
@@ -50,18 +43,15 @@ export default function CredentialManager({ company, onClose }) {
             setLoading(false);
         }
     };
-
     const handleSave = async (slug) => {
         const creds = credentials[slug];
         if (!creds || !creds.username || !creds.password) {
             setError('Ingresa usuario y contraseña para guardar');
             return;
         }
-
         setSaving(slug);
         setError('');
         setSuccess('');
-
         try {
             const admin = getAdminSession();
             const res = await savePlatformCredentialAction(admin.id, company.id, slug, creds);
@@ -83,14 +73,11 @@ export default function CredentialManager({ company, onClose }) {
             setSaving(null);
         }
     };
-
     const handleDelete = async (slug) => {
         if (!confirm('¿Estás seguro de eliminar estas credenciales? La automatización dejará de funcionar para esta plataforma.')) return;
-
         setSaving(slug);
         setError('');
         setSuccess('');
-
         try {
             const admin = getAdminSession();
             const res = await deletePlatformCredentialAction(admin.id, company.id, slug);
@@ -107,7 +94,6 @@ export default function CredentialManager({ company, onClose }) {
             setSaving(null);
         }
     };
-
     const handleInputChange = (slug, field, value) => {
         setCredentials(prev => ({
             ...prev,
@@ -117,14 +103,12 @@ export default function CredentialManager({ company, onClose }) {
             }
         }));
     };
-
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div 
                 className="rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border flex flex-col max-h-[90vh]" 
                 style={{ background: theme.surface, borderColor: theme.border }}
             >
-                {/* Header */}
                 <div className="p-5 border-b flex justify-between items-center bg-gray-50/50 dark:bg-white/5" style={{ borderColor: theme.border }}>
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: theme.text }}>
@@ -143,10 +127,7 @@ export default function CredentialManager({ company, onClose }) {
                         <X size={20} />
                     </button>
                 </div>
-
-                {/* Body */}
                 <div className="p-5 overflow-y-auto custom-scrollbar flex-1">
-                    {/* Alerts */}
                     {error && (
                         <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 flex items-center gap-2 text-sm font-medium">
                             <AlertCircle size={16} /> {error}
@@ -157,7 +138,6 @@ export default function CredentialManager({ company, onClose }) {
                             <CheckCircle size={16} /> {success}
                         </div>
                     )}
-
                     <div className="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-sm" style={{ color: isDark ? '#93c5fd' : '#1e40af' }}>
                         <p className="font-semibold mb-1 flex items-center gap-2">
                             <Lock size={16} /> Cifrado AES-256-GCM
@@ -166,7 +146,6 @@ export default function CredentialManager({ company, onClose }) {
                             Estas credenciales se almacenan fuertemente cifradas. Por seguridad, no es posible ver la contraseña una vez guardada. Si necesitas actualizarla, simplemente ingresa una nueva y guarda.
                         </p>
                     </div>
-
                     {loading ? (
                         <div className="py-12 flex flex-col items-center justify-center">
                             <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4" />
@@ -178,7 +157,6 @@ export default function CredentialManager({ company, onClose }) {
                                 const isSaved = status[platform.slug];
                                 const creds = credentials[platform.slug] || { username: '', password: '' };
                                 const isWorking = saving === platform.slug;
-
                                 return (
                                     <div 
                                         key={platform.slug}
@@ -204,7 +182,6 @@ export default function CredentialManager({ company, onClose }) {
                                                     </div>
                                                 </div>
                                             </div>
-
                                             {isSaved && (
                                                 <button
                                                     onClick={() => handleDelete(platform.slug)}
@@ -215,7 +192,6 @@ export default function CredentialManager({ company, onClose }) {
                                                 </button>
                                             )}
                                         </div>
-
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                                             <div>
                                                 <label className="block text-[11px] font-bold uppercase mb-1.5 opacity-70" style={{ color: theme.text }}>Usuario / RUC</label>

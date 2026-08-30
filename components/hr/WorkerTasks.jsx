@@ -56,13 +56,13 @@ export default function WorkerTasks({ workerId, theme, isDark, readOnly = false 
         e.preventDefault();
         if (!newTask.title.trim() || readOnly) return;
         setAdding(true);
-        
+
         if (newTask.id) {
             const { data } = await supabase.from('hr_tasks').update({
                 title: newTask.title,
                 description: newTask.description
             }).eq('id', newTask.id).select().single();
-            
+
             if (data) {
                 setTasks(tasks.map(t => t.id === newTask.id ? data : t));
                 setNewTask({ title: '', description: '' });
@@ -78,10 +78,9 @@ export default function WorkerTasks({ workerId, theme, isDark, readOnly = false 
             }).select().single();
 
             if (error) {
-                console.error('Error adding task:', error);
-                // Graceful fail without native alert
+
             } else if (data) {
-                // Send notification to the worker
+
                 await supabase.from('notificaciones').insert({
                     worker_id: workerId,
                     titulo: 'Nueva Tarea Asignada',

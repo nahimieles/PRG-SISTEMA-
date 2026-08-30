@@ -11,7 +11,6 @@ export default function SurveyForm({ interviewId }) {
   const [survey, setSurvey] = useState(null);
   const [questions, setQuestions] = useState([]);
 
-  // Form State
   const [candidate, setCandidate] = useState({ full_name: '', email: '', phone: '' });
   const [responses, setResponses] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +29,7 @@ export default function SurveyForm({ interviewId }) {
         if (savedResponses) setResponses(savedResponses);
       }
     } catch (err) {
-      console.warn('Error loading draft from localStorage:', err);
+
     }
   }, [draftKey]);
 
@@ -64,7 +63,7 @@ export default function SurveyForm({ interviewId }) {
   const handleResponseChange = (questionId, value, isCheckbox = false) => {
     setResponses(prev => {
        if (!isCheckbox) return { ...prev, [questionId]: value };
-       
+
        const currentArr = prev[questionId] || [];
        if (currentArr.includes(value)) {
            return { ...prev, [questionId]: currentArr.filter(v => v !== value) };
@@ -86,7 +85,6 @@ export default function SurveyForm({ interviewId }) {
     setSubmitting(true);
     setError(null);
 
-    // Prepare payload
     const hasAnswer = (value) => {
       if (Array.isArray(value)) return value.length > 0;
       if (value && typeof value === 'object') {
@@ -113,7 +111,7 @@ export default function SurveyForm({ interviewId }) {
       if (!res.ok) throw new Error(data.error || 'Error al enviar');
 
       setSuccess(true);
-      localStorage.removeItem(draftKey); // Clear draft on success
+      localStorage.removeItem(draftKey); 
       window.scrollTo(0, 0);
     } catch (err) {
       setError(err.message);
@@ -166,21 +164,21 @@ export default function SurveyForm({ interviewId }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-50 to-zinc-200 p-4 md:p-8 font-sans overflow-x-hidden selection:bg-indigo-500/30 flex justify-center">
       <div className="w-full max-w-5xl">
-        {/* Flow Header */}
+        {}
         <div className="mb-10 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-slate-800 tracking-tight leading-loose mb-3">{survey.title}</h1>
           {survey.description && <p className="text-base md:text-lg text-slate-500 max-w-3xl mx-auto font-normal leading-relaxed">{survey.description}</p>}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8 relative">
-          
-          {/* Main Card */}
+
+          {}
           <div className="bg-white/95 backdrop-blur-2xl rounded-[1.5rem] shadow-xl border border-white p-5 sm:p-8 md:p-10 md:px-14 space-y-12">
-            
-            {/* Candidate Section */}
+
+            {}
             <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6 tracking-tight">Información Personal</h2>
-                
+
                 <div className="space-y-6">
                   <div>
                     <label className={labelClass}>Nombre Completo *</label>
@@ -222,10 +220,10 @@ export default function SurveyForm({ interviewId }) {
 
             <hr className="border-gray-200/60" />
 
-            {/* Questions Section */}
+            {}
             <div className="space-y-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-8 tracking-tight">Prueba</h2>
-                
+
                 <div className="space-y-12">
                 {questions.map((q, idx) => (
                   <div key={q.id} className="group flex flex-col space-y-4">
@@ -354,7 +352,6 @@ export default function SurveyForm({ interviewId }) {
 
           </div>
 
-          {/* Submit Action within flow */}
           <div className="pt-8 flex justify-end">
             <button 
               type="submit" 

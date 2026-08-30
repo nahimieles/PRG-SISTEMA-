@@ -1,4 +1,3 @@
--- Fix RLS para las tablas de HR (Permitir acceso anónimo y autenticado)
 
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON hr_tasks;
 DROP POLICY IF EXISTS "Enable all for authenticated users" ON hr_trainings;

@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
@@ -25,25 +24,21 @@ import { getGroups, createGroup, updateGroup, deleteGroup, moveGroup } from '@/l
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import * as LucideIcons from 'lucide-react';
-
 export default function GroupManager() {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
-    // State
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedGroup, setSelectedGroup] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+    const [modalMode, setModalMode] = useState('create'); 
     const [workers, setWorkers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-
     // Form State
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        type: 'group', // group, folder, link
+        type: 'group', 
         icon: 'Folder',
         color: '#3498db',
         image_url: '',
@@ -51,43 +46,32 @@ export default function GroupManager() {
         resource_id: '',
         permissions: ['admin', 'manager']
     });
-
     const [expandedGroups, setExpandedGroups] = useState(new Set());
-
     useEffect(() => {
         loadGroups();
         loadWorkers();
     }, []);
-
     const loadWorkers = async () => {
         const { getAllWorkers } = await import('@/lib/auth');
         const data = await getAllWorkers();
         setWorkers(data || []);
     };
-
     const loadGroups = async () => {
         setLoading(true);
         try {
             const data = await getGroups();
             setGroups(data);
         } catch (error) {
-            console.error('Failed to load groups:', error);
         } finally {
             setLoading(false);
         }
     };
-
-    // Helper to build hierarchy
     const buildHierarchy = (items) => {
         const itemMap = {};
         const roots = [];
-
-        // Initialize map
         items.forEach(item => {
             itemMap[item.id] = { ...item, children: [] };
         });
-
-        // Build tree
         items.forEach(item => {
             if (item.parent_id && itemMap[item.parent_id]) {
                 itemMap[item.parent_id].children.push(itemMap[item.id]);
@@ -95,10 +79,8 @@ export default function GroupManager() {
                 roots.push(itemMap[item.id]);
             }
         });
-
         return roots;
     };
-
     const handleCreate = (parentId = null) => {
         setModalMode('create');
         setFormData({
@@ -114,7 +96,6 @@ export default function GroupManager() {
         });
         setIsModalOpen(true);
     };
-
     const handleEdit = (group) => {
         setModalMode('edit');
         setSelectedGroup(group);
@@ -131,7 +112,6 @@ export default function GroupManager() {
         });
         setIsModalOpen(true);
     };
-
     const handleDelete = async (id) => {
         if (!confirm('¿Estás seguro de eliminar este grupo y todos sus descendientes?')) return;
         try {
@@ -141,7 +121,6 @@ export default function GroupManager() {
             alert('Error eliminando grupo: ' + error.message);
         }
     };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -156,7 +135,6 @@ export default function GroupManager() {
             alert('Error guardando: ' + error.message);
         }
     };
-
     const togglePermission = (value) => {
         const perms = new Set(formData.permissions);
         if (perms.has(value)) {
@@ -166,33 +144,25 @@ export default function GroupManager() {
         }
         setFormData({ ...formData, permissions: Array.from(perms) });
     };
-
     const setPublicPermission = (isPublic) => {
-        let newPerms = ['admin', 'manager']; // Always keep admins
+        let newPerms = ['admin', 'manager']; 
         if (isPublic) newPerms.push('all');
         setFormData({ ...formData, permissions: newPerms });
     }
-
     const toggleExpand = (id) => {
         const newSet = new Set(expandedGroups);
         if (newSet.has(id)) newSet.delete(id);
         else newSet.add(id);
         setExpandedGroups(newSet);
     };
-
-    // Filter groups for search (flattened view when searching)
     const filteredGroups = searchTerm
         ? groups.filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()))
         : groups;
-
     const hierarchy = !searchTerm ? buildHierarchy(groups) : null;
-
-    // Recursive component for Tree Item
     const TreeItem = ({ item, depth = 0 }) => {
         const hasChildren = item.children && item.children.length > 0;
         const isExpanded = expandedGroups.has(item.id);
         const ItemIcon = LucideIcons[item.icon] || Folder;
-
         return (
             <div className="select-none">
                 <div
@@ -205,14 +175,12 @@ export default function GroupManager() {
                     >
                         {isExpanded ? <ChevronDown size={12} className="sm:w-3.5 sm:h-3.5" /> : <ChevronRight size={12} className="sm:w-3.5 sm:h-3.5" />}
                     </button>
-
                     <div
                         className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg shadow-sm flex-shrink-0"
                         style={{ backgroundColor: item.color + '20', color: item.color }}
                     >
                         <ItemIcon size={14} className="sm:w-4 sm:h-4" />
                     </div>
-
                     <div className="flex-1 min-w-0">
                         <div className="font-medium text-xs sm:text-sm flex items-center gap-1 sm:gap-2">
                             <span className="truncate">{item.name}</span>
@@ -222,7 +190,6 @@ export default function GroupManager() {
                             {item.resource_id && <span className="font-mono truncate">{item.resource_id}</span>}
                         </div>
                     </div>
-
                     <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                         <button
                             onClick={() => handleCreate(item.id)}
@@ -247,7 +214,6 @@ export default function GroupManager() {
                         </button>
                     </div>
                 </div>
-
                 {isExpanded && hasChildren && (
                     <div className="anim-slide-down">
                         {item.children.map(child => (
@@ -258,7 +224,6 @@ export default function GroupManager() {
             </div>
         );
     };
-
     return (
         <div className="w-full h-full flex flex-col animate-fade-in overflow-x-hidden">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
@@ -269,7 +234,6 @@ export default function GroupManager() {
                     </h2>
                     <p className="text-xs sm:text-sm opacity-60">Configura la estructura virtual.</p>
                 </div>
-
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     <div className="relative flex-1 md:w-64">
                         <Search className="absolute left-3 top-2.5 opacity-40" size={16} />
@@ -299,14 +263,11 @@ export default function GroupManager() {
                     </button>
                 </div>
             </div>
-
-            {/* Last Updated Timestamp */}
             {!loading && groups.length > 0 && (
                 <div className="text-xs opacity-60 mb-4">
                     Última actualización: {new Date().toLocaleTimeString()}
                 </div>
             )}
-
             <div
                 className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col"
                 style={{ background: theme.surface, borderColor: theme.border }}
@@ -350,8 +311,6 @@ export default function GroupManager() {
                     </div>
                 )}
             </div>
-
-            {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
@@ -367,10 +326,8 @@ export default function GroupManager() {
                                 <X size={18} />
                             </button>
                         </div>
-
                         <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-4 max-h-[70vh] overflow-y-auto scrollbar-thin">
-
-                            {/* Name Input */}
+                            {}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                     <Type size={14} /> Nombre
@@ -385,8 +342,7 @@ export default function GroupManager() {
                                     placeholder="Ej. Finanzas 2026"
                                 />
                             </div>
-
-                            {/* Description Input */}
+                            {}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                     <LucideIcons.FileText size={14} /> Descripción
@@ -400,9 +356,8 @@ export default function GroupManager() {
                                     placeholder="Breve descripción del grupo"
                                 />
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
-                                {/* Type Select */}
+                                {}
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                         <Layers size={14} /> Tipo
@@ -418,8 +373,7 @@ export default function GroupManager() {
                                         <option value="link">Enlace</option>
                                     </select>
                                 </div>
-
-                                {/* Color Picker */}
+                                {}
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                         <Palette size={14} /> Color
@@ -435,8 +389,7 @@ export default function GroupManager() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Image URL Input */}
+                            {}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                     <LucideIcons.Image size={14} /> URL de Imagen (Banner)
@@ -450,8 +403,7 @@ export default function GroupManager() {
                                     placeholder="https://example.com/image.jpg"
                                 />
                             </div>
-
-                            {/* Icon Input */}
+                            {}
                             <div className="space-y-2">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                     Icono (Lucide)
@@ -479,15 +431,13 @@ export default function GroupManager() {
                                     Usa nombres de la librería <a href="https://lucide.dev/icons" target="_blank" rel="noreferrer" className="underline hover:text-blue-500">Lucide Icons</a>.
                                 </div>
                             </div>
-
-                            {/* Permissions Section */}
+                            {}
                             <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
                                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-60">
                                     <LucideIcons.Shield size={14} /> Permisos y Visibilidad
                                 </label>
-
                                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-gray-700 space-y-3">
-                                    {/* Public/Private Toggle */}
+                                    {}
                                     <div className="flex items-center gap-3">
                                         <input
                                             type="checkbox"
@@ -497,7 +447,6 @@ export default function GroupManager() {
                                         />
                                         <span className="text-sm font-medium">Público (Visible para todos)</span>
                                     </div>
-
                                     {!formData.permissions.includes('all') && (
                                         <div className="space-y-2 pl-1 pt-2">
                                             <p className="text-xs font-bold opacity-50 block mb-1">ACCESO INDIVIDUAL:</p>
@@ -519,8 +468,7 @@ export default function GroupManager() {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Link Resource ID */}
+                            {}
                             {formData.type === 'link' && (
                                 <div className="animate-scale-in bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-2">
                                     <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-900">
@@ -538,8 +486,7 @@ export default function GroupManager() {
                                     </p>
                                 </div>
                             )}
-
-                            {/* Actions */}
+                            {}
                             <div className="pt-6 flex justify-end gap-3 border-t border-gray-50 dark:border-gray-800">
                                 <button
                                     type="button"
@@ -563,7 +510,6 @@ export default function GroupManager() {
         </div>
     );
 }
-
 const styles = `
 .anim-slide-down {
     animation: slideDown 0.2s ease-out forwards;

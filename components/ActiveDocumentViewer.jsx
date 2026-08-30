@@ -3,7 +3,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Eye, Users, FileText, Building2, User as UserIcon, Clock, RefreshCw, MonitorPlay, X } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
-
 function getFileIcon(fileName) {
     const ext = (fileName || '').split('.').pop().toLowerCase();
     const icons = {
@@ -15,13 +14,11 @@ function getFileIcon(fileName) {
     };
     return icons[ext] || '📁';
 }
-
 function formatDuration(minutes) {
     if (minutes < 1) return 'Hace un momento';
     if (minutes === 1) return 'Hace 1 minuto';
     return `Hace ${minutes} minutos`;
 }
-
 export default function ActiveDocumentViewer() {
     const [editors, setEditors] = useState([]);
     const [selectedEditor, setSelectedEditor] = useState(null);
@@ -30,19 +27,14 @@ export default function ActiveDocumentViewer() {
     const [lastRefresh, setLastRefresh] = useState(null);
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     const fetchActiveEditors = useCallback(async () => {
         try {
             const res = await fetch('/api/graph/active-editors');
             const data = await res.json();
-
             if (!data.success) throw new Error(data.error || 'Error desconocido');
-
             setEditors(data.editors || []);
             setError(null);
             setLastRefresh(new Date());
-
-            // If the selected file is no longer active, deselect it
             if (selectedEditor) {
                 const stillActive = data.editors.some(e => e.fileId === selectedEditor.fileId);
                 if (!stillActive) setSelectedEditor(null);
@@ -53,13 +45,11 @@ export default function ActiveDocumentViewer() {
             setLoading(false);
         }
     }, [selectedEditor]);
-
     useEffect(() => {
         fetchActiveEditors();
         const interval = setInterval(fetchActiveEditors, 30_000);
         return () => clearInterval(interval);
     }, [fetchActiveEditors]);
-
     if (loading) {
         return (
             <div className="rounded-xl border p-8 text-center" style={{ background: theme.surface, borderColor: theme.border }}>
@@ -68,10 +58,9 @@ export default function ActiveDocumentViewer() {
             </div>
         );
     }
-
     return (
         <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: theme.surface, borderColor: theme.border }}>
-            {/* Header */}
+            {}
             <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: theme.border }}>
                 <div className="flex items-center gap-2">
                     <MonitorPlay className="w-5 h-5 text-indigo-500" />
@@ -92,8 +81,6 @@ export default function ActiveDocumentViewer() {
                     <RefreshCw className="w-4 h-4 opacity-60" />
                 </button>
             </div>
-
-            {/* Body */}
             {editors.length === 0 ? (
                 <div className="p-10 text-center space-y-3">
                     <div className="text-5xl opacity-20">🗂️</div>
@@ -108,7 +95,7 @@ export default function ActiveDocumentViewer() {
                 </div>
             ) : (
                 <div className="divide-y" style={{ borderColor: theme.border }}>
-                    {/* Active editors list */}
+                    {}
                     <div className="p-3 space-y-2">
                         <p className="text-xs font-semibold px-1 mb-3 uppercase tracking-wider opacity-50" style={{ color: theme.text }}>
                             Usuarios editando ahora:
@@ -156,8 +143,7 @@ export default function ActiveDocumentViewer() {
                             </button>
                         ))}
                     </div>
-
-                    {/* Office Online Preview Panel */}
+                    {}
                     {selectedEditor && (
                         <div className="border-t" style={{ borderColor: theme.border }}>
                             <div className="p-3 flex justify-between items-center bg-indigo-50/50 dark:bg-indigo-900/10">
@@ -174,7 +160,6 @@ export default function ActiveDocumentViewer() {
                                     <X className="w-4 h-4 opacity-60" />
                                 </button>
                             </div>
-
                             {selectedEditor.previewUrl ? (
                                 <iframe
                                     src={selectedEditor.previewUrl}
@@ -198,7 +183,6 @@ export default function ActiveDocumentViewer() {
                     )}
                 </div>
             )}
-
             {error && (
                 <div className="p-3 text-center text-xs text-red-500 border-t" style={{ borderColor: theme.border }}>
                     Error al verificar editores: {error}

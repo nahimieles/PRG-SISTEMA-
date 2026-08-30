@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../contexts/ThemeContext';
@@ -8,23 +7,19 @@ import * as LucideIcons from 'lucide-react';
 import { Folder, Link as LinkIcon, Search, ChevronRight, Layers, Edit2, Trash2, Settings, Plus } from 'lucide-react';
 import { deleteGroup } from '@/lib/groups';
 import { getAdminSession } from '@/lib/auth';
-
 const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
     const Icon = LucideIcons[group.icon] || (group.type === 'link' ? LinkIcon : Folder);
     const color = group.color || '#3b82f6';
-
     const handleDelete = (e) => {
         e.stopPropagation();
         onDelete(group);
     };
-
     const handleEdit = (e) => {
         e.stopPropagation();
         onEdit(group);
     };
-
     return (
         <button
             onClick={onClick}
@@ -32,27 +27,25 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
             style={{
                 background: theme.surface,
                 boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.05)',
-                height: '240px' // Taller for image
+                height: '240px' 
             }}
         >
-            {/* Header Color/Image Area */}
+            {}
             <div
                 className="h-32 w-full relative overflow-hidden"
                 style={{
                     background: group.image_url ? `url(${group.image_url}) center/cover no-repeat` : `linear-gradient(135deg, ${color}, ${adjustColor(color, -20)})`
                 }}
             >
-                {/* Overlay for readability if image exists */}
+                {}
                 {group.image_url && <div className="absolute inset-0 bg-black/20" />}
-
                 {!group.image_url && (
                     <div className="absolute inset-0 opacity-20"
                         style={{ backgroundImage: 'radial-gradient(circle at 10px 10px, rgba(255,255,255,0.2) 2px, transparent 0)', backgroundSize: '20px 20px' }}
                     />
                 )}
             </div>
-
-            {/* Edit Mode Actions */}
+            {}
             {isEditMode && (
                 <div className="absolute top-2 right-2 flex gap-2 z-10">
                     <div onClick={handleEdit} className="p-2 bg-white/90 rounded-full text-blue-600 hover:bg-white shadow-sm transition-all hover:scale-110 cursor-pointer">
@@ -63,28 +56,24 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
                     </div>
                 </div>
             )}
-
-            {/* Floating Icon */}
+            {}
             <div
                 className="absolute top-20 left-6 w-16 h-16 rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 z-10"
                 style={{ background: theme.surface }}
             >
                 {group.image_url ? (
-                    // If header has image, icon can be simple
                     <Icon size={32} color={color} strokeWidth={1.5} />
                 ) : (
                     <Icon size={32} color={color} strokeWidth={1.5} />
                 )}
             </div>
-
-            {/* Type Badge */}
+            {}
             {!isEditMode && (
                 <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm z-0">
                     {group.type === 'link' ? 'Enlace' : 'Grupo'}
                 </div>
             )}
-
-            {/* Content Body */}
+            {}
             <div className="flex-1 pt-6 px-6 pb-4 flex flex-col justify-between mt-4">
                 <div>
                     <h3
@@ -97,7 +86,6 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
                         {group.description || (group.type === 'link' ? 'Recurso Externo' : 'Contenedor de Archivos')}
                     </p>
                 </div>
-
                 <div className="flex justify-between items-end mt-2">
                     <span
                         className="text-[10px] font-semibold opacity-40 uppercase tracking-widest"
@@ -116,8 +104,6 @@ const PremiumCard = ({ group, onClick, isEditMode, onEdit, onDelete }) => {
         </button>
     );
 };
-
-// Helper to darken/lighten color slightly for gradient
 function adjustColor(col, amt) {
     let usePound = false;
     if (col[0] == "#") {
@@ -136,21 +122,17 @@ function adjustColor(col, amt) {
     else if (g < 0) g = 0;
     return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
 }
-
 export default function CompanyGroupDashboard({ groups = [], title = "Grupos de Empresas", subtitle = "Panel de Control Financiero y Operativo", isLoading = false, onRefresh }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
-
     // Admin Edit Mode
     const [isEditMode, setIsEditMode] = useState(false);
     const [isAdmin, setIsAdmin] = React.useState(false);
-
     React.useEffect(() => {
         setIsAdmin(!!getAdminSession());
     }, []);
-
     const handleCardClick = (group) => {
         if (isEditMode) return; // Disable navigation in edit mode
         if (group.type === 'link') {
@@ -159,19 +141,9 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
             router.push(`/grupos/${group.id}`);
         }
     };
-
     const handleEditGroup = (group) => {
-        // Redirect to admin modal (or better, open modal here if we hoist state)
-        // For now, easier to redirect to admin page with query param or just let them manage it there.
-        // But user requested "unified". So we should really open a modal here.
-        // Assuming we pass a prop or use a context? 
-        // For simplicity in this step, we will route to admin panel with auto-open
-        // BUT user said "create groups from start". Hard to hoist modal without refactoring page.
-        // Let's settle for: redirecting to specific admin route or just accept we need to move modal logic here.
-        // Actually, let's keep it simple: Route to /admin/groups?edit={id}
         router.push(`/admin/groups?edit=${group.id}`);
     };
-
     const handleDeleteGroup = async (group) => {
         if (confirm(`¿Eliminar ${group.name}?`)) {
             await deleteGroup(group.id);
@@ -179,15 +151,12 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
             else window.location.reload();
         }
     };
-
     const handleCreateNew = () => {
         router.push('/admin/groups?create=true');
     };
-
     const filteredGroups = groups.filter(g =>
         g.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
     if (isLoading) {
         return (
             <div className="w-full max-w-7xl mx-auto p-6 flex items-center justify-center min-h-[400px]">
@@ -195,10 +164,9 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
             </div>
         );
     }
-
     return (
         <div className="w-full max-w-7xl mx-auto p-4 md:p-8 animate-fade-in pb-20">
-            {/* Header Section */}
+            {}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight" style={{ color: theme.text }}>
@@ -208,8 +176,7 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
                         {subtitle}
                     </p>
                 </div>
-
-                {/* Actions & Search */}
+                {}
                 <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
                     {isAdmin && (
                         <div className="flex items-center gap-2 bg-white dark:bg-black/20 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -229,8 +196,7 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
                             )}
                         </div>
                     )}
-
-                    {/* Search Bar */}
+                    {}
                     <div className="relative w-full md:w-72">
                         <input
                             type="text"
@@ -248,8 +214,7 @@ export default function CompanyGroupDashboard({ groups = [], title = "Grupos de 
                     </div>
                 </div>
             </div>
-
-            {/* Grid */}
+            {}
             {filteredGroups.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 opacity-50 text-center">
                     <Layers size={64} strokeWidth={1} className="mb-4" />

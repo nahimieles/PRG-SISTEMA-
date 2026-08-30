@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -21,11 +20,7 @@ import AuditLogsTable from '../../components/AuditLogsTable';
 import Toast from '../../components/Toast';
 import WorkerManager from '../../components/WorkerManager';
 import AdminDashboard from '../../components/management/AdminDashboard';
-
-// Dynamic imports for MSAL-dependent components to avoid SSR issues
-import { getAuditLogs } from '../../lib/audit'; // Added import
-
-// Dynamic imports for MSAL-dependent components to avoid SSR issues
+import { getAuditLogs } from '../../lib/audit'; 
 const OneDriveContainer = dynamic(() => import('../../components/OneDriveContainer'), { ssr: false });
 const SmartReportGenerator = dynamic(() => import('../../components/SmartReportGenerator'), { ssr: false });
 const RealTimeMonitor = dynamic(() => import('../../components/RealTimeMonitor'), { ssr: false });
@@ -35,12 +30,10 @@ const CompanyManager = dynamic(() => import('../../components/CompanyManager'), 
 const RecruitmentManager = dynamic(() => import('../../components/recruitment/RecruitmentManager'), { ssr: false });
 const TaxCalendar2026 = dynamic(() => import('../../components/TaxCalendar2026'), { ssr: false });
 const ActivityLogger = dynamic(() => import('../../components/ActivityLogger'), { ssr: false });
-
 export default function AdminPage() {
   const router = useRouter();
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
-
   const sidebarItems = [
     { id: 'dashboards', label: 'Dashboards', icon: PieChart },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
@@ -51,13 +44,9 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
-
-  // Initialize activeTab from URL hash or default to 'dashboards'
   const [activeTab, setActiveTab] = useState('dashboards');
-  const [activeSubTab, setActiveSubTab] = useState('funcionarios'); // For talento_humano panel
-
+  const [activeSubTab, setActiveSubTab] = useState('funcionarios'); 
   useEffect(() => {
-    // Check hash on mount
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
       if (hash && ['dashboards', 'analisis_gestion', 'empresas', 'talento_humano', 'cursos'].includes(hash)) {
@@ -65,34 +54,27 @@ export default function AdminPage() {
       }
     }
   }, []);
-
-  // Update hash when tab changes
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     if (typeof window !== 'undefined') {
       window.location.hash = tabId;
     }
   };
-  const [message, setMessage] = useState(null); // { text, type }
-
+  const [message, setMessage] = useState(null); 
   const showToast = (text, type = 'success') => {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 3000);
   };
-
-  // Estado para actividades
   const [records, setRecords] = useState([]);
-  const [fileLogs, setFileLogs] = useState([]); // State for file logs
+  const [fileLogs, setFileLogs] = useState([]); 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWorker, setSelectedWorker] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-
   // Estado para filtros de empresas
   const [companySearchTerm, setCompanySearchTerm] = useState('');
   const [companyTypeFilter, setCompanyTypeFilter] = useState('');
-
   // Estado para funcionarios
   const [workers, setWorkers] = useState([]);
   const [workerSearchTerm, setWorkerSearchTerm] = useState('');
@@ -106,7 +88,6 @@ export default function AdminPage() {
     full_name: '',
     email: ''
   });
-
   // Estado para empresas
   const [companies, setCompanies] = useState([]);
   const [showCompanyForm, setShowCompanyForm] = useState(false);
@@ -115,15 +96,12 @@ export default function AdminPage() {
     name: '',
     type: 'auditoria'
   });
-
-  // Estado para reportes
   const [reportFilters, setReportFilters] = useState({
     startDate: '',
     endDate: '',
     worker: ''
   });
   const [reportData, setReportData] = useState(null);
-
   // Estado para alertas y estadísticas
   const [workersWithoutReports, setWorkersWithoutReports] = useState([]);
   const [qualityIssues, setQualityIssues] = useState([]);
@@ -133,7 +111,6 @@ export default function AdminPage() {
   const [closingAlerts, setClosingAlerts] = useState(false);
   const [closingQuality, setClosingQuality] = useState(false);
   const [showAlertDetails, setShowAlertDetails] = useState(false);
-
   // Estado para asistencia
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [activeAttendances, setActiveAttendances] = useState([]);
@@ -142,28 +119,23 @@ export default function AdminPage() {
   const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('');
   const [attendanceDateFrom, setAttendanceDateFrom] = useState('');
   const [attendanceDateTo, setAttendanceDateTo] = useState('');
-
   // Estado para selección múltiple (borrado en lote)
   const [selectedRecords, setSelectedRecords] = useState(new Set());
   const [deleteMode, setDeleteMode] = useState(false);
-
   // Estado para modal de detalle de registro
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isViewerMode, setIsViewerMode] = useState(false);
-
   // Estado para modal de estadísticas de funcionario
   const [selectedWorkerStats, setSelectedWorkerStats] = useState(null);
-
-
   // Estado para controlar la expansión del sidebar
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
-
   // Admin Profile Modal
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({ full_name: '', username: '', password: '', confirmPassword: '' });
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
-
   const openConfirm = (title, action) => {
     setConfirmModal({
       show: true,
@@ -174,18 +146,14 @@ export default function AdminPage() {
       }
     });
   };
-
-
   const handleCloseAlertsWidget = () => {
     setClosingAlerts(true);
     setTimeout(() => setShowAlertsWidget(false), 400);
   };
-
   const handleCloseQualityWidget = () => {
     setClosingQuality(true);
     setTimeout(() => setShowQualityWidget(false), 400);
   };
-
   // Auto-dismiss alerts after 5 seconds
   useEffect(() => {
     if (showAlertsWidget && workersWithoutReports.length > 0 && !closingAlerts) {
@@ -195,7 +163,6 @@ export default function AdminPage() {
       return () => clearTimeout(timer);
     }
   }, [showAlertsWidget, workersWithoutReports.length, closingAlerts]);
-
   // Verificar sesión al montar
   useEffect(() => {
     const savedSession = getAdminSession();
@@ -205,7 +172,6 @@ export default function AdminPage() {
       // Fallback: verificar sesión unificada para evitar loop de redirección
       const unifiedSession = getUnifiedSession();
       if (unifiedSession && unifiedSession.role === 'admin') {
-        // Re-sincronizar la sesión de admin que se desincronizó
         saveAdminSession(unifiedSession.user);
         setIsAuthenticated(true);
       } else {
@@ -214,88 +180,62 @@ export default function AdminPage() {
     }
     setCheckingSession(false);
   }, []);
-
   useEffect(() => {
     if (isAuthenticated) {
       loadAllData();
       loadAlertsAndStats();
-
-      // Actualizar estadísticas cada 60 segundos
       const interval = setInterval(loadAlertsAndStats, 60000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
-
   const handleLogin = async (username, password) => {
     const result = await loginUnifiedAction(username, password);
     if (result.success && result.role === 'admin') {
       setIsAuthenticated(true);
-      saveAdminSession(result.user); // Guardar sesión
+      saveAdminSession(result.user); 
       return { success: true };
     } else if (result.success && result.role !== 'admin') {
       return { success: false, message: 'No tienes permisos de administrador.' };
     }
     return result;
   };
-
   const handleLogout = () => {
     router.push('/');
     clearAdminSession();
     clearUnifiedSession();
     setIsAuthenticated(false);
   };
-
   const loadAlertsAndStats = async () => {
     const workersAlert = await getWorkersWithoutReports(3);
     setWorkersWithoutReports(workersAlert);
-
     const stats = await getRealTimeStats();
     setRealtimeStats(stats);
-
-    // Refresh file audit logs for dashboards
     const fileActivityLogs = await getAuditLogs({ limit: 2000 });
     setFileLogs(fileActivityLogs);
-
-    // Cargar estadísticas de asistencia
     const attStats = await getAttendanceStats();
     setAttendanceStats(attStats);
-
-    // Cargar asistencias activas
     const activeAtt = await getActiveAttendances();
     setActiveAttendances(activeAtt);
   };
-
   const loadAllData = async () => {
     setLoading(true);
     try {
       const recordsData = await getRecords();
       const workersData = await supabase.from('workers').select('*').order('created_at', { ascending: false });
       const companiesData = await getCompanies();
-
-      console.log('Registros cargados:', recordsData);
-
       setRecords(recordsData);
-
       if (!workersData.error) setWorkers(workersData.data || []);
       setCompanies(companiesData);
-
-      // Detectar problemas de calidad
       const issues = await getQualityIssues(recordsData);
       setQualityIssues(issues);
-
-      // Cargar datos de asistencia
       const attRecords = await getAllAttendanceRecords();
       setAttendanceRecords(attRecords);
     } catch (error) {
-      console.error("Error cargando datos:", error);
       setMessage("Error al cargar los datos. Por favor recarga la página.");
     } finally {
       setLoading(false);
     }
   };
-
-
-
   const handleAddWorker = async (e) => {
     e.preventDefault();
     setMessage('');
@@ -303,21 +243,16 @@ export default function AdminPage() {
       setMessage('Completa los campos obligatorios');
       return;
     }
-
     if (editingWorkerId) {
-      // Actualizar trabajador existente
       if (!newWorker.password) {
         setMessage('Debe ingresar una contraseña');
         return;
       }
-
       const { success, error } = await updateWorkerAction(editingWorkerId, newWorker, adminSession.id);
-
       if (!success) {
         setMessage('Error al actualizar usuario: ' + error);
         return;
       }
-
       setMessage('Usuario actualizado correctamente');
       setEditingWorkerId(null);
     } else {
@@ -325,22 +260,17 @@ export default function AdminPage() {
         setMessage('Debe ingresar una contraseña');
         return;
       }
-
       const { success, error } = await createWorkerAction(newWorker, adminSession.id);
-
       if (!success) {
         setMessage('Error al crear usuario: ' + error);
         return;
       }
-
       setMessage('Usuario creado correctamente');
     }
-
     setNewWorker({ username: '', password: '', full_name: '', email: '' });
     loadAllData();
     setTimeout(() => setShowUserForm(false), 1500);
   };
-
   const handleDeleteWorker = (id) => {
     openConfirm('¿Eliminar este usuario y todas sus actividades?', async () => {
       const { success, error } = await deleteWorkerAction(id, adminSession.id);
@@ -352,7 +282,6 @@ export default function AdminPage() {
       }
     });
   };
-
   const handleEditWorker = (worker) => {
     setEditingWorkerId(worker.id);
     setNewWorker({
@@ -363,7 +292,6 @@ export default function AdminPage() {
     });
     setShowUserForm(true);
   };
-
   const handleDeleteRecord = (id) => {
     openConfirm('¿Eliminar este registro?', async () => {
       const { success, error } = await deleteAuditRecordAction(id, adminSession.id);
@@ -380,8 +308,6 @@ export default function AdminPage() {
       }
     });
   };
-
-  // Funciones para selección múltiple
   const toggleRecordSelection = (id) => {
     setSelectedRecords(prev => {
       const newSet = new Set(prev);
@@ -393,7 +319,6 @@ export default function AdminPage() {
       return newSet;
     });
   };
-
   const toggleSelectAll = (filteredRecords) => {
     if (selectedRecords.size === filteredRecords.length) {
       setSelectedRecords(new Set());
@@ -401,7 +326,6 @@ export default function AdminPage() {
       setSelectedRecords(new Set(filteredRecords.map(r => r.id)));
     }
   };
-
   const handleBulkDelete = () => {
     if (selectedRecords.size === 0) return;
     openConfirm(`¿Eliminar ${selectedRecords.size} registros seleccionados?`, async () => {
@@ -415,13 +339,10 @@ export default function AdminPage() {
       setLoading(false);
     });
   };
-
   const cancelDeleteMode = () => {
     setDeleteMode(false);
     setSelectedRecords(new Set());
   };
-
-  // Función para refrescar datos de asistencia
   const refreshAttendanceData = async () => {
     setLoading(true);
     const attRecords = await getAllAttendanceRecords();
@@ -432,36 +353,27 @@ export default function AdminPage() {
     setAttendanceStats(attStats);
     setLoading(false);
   };
-
-
   const handleAddCompany = async (e) => {
     e.preventDefault();
     setMessage('');
-
     if (!newCompany.name) {
       setMessage('Ingresa el nombre de la empresa');
       return;
     }
-
     if (editingCompanyId) {
-      // Actualizar empresa existente
       const result = await updateCompanyAction(editingCompanyId, {
         name: newCompany.name,
         type: newCompany.type
       }, adminSession.id);
-
       if (!result.success) {
         setMessage('Error al actualizar empresa: ' + result.error);
         showToast('Error al actualizar empresa: ' + result.error, 'error');
         return;
       }
-
       showToast('Empresa actualizada correctamente');
       setEditingCompanyId(null);
     } else {
-      // Crear nueva empresa
       const result = await createCompanyAction({ name: newCompany.name, type: newCompany.type }, adminSession.id);
-
       if (result.success) {
         showToast('Empresa creada correctamente');
       } else {
@@ -469,12 +381,10 @@ export default function AdminPage() {
         return;
       }
     }
-
     setNewCompany({ name: '', type: 'auditoria' });
     loadAllData();
     setTimeout(() => setShowCompanyForm(false), 1500);
   };
-
   const handleDeleteCompany = (id) => {
     openConfirm('¿Eliminar esta empresa?', async () => {
       const success = await deleteCompany(id);
@@ -486,7 +396,6 @@ export default function AdminPage() {
       }
     });
   };
-
   const handleEditCompany = (company) => {
     setEditingCompanyId(company.id);
     setNewCompany({
@@ -495,23 +404,19 @@ export default function AdminPage() {
     });
     setShowCompanyForm(true);
   };
-
   const generateReport = () => {
     if (!reportFilters.startDate || !reportFilters.endDate) {
       showToast('Selecciona rango de fechas', 'error');
       return;
     }
-
     const startDate = new Date(reportFilters.startDate);
     const endDate = new Date(reportFilters.endDate);
-
     const filtered = records.filter(r => {
       const recordDate = new Date(r.start_datetime);
       const matchesDate = recordDate >= startDate && recordDate <= endDate;
       const matchesWorker = !reportFilters.worker || r.worker_name === reportFilters.worker;
       return matchesDate && matchesWorker;
     });
-
     setReportData({
       records: filtered,
       summary: {
@@ -522,7 +427,6 @@ export default function AdminPage() {
     });
     showToast('Reporte generado');
   };
-
   const exportReport = () => {
     if (reportData && reportData.records.length > 0) {
       exportToExcel(reportData.records, 'reporte-actividades');
@@ -531,11 +435,9 @@ export default function AdminPage() {
       showToast('No hay datos para exportar', 'error');
     }
   };
-
   const handleExport = () => {
     exportToExcel(filteredRecords, 'actividades-completo');
   };
-
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedWorker('');
@@ -543,7 +445,6 @@ export default function AdminPage() {
     setDateFrom('');
     setDateTo('');
   };
-
   const filteredRecords = records.filter(r => {
     const matchesSearch = !searchTerm ||
       r.worker_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -551,7 +452,6 @@ export default function AdminPage() {
       (r.description && r.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesWorker = !selectedWorker || r.worker_name === selectedWorker;
     const matchesCompany = !selectedCompany || r.company_name === selectedCompany;
-
     // Filtro por fecha
     let matchesDateFrom = true;
     let matchesDateTo = true;
@@ -566,15 +466,12 @@ export default function AdminPage() {
       toDate.setHours(23, 59, 59, 999);
       matchesDateTo = recordDate <= toDate;
     }
-
     return matchesSearch && matchesWorker && matchesCompany && matchesDateFrom && matchesDateTo;
   });
-
   const uniqueWorkers = [...new Set(records.map(r => r.worker_name))];
   const uniqueCompanies = [...new Set(records.map(r => r.company_name))];
   const totalHours = records.reduce((sum, r) => sum + parseFloat(r.hours_worked || 0), 0);
   const workersList = [...new Set(records.map(r => r.worker_name))];
-
   // Filtro para empresas
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = !companySearchTerm ||
@@ -582,7 +479,6 @@ export default function AdminPage() {
     const matchesType = !companyTypeFilter || c.type === companyTypeFilter;
     return matchesSearch && matchesType;
   });
-
   // Mostrar loading mientras verifica sesión
   if (checkingSession) {
     return (
@@ -600,28 +496,28 @@ export default function AdminPage() {
       </div>
     );
   }
-
   if (!isAuthenticated) {
     return null;
   }
-
   // MODO VISTA ESPECTADOR (FULLSCREEN)
   if (isViewerMode) {
     // isViewerMode can be boolean true (generic) or a company ID string
     const previewCompanyId = typeof isViewerMode === 'string' ? isViewerMode : null;
     return <CourseViewer adminPreview={true} companyId={previewCompanyId} onBack={() => setIsViewerMode(false)} />;
   }
-
-  // Obtener el nombre del admin
   const adminSession = getAdminSession();
   const adminName = adminSession?.full_name || adminSession?.username || 'Administrador';
-
-  // Admin Profile Modal handlers
   const handleOpenProfile = () => {
-    setProfileForm({ full_name: adminSession?.full_name || '', username: adminSession?.username || '', password: '', confirmPassword: '' });
+    setProfileForm({
+      full_name: adminSession?.full_name || '',
+      username: adminSession?.username || '',
+      password: '',
+      confirmPassword: ''
+    });
+    setProfileImageFile(null);
+    setProfileImagePreview(adminSession?.profile_image_url || null);
     setShowProfileModal(true);
   };
-
   const handleSaveProfile = async () => {
     if (profileForm.password && profileForm.password !== profileForm.confirmPassword) {
       showToast('Las contraseñas no coinciden', 'error');
@@ -631,7 +527,6 @@ export default function AdminPage() {
       showToast('La contraseña debe tener al menos 4 caracteres', 'error');
       return;
     }
-
     setProfileSaving(true);
     try {
       const payload = {};
@@ -645,18 +540,33 @@ export default function AdminPage() {
         payload.password = profileForm.password;
       }
 
+      if (profileImageFile) {
+        const fileExt = profileImageFile.name.split('.').pop();
+        const fileName = `${adminSession.id}-${Date.now()}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, profileImageFile, { cacheControl: '3600', upsert: true });
+          
+        if (uploadError) {
+          showToast('Error al subir la imagen: ' + uploadError.message, 'error');
+          setProfileSaving(false);
+          return;
+        }
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        payload.profile_image_url = publicUrl;
+      }
+
       if (Object.keys(payload).length === 0) {
         showToast('No hay cambios para guardar', 'error');
         setProfileSaving(false);
         return;
       }
-
       const result = await updateAdminAction(adminSession.id, payload, adminSession.id);
       if (result.success) {
-        // Update local session
         const newSession = { ...adminSession };
         if (payload.username) newSession.username = payload.username;
         if (payload.full_name) newSession.full_name = payload.full_name;
+        if (payload.profile_image_url) newSession.profile_image_url = payload.profile_image_url;
         saveAdminSession(newSession);
         showToast('Perfil actualizado correctamente');
         setShowProfileModal(false);
@@ -670,22 +580,30 @@ export default function AdminPage() {
     }
   };
 
+  const fileInputRef = React.useRef(null);
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileImageFile(file);
+      setProfileImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <div className="dashboard-layout overflow-x-hidden" style={{ background: theme.background, minHeight: '100vh' }}>
-      {/* Sidebar */}
+      {}
       <Sidebar
         items={sidebarItems}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         userName={adminName}
+        avatarUrl={adminSession?.profile_image_url}
         onLogout={handleLogout}
         showBackButton={false}
         onHoverChange={setIsSidebarExpanded}
         onProfileClick={handleOpenProfile}
       />
-
-      {/* Contenido Principal con margen dinámico */}
+      {}
       <main
         className="dashboard-content min-h-screen transition-all duration-300 ease-in-out p-0 sm:p-4 lg:p-8 page-transition"
         style={{
@@ -695,12 +613,10 @@ export default function AdminPage() {
           paddingTop: typeof window !== 'undefined' && window.innerWidth <= 1024 ? '80px' : '32px'
         }}
       >
-
         <div className="max-w-7xl mx-auto px-4 sm:px-0">
-
-          {/* Professional Header Bar */}
+          {}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
-            {/* Title Section */}
+            {}
             <div className={`main-page-header ${activeTab === 'empresas' ? 'hidden' : 'block'}`}>
               <div className="flex items-center gap-4">
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold" style={{ color: theme.text }}>
@@ -730,8 +646,7 @@ export default function AdminPage() {
                 </button>
             )}
           </div>
-
-          {/* Sub-Tabs for Talento Humano */}
+          {}
           {activeTab === 'talento_humano' && (
             <div className="flex justify-between items-center mb-6 border-b" style={{ borderColor: theme.border }}>
               <div className="flex gap-2">
@@ -767,8 +682,7 @@ export default function AdminPage() {
               )}
             </div>
           )}
-
-          {/* Toast Notification */}
+          {}
           {message && (
             <Toast
               message={message.text}
@@ -776,73 +690,38 @@ export default function AdminPage() {
               onClose={() => setMessage(null)}
             />
           )}
-
-
-
-          {/* TOAST NOTIFICATION - Removido (Notificaciones movidas a campana) */}
-
-          {/* WIDGETS COMPACTOS (Quality Issues) */}
+          {}
+          {}
           <div className="flex flex-col gap-2 mb-6">
-            {/* CALIDAD COMPACTA */}
-            {/* CALIDAD COMPACTA (Oculto por solicitud) */}
-            {/* showQualityWidget && qualityIssues.length > 0 && (
-              <details className="group">
-                <summary
-                  className="list-none cursor-pointer p-3 rounded-lg flex items-center justify-between text-sm font-medium shadow-sm border transition-all hover:opacity-90"
-                  style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#b91c1c' }}
-                >
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={16} />
-                    <span>{qualityIssues.length} Problemas de calidad detectados</span>
-                  </div>
-                  <span className="text-xs underline group-open:no-underline">Ver detalles</span>
-                </summary>
-                <div className="mt-2 p-3 rounded-lg border shadow-inner grid gap-2 max-h-60 overflow-y-auto" style={{ background: theme.surface, borderColor: theme.border }}>
-                  {qualityIssues.map((issue, idx) => (
-                    <div key={idx} className="flex justify-between items-start text-xs p-2 rounded" style={{ background: isDark ? 'rgba(239, 68, 68, 0.1)' : '#fef2f2', color: isDark ? '#fca5a5' : '#991b1b' }}>
-                      <div className="flex flex-col">
-                        <span className="font-semibold">{issue.message}</span>
-                        <span className="opacity-75">{issue.record.worker_name}</span>
-                      </div>
-                      <span className="font-bold">{issue.severity}</span>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ) */}
+            {}
+            {}
+            {}
           </div>
-
-
-
-          {/* TAB: CURSOS */}
+          {}
           {activeTab === 'cursos' && (
             <div className="animate-fade-in">
               <CourseEditor onPreview={(companyId) => setIsViewerMode(companyId || true)} />
             </div>
           )}
-
-          {/* TAB: EMPRESAS */}
+          {}
           {activeTab === 'empresas' && (
             <div className="animate-fade-in">
               <CompanyManager />
             </div>
           )}
-
-          {/* TAB: TALENTO HUMANO -> PRUEBAS */}
+          {}
           {activeTab === 'talento_humano' && activeSubTab === 'pruebas' && (
             <div className="animate-fade-in">
               <RecruitmentManager />
             </div>
           )}
-
-          {/* TAB: ANÁLISIS DE GESTIÓN */}
+          {}
           {activeTab === 'analisis_gestion' && (
             <div className="animate-fade-in">
               <ManagementAnalysisModule theme={theme} isDark={isDark} />
             </div>
           )}
-
-          {/* TAB: TALENTO HUMANO -> FUNCIONARIOS */}
+          {}
           {activeTab === 'talento_humano' && activeSubTab === 'funcionarios' && (
             <div className="animate-fade-in">
               <WorkerManager 
@@ -853,29 +732,22 @@ export default function AdminPage() {
               />
             </div>
           )}
-
           {activeTab === 'dashboards' && (
             <div className="animate-fade-in space-y-8">
                 <AdminDashboard theme={theme} isDark={isDark} />
             </div>
-
           )}
-
-
-
-
-          {/* TAB: ARCHIVOS ONEDRIVE */}
-          {/* TAB: ARCHIVOS ONEDRIVE */}
-          {/* Usamos display style para mantener el componente montado y no perder el progreso del respaldo */}
+          {}
+          {}
+          {}
           <div style={{ display: activeTab === 'archivos' ? 'block' : 'none' }}>
             <div className="animate-fade-in space-y-6">
-              {/* OneDrive Container */}
+              {}
               <OneDriveContainer />
             </div>
           </div>
         </div >
-
-        {/* Modal de detalle de registro */}
+        {}
         {
           selectedRecord && (
             <div
@@ -888,7 +760,7 @@ export default function AdminPage() {
                 style={{ background: theme.surface }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Header del modal */}
+                {}
                 <div className="sticky top-0 p-6 flex justify-between items-center border-b z-10" style={{ borderColor: theme.border, background: theme.surface }}>
                   <h2 className="text-xl font-bold" style={{ color: theme.primary }}>
                     Detalle de Actividad
@@ -901,10 +773,9 @@ export default function AdminPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
-                {/* Contenido del modal */}
+                {}
                 <div className="p-6 space-y-6">
-                  {/* Información del registro */}
+                  {}
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                       <p className="text-sm font-medium" style={{ color: theme.textSecondary }}>Funcionario</p>
@@ -931,14 +802,12 @@ export default function AdminPage() {
                       <p className="font-semibold">{new Date(selectedRecord.created_at).toLocaleString('es-ES')}</p>
                     </div>
                   </div>
-
-                  {/* Descripción */}
+                  {}
                   <div className="p-4 rounded-lg card-professional" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa' }}>
                     <p className="text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Descripción</p>
                     <p className="whitespace-pre-wrap">{selectedRecord.description || 'Sin descripción'}</p>
                   </div>
-
-                  {/* Visor de archivo */}
+                  {}
                   {selectedRecord.file_url ? (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
@@ -954,7 +823,7 @@ export default function AdminPage() {
                         </a>
                       </div>
                       <div className="border rounded-lg overflow-hidden shadow-professional" style={{ borderColor: theme.border }}>
-                        {/* Visor según tipo de archivo */}
+                        {}
                         {selectedRecord.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                           <img
                             src={selectedRecord.file_url}
@@ -968,7 +837,6 @@ export default function AdminPage() {
                             title="Vista previa PDF"
                           />
                         ) : (
-                          /* Para .doc, .docx, .xlsx, .xls usar Google Docs Viewer */
                           <iframe
                             src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedRecord.file_url)}&embedded=true`}
                             className="w-full h-96"
@@ -983,8 +851,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Footer del modal */}
+                {}
                 <div className="sticky bottom-0 p-4 border-t flex justify-end gap-3 z-10" style={{ borderColor: theme.border, background: theme.surface }}>
                   <button
                     onClick={() => {
@@ -1008,14 +875,12 @@ export default function AdminPage() {
             </div>
           )
         }
-        {/* Modal de estadísticas de funcionario */}
+        {}
         {selectedWorkerStats && (() => {
           const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
           const wFullName = norm(selectedWorkerStats.full_name);
           const wUsername = norm(selectedWorkerStats.username);
-          
           const isUsingReports = records && records.length > 0;
-
           const filteredRecords = records.filter(r => {
             if (!r.worker_name) return false;
             const rName = norm(r.worker_name);
@@ -1024,7 +889,6 @@ export default function AdminPage() {
                    (rName && rName.includes(wFullName)) ||
                    (wUsername && rName.includes(wUsername));
           });
-
           const filteredFileLogs = fileLogs.filter(log => {
             if (!log.worker_name) return false;
             const rName = norm(log.worker_name);
@@ -1033,9 +897,7 @@ export default function AdminPage() {
                    (rName && rName.includes(wFullName)) ||
                    (wUsername && rName.includes(wUsername));
           });
-          
           const showManual = isUsingReports && filteredRecords.length > 0;
-
           const ACTION_STYLES = {
               'CREATED': { color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: Plus, label: 'CREADO' },
               'MODIFIED': { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', icon: Edit2, label: 'MODIFICADO' },
@@ -1044,7 +906,6 @@ export default function AdminPage() {
               'MOVED': { color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: Folder, label: 'MOVIDO' },
               'DEFAULT': { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: FileText, label: 'ACTIVIDAD' }
           };
-
           return (
           <div
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-animate"
@@ -1069,7 +930,7 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="p-6 space-y-6">
-                {/* Tabla de últimas 5 actividades */}
+                {}
                 <div>
                   <h3 className="text-lg font-bold mb-3">Actividades Recientes</h3>
                   {showManual ? (
@@ -1148,8 +1009,7 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Gráfica de distribución de tiempo */}
+                {}
                 {showManual && filteredRecords.length > 0 && (
                   <div>
                     <h3 className="text-lg font-bold mb-3">Distribución de Tiempo</h3>
@@ -1192,8 +1052,7 @@ export default function AdminPage() {
           </div>
           );
         })()}
-
-        {/* Custom Confirmation Modal */}
+        {}
         {confirmModal.show && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" style={{ zIndex: 110 }}>
             <div className="bg-white dark:bg-[#1a1f2e] rounded-xl shadow-lg w-full max-w-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -1218,8 +1077,7 @@ export default function AdminPage() {
           </div>
         )}
       </main >
-
-      {/* Admin Profile Modal */}
+      {}
       {showProfileModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)}>
           <div
@@ -1227,16 +1085,34 @@ export default function AdminPage() {
             style={{ background: theme.surface, border: `1px solid ${theme.border}` }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
+            {}
             <div className="px-6 pt-6 pb-4 text-center" style={{ borderBottom: `1px solid ${theme.border}` }}>
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3">
-                {adminName?.charAt(0)?.toUpperCase() || 'A'}
+              <div 
+                className="relative w-16 h-16 mx-auto mb-3 cursor-pointer group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {profileImagePreview ? (
+                  <img src={profileImagePreview} alt="Perfil" className="w-16 h-16 rounded-full object-cover border-2 border-blue-500" />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                    {adminName?.charAt(0)?.toUpperCase() || 'A'}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-[10px] font-medium">Cambiar</span>
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleImageSelect} 
+                />
               </div>
               <h3 className="text-lg font-bold" style={{ color: theme.text, letterSpacing: '-0.02em' }}>Mi Perfil</h3>
               <p className="text-xs mt-0.5" style={{ color: theme.textSecondary }}>{adminSession?.username}</p>
             </div>
-
-            {/* Form */}
+            {}
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Nombre completo</label>
@@ -1252,7 +1128,6 @@ export default function AdminPage() {
                   placeholder="Tu nombre completo"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Correo (Usuario Microsoft)</label>
                 <input
@@ -1267,7 +1142,6 @@ export default function AdminPage() {
                   placeholder="ejemplo@microsoft.com"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>
                   Nueva contraseña <span className="font-normal opacity-60">(dejar vacío para mantener)</span>
@@ -1285,7 +1159,6 @@ export default function AdminPage() {
                   autoComplete="new-password"
                 />
               </div>
-
               {profileForm.password && (
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: theme.textSecondary }}>Confirmar contraseña</label>
@@ -1304,8 +1177,7 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-
-            {/* Actions */}
+            {}
             <div className="px-6 py-4 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${theme.border}` }}>
               <button
                 onClick={() => setShowProfileModal(false)}

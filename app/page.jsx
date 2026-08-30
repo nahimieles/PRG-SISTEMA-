@@ -1,5 +1,4 @@
 'use client';
-// Build trigger: 2026-05-09 02:40
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -33,7 +32,6 @@ export default function HomePage() {
       setUsername(savedUsername);
     }
   }, []);
-
 
   // Verificar sesión existente al cargar
   useEffect(() => {
@@ -69,11 +67,9 @@ export default function HomePage() {
         localStorage.removeItem('rememberedUsername');
       }
 
-      // Guardar sesión: si eligió recordarme, durará 30 días, si no, 8 horas.
       const expiration = rememberMe ? 30 * 24 * 60 : 8 * 60;
       saveUnifiedSession(result.user, result.role, expiration);
 
-      // Redirigir según el rol
       if (result.role === 'admin') {
         router.push('/administracion');
       } else if (result.role === 'company') {
@@ -109,21 +105,19 @@ export default function HomePage() {
       className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors animate-fade-in"
       style={{ background: theme.background, color: theme.text }}
     >
-      {/* Toggle de tema en esquina superior derecha */}
+
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      {/* Contenedor del login */}
       <div className="w-full max-w-md">
-        {/* Logo y título */}
+
         <div className="text-center mb-6">
           <div className="flex justify-center mb-0">
             <LoginLogo className="w-96 h-auto" />
           </div>
         </div>
 
-        {/* Formulario de login */}
         <div
           className="rounded-xl shadow-lg p-8"
           style={{
@@ -154,7 +148,7 @@ export default function HomePage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Campo de usuario */}
+            {}
             <div>
               <label
                 className="block text-sm font-medium mb-2"
@@ -178,7 +172,7 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Campo de contraseña */}
+            {}
             <div>
               <label
                 className="block text-sm font-medium mb-2"
@@ -211,7 +205,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Toggle Recordarme */}
+            {}
             <div
               style={{
                 display: 'flex',
@@ -223,7 +217,7 @@ export default function HomePage() {
               }}
               onClick={() => setRememberMe(prev => !prev)}
             >
-              {/* Custom toggle switch */}
+              {}
               <div style={{
                 width: '40px',
                 height: '22px',
@@ -254,7 +248,7 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Botón de login */}
+            {}
             <button
               type="submit"
               disabled={loading}
@@ -279,7 +273,7 @@ export default function HomePage() {
           </form>
         </div>
 
-        {/* Footer */}
+        {}
         <div className="text-center mt-8">
           <p
             className="text-sm"

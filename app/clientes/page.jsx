@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Search, Download } from 'lucide-react';
 import Link from 'next/link';
@@ -8,7 +7,6 @@ import ThemeToggle from '../../components/ThemeToggle';
 import StatsCard from '../../components/StatsCard';
 import { getRecords, getCompanies, exportToExcel } from '../../lib/auth';
 import { lightTheme, darkTheme } from '../../lib/colors';
-
 export default function ClientesPage() {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
@@ -17,16 +15,13 @@ export default function ClientesPage() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [companyRecords, setCompanyRecords] = useState(null);
   const [loading, setLoading] = useState(false);
-
   // Filtros avanzados
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [workerFilter, setWorkerFilter] = useState('');
-
   useEffect(() => {
     loadData();
   }, []);
-
   const loadData = async () => {
     setLoading(true);
     const recordsData = await getRecords();
@@ -35,7 +30,6 @@ export default function ClientesPage() {
     setCompanies(companiesData);
     setLoading(false);
   };
-
   const handleSelectCompany = (companyName) => {
     if (!companyName) {
       setCompanyRecords(null);
@@ -44,33 +38,26 @@ export default function ClientesPage() {
       setWorkerFilter('');
       return;
     }
-
     applyFilters(companyName, dateFrom, dateTo, workerFilter);
   };
-
   const applyFilters = (companyName = selectedCompany, from = dateFrom, to = dateTo, worker = workerFilter) => {
     if (!companyName) return;
-
     let filtered = records.filter(r => r.company_name === companyName);
-
     // Filtro por funcionario
     if (worker) {
       filtered = filtered.filter(r => r.worker_name === worker);
     }
-
     // Filtro por fecha desde
     if (from) {
       const fromDate = new Date(from);
       filtered = filtered.filter(r => new Date(r.start_datetime) >= fromDate);
     }
-
     // Filtro por fecha hasta
     if (to) {
       const toDate = new Date(to);
       toDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter(r => new Date(r.start_datetime) <= toDate);
     }
-
     setCompanyRecords({
       name: companyName,
       records: filtered,
@@ -81,7 +68,6 @@ export default function ClientesPage() {
       }
     });
   };
-
   const clearClientFilters = () => {
     setDateFrom('');
     setDateTo('');
@@ -90,19 +76,16 @@ export default function ClientesPage() {
       applyFilters(selectedCompany, '', '', '');
     }
   };
-
   const handleExportClient = () => {
     if (companyRecords && companyRecords.records.length > 0) {
       exportToExcel(companyRecords.records, `actividades-${companyRecords.name}`);
     }
   };
-
   // Obtener funcionarios únicos de la empresa seleccionada
   const getUniqueWorkersForCompany = () => {
     if (!selectedCompany) return [];
     return [...new Set(records.filter(r => r.company_name === selectedCompany).map(r => r.worker_name))];
   };
-
   return (
     <div
       className="min-h-screen transition-colors p-4"
@@ -115,8 +98,6 @@ export default function ClientesPage() {
           </Link>
           <ThemeToggle />
         </div>
-
-        {/* Hero */}
         <div
           className="rounded-xl shadow-lg p-8 mb-6 text-center"
           style={{ background: theme.surface }}
@@ -128,8 +109,6 @@ export default function ClientesPage() {
             Portal de Clientes - Visualice las actividades realizadas
           </p>
         </div>
-
-        {/* Búsqueda */}
         <div
           className="rounded-xl shadow-lg p-6 mb-6"
           style={{ background: theme.surface }}
@@ -161,8 +140,6 @@ export default function ClientesPage() {
             </select>
           </div>
         </div>
-
-        {/* Resultados */}
         {companyRecords && (
           <div className="rounded-xl shadow-lg p-6 mb-6" style={{ background: theme.surface }}>
             <h3 className="text-2xl font-bold mb-4" style={{ color: theme.primary }}>
@@ -185,8 +162,7 @@ export default function ClientesPage() {
                 bgColor={theme.primary}
               />
             </div>
-
-            {/* Filtros avanzados */}
+            {}
             <div
               className="rounded-lg p-4 mb-6"
               style={{ background: isDark ? '#0f1419' : '#f8f9fa' }}
@@ -268,7 +244,6 @@ export default function ClientesPage() {
                 Mostrando {companyRecords.records.length} actividades
               </p>
             </div>
-
             {companyRecords.records.length === 0 ? (
               <div
                 className="rounded-lg p-12 text-center"

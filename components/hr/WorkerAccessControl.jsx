@@ -19,7 +19,7 @@ export default function WorkerAccessControl({ workerId, theme, isDark }) {
                 getCompanies(),
                 getWorkerCompanyAccess(workerId)
             ]);
-            
+
             setGroups(fetchedGroups);
             setCompanies(fetchedCompanies);
             setSelectedGroups(new Set(access.groupIds));
@@ -69,7 +69,7 @@ export default function WorkerAccessControl({ workerId, theme, isDark }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Grupos */}
+
                 <div className="rounded-xl border p-4" style={{ borderColor: theme.border, background: isDark ? 'rgba(0,0,0,0.1)' : '#f9fafb' }}>
                     <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: theme.text }}>
                         <Users size={18} className="text-emerald-500" />
@@ -94,7 +94,7 @@ export default function WorkerAccessControl({ workerId, theme, isDark }) {
                     </div>
                 </div>
 
-                {/* Empresas Específicas */}
+                {}
                 <div className="rounded-xl border p-4" style={{ borderColor: theme.border, background: isDark ? 'rgba(0,0,0,0.1)' : '#f9fafb' }}>
                     <h4 className="font-bold mb-4 flex items-center gap-2" style={{ color: theme.text }}>
                         <Building2 size={18} className="text-indigo-500" />
@@ -102,7 +102,7 @@ export default function WorkerAccessControl({ workerId, theme, isDark }) {
                     </h4>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                         {companies.map(company => {
-                            // If user already has access via group, we can indicate it or just disable it.
+
                             const hasGroupAccess = Boolean(company.group_id && selectedGroups.has(company.group_id));
                             return (
                                 <label key={company.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${hasGroupAccess ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5'}`} style={{ borderColor: theme.border, background: theme.surface }}>
@@ -135,7 +135,7 @@ export default function WorkerAccessControl({ workerId, theme, isDark }) {
                         {successMessage}
                     </span>
                 ) : <div />}
-                
+
                 <button 
                     onClick={handleSave}
                     disabled={saving}

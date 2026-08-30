@@ -5,7 +5,6 @@ import { Inter } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import { ThemeProvider } from '../contexts/ThemeContext'
 
-// Dynamic import MsalWrapper to completely avoid SSR for MSAL
 const MsalWrapper = dynamic(() => import('../components/MsalWrapper'), {
   ssr: false,
   loading: () => null

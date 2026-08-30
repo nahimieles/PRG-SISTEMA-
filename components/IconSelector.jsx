@@ -1,13 +1,10 @@
 'use client';
-
 import React, { useState, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-
 export default function IconSelector({ selectedIcon, onSelect }) {
     const { isDark } = useTheme();
     const [searchTerm, setSearchTerm] = useState('');
-
     // Filter available icons based on search
     const iconList = useMemo(() => {
         const icons = Object.keys(LucideIcons).filter(name =>
@@ -16,14 +13,11 @@ export default function IconSelector({ selectedIcon, onSelect }) {
             name !== 'default' &&
             name.toLowerCase().includes(searchTerm.toLowerCase())
         );
-        return icons.slice(0, 50); // Limit to top 50 matches for performance
+        return icons.slice(0, 50); 
     }, [searchTerm]);
-
-    // Render the currently selected icon component dynamically
     const SelectedIconComponent = selectedIcon && LucideIcons[selectedIcon]
         ? LucideIcons[selectedIcon]
         : LucideIcons.FileText;
-
     return (
         <div
             className="border rounded-xl sm:rounded-xl p-3 sm:p-5 shadow-sm"
@@ -46,7 +40,6 @@ export default function IconSelector({ selectedIcon, onSelect }) {
                     Personalizado
                 </div>
             </div>
-
             <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
                 <div
                     className="w-10 h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-xl flex items-center justify-center text-blue-600 transition-transform border shadow-inner flex-shrink-0"
@@ -57,7 +50,6 @@ export default function IconSelector({ selectedIcon, onSelect }) {
                 >
                     <SelectedIconComponent size={20} className="sm:w-6 sm:h-6 lg:w-8 lg:h-8" strokeWidth={2.5} />
                 </div>
-
                 <div className="flex-1 relative min-w-0">
                     <div className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af' }}>
                         <LucideIcons.Search size={14} className="sm:w-4 sm:h-4" />
@@ -76,7 +68,6 @@ export default function IconSelector({ selectedIcon, onSelect }) {
                     />
                 </div>
             </div>
-
             <div className="grid grid-cols-6 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 gap-1.5 sm:gap-2 max-h-36 sm:max-h-48 overflow-y-auto p-1 custom-scrollbar">
                 {iconList.map(iconName => {
                     const Icon = LucideIcons[iconName];
@@ -101,7 +92,6 @@ export default function IconSelector({ selectedIcon, onSelect }) {
                     );
                 })}
             </div>
-
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 4px;

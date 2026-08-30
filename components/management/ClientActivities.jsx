@@ -8,8 +8,7 @@ export default function ClientActivities({ theme, isDark }) {
     const [companies, setCompanies] = useState([]);
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
-    
-    // Filters
+
     const [selectedCompany, setSelectedCompany] = useState('');
     const [startDate, setStartDate] = useState(() => {
         const d = new Date();
@@ -32,7 +31,7 @@ export default function ClientActivities({ theme, isDark }) {
         if (!selectedCompany) return;
         setLoading(true);
         try {
-            // Get the company name because audit_records currently stores company_name string
+
             const company = companies.find(c => c.id === selectedCompany);
             if (!company) return;
 
@@ -48,7 +47,7 @@ export default function ClientActivities({ theme, isDark }) {
                 setRecords(data);
             }
         } catch (error) {
-            console.error('Error fetching activities:', error);
+
         } finally {
             setLoading(false);
         }
@@ -66,7 +65,7 @@ export default function ClientActivities({ theme, isDark }) {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Controls */}
+            {}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 sm:p-6 rounded-2xl border shadow-sm" style={{ background: theme.surface, borderColor: theme.border }}>
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider mb-2" style={{ color: theme.textSecondary }}>Cliente / Empresa</label>
@@ -105,7 +104,6 @@ export default function ClientActivities({ theme, isDark }) {
                 </div>
             </div>
 
-            {/* Results Header */}
             {selectedCompany && (
                 <div className="flex items-center justify-between p-4 rounded-xl border bg-blue-500/5" style={{ borderColor: theme.border }}>
                     <div>
@@ -119,7 +117,6 @@ export default function ClientActivities({ theme, isDark }) {
                 </div>
             )}
 
-            {/* Results List */}
             {!selectedCompany ? (
                 <div className="p-12 text-center rounded-2xl border border-dashed" style={{ borderColor: theme.border, background: theme.surface }}>
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-gray-500/10 text-gray-400">

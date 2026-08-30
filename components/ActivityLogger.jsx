@@ -6,11 +6,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '@/lib/colors';
 import CustomDatePicker from './CustomDatePicker';
 
-/**
- * ActivityLogger - Allows employees to register manual activities
- * (e.g., "3 hours in Contifico", "2 hours in Perseo").
- * Activity log lives within the same Informes container.
- */
 export default function ActivityLogger() {
   const { isDark } = useTheme();
   const theme = isDark ? darkTheme : lightTheme;
@@ -74,7 +69,7 @@ export default function ActivityLogger() {
       border: `1px solid ${theme.border}`,
       boxShadow: isDark ? '0 1px 4px rgba(0,0,0,0.3)' : '0 1px 8px rgba(0,0,0,0.05)',
     }}>
-      {/* Header */}
+      {}
       <div className="px-5 py-4 flex justify-between items-center" style={{ borderBottom: `1px solid ${theme.border}` }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{
@@ -120,13 +115,13 @@ export default function ActivityLogger() {
 
       {!isCollapsed && (
         <>
-          {/* Form */}
+          {}
           {showForm && (
             <form onSubmit={handleAdd} className="px-5 py-4 space-y-3 animate-fade-in" style={{
               background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)',
               borderBottom: `1px solid ${theme.border}`,
             }}>
-              {/* Quick system pills */}
+              {}
               <div className="flex flex-wrap gap-1.5">
                 {quickSystems.map(sys => (
                   <button
@@ -213,7 +208,7 @@ export default function ActivityLogger() {
             </form>
           )}
 
-          {/* Activities List */}
+          {}
           <div className="overflow-y-auto" style={{ maxHeight: '16rem' }}>
             {activities.length === 0 ? (
               <div className="text-center py-8 px-6">

@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { Plus, Edit2, Trash2, X, Upload, Save, Eye, Users, FileText, ChevronUp, ChevronDown, ChevronLeft, Folder, CheckCircle, Search, Layers, Globe, FolderPlus, PenTool, Settings, Play } from 'lucide-react';
@@ -15,7 +14,6 @@ import {
     uploadFile,
     updateCoursePosition
 } from '../lib/auth';
-
 import {
     DndContext,
     closestCenter,
@@ -32,29 +30,22 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
 import IconSelector from './IconSelector';
 import Toast from './Toast';
-
-// --- HELPER FUNCTIONS ---
 const DEFAULT_FOLDER_NAME = 'Material PRG Auditores';
-
 const getFolderFromDescription = (desc) => {
     if (!desc) return DEFAULT_FOLDER_NAME;
     const match = desc.match(/^\[FOLDER:\s*(.*?)\]/);
     return match ? match[1].trim() : DEFAULT_FOLDER_NAME;
 };
-
 const getCleanDescription = (desc) => {
     if (!desc) return '';
     return desc.replace(/^\[FOLDER:\s*.*?\]\s*/, '');
 };
-
 const formatDescription = (folder, cleanDesc) => {
     const safeFolder = (folder || DEFAULT_FOLDER_NAME).replace(/[\[\]]/g, '').trim();
     return `[FOLDER: ${safeFolder}] ${cleanDesc || ''}`;
 };
-
 // --- SORTABLE ITEM COMPONENT ---
 function SortableItem(props) {
     const {
@@ -65,92 +56,64 @@ function SortableItem(props) {
         transition,
         isDragging
     } = useSortable({ id: props.id });
-
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 50 : 'auto',
         position: 'relative'
     };
-
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
             {props.children}
         </div>
     );
 }
-
-
 export default function CourseEditor({ onPreview }) {
     const { isDark } = useTheme();
     const theme = isDark ? darkTheme : lightTheme;
-
     const [courses, setCourses] = useState([]);
     const [companies, setCompanies] = useState([]);
-    const [groups, setGroups] = useState([]); // NEW STATE
+    const [groups, setGroups] = useState([]); 
     const [loading, setLoading] = useState(false);
-
-    // UI States
-    const [currentFolder, setCurrentFolder] = useState(null); // null = Root
+    const [currentFolder, setCurrentFolder] = useState(null); 
     const [folders, setFolders] = useState([]);
-
-    // Modal States
     const [showCourseModal, setShowCourseModal] = useState(false);
     const [showFolderModal, setShowFolderModal] = useState(false);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
-
     const [editingCourse, setEditingCourse] = useState(null);
-    const [editingFolder, setEditingFolder] = useState(null); // { name: string, companies: [] }
-
-    // --- INITIAL DATA LOAD ---
+    const [editingFolder, setEditingFolder] = useState(null); 
     useEffect(() => {
         loadData();
     }, []);
-
     const loadData = async () => {
         setLoading(true);
         const [coursesData, companiesData, groupsData] = await Promise.all([
             getCourses(),
             getCompanies(),
-            getCompanyGroups() // NEW FETCH
+            getCompanyGroups() 
         ]);
-
-        // Sort courses by position if available, otherwise by title or created_at
         const sortedCourses = coursesData.sort((a, b) => (a.position || 0) - (b.position || 0));
-
         setCourses(sortedCourses);
         setCompanies(companiesData);
-        setGroups(groupsData); // SET GROUPS
-
-        // Extract folders dynamically
+        setGroups(groupsData); 
         const uniqueFolders = new Set();
         coursesData.forEach(c => {
             uniqueFolders.add(getFolderFromDescription(c.description));
         });
-
-        // Ensure default folder exists if we have no courses yet, or just to be safe
         if (uniqueFolders.size === 0) uniqueFolders.add(DEFAULT_FOLDER_NAME);
-
         setFolders([...uniqueFolders].sort());
         setLoading(false);
     };
-
-    // --- FOLDER ACTIONS ---
-
-    // Open Folder Edit/Create Modal
     const handleOpenFolderModal = (folderName = null) => {
         if (folderName) {
-            // Editing existing folder
             const exampleCourse = courses.find(c => getFolderFromDescription(c.description) === folderName);
             const initialids = exampleCourse ? (exampleCourse.assigned_company_ids || []) : [];
-
             setEditingFolder({
                 originalName: folderName,
                 name: folderName,
                 assigned_company_ids: initialids
             });
         } else {
-            // Creating new folder
             setEditingFolder({
                 originalName: null,
                 name: '',
@@ -159,7 +122,6 @@ export default function CourseEditor({ onPreview }) {
         }
         setShowFolderModal(true);
     };
-
     const handleSaveFolder = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -167,14 +129,11 @@ export default function CourseEditor({ onPreview }) {
             const oldName = editingFolder.originalName;
             const newName = editingFolder.name.trim();
             const newIds = editingFolder.assigned_company_ids;
-
             if (!newName) throw new Error("El nombre de la carpeta es requerido");
             if (folders.includes(newName) && newName !== oldName) throw new Error("Ya existe una carpeta con ese nombre");
-
             if (oldName) {
                 // UPDATE EXISTING FOLDER
                 const folderCourses = courses.filter(c => getFolderFromDescription(c.description) === oldName);
-
                 for (const course of folderCourses) {
                     const newDesc = formatDescription(newName, getCleanDescription(course.description));
                     await updateCourse(course.id, {
@@ -189,20 +148,15 @@ export default function CourseEditor({ onPreview }) {
                 setFolders(prev => [...prev, newName].sort());
                 showToast("Carpeta creada");
             }
-
             setShowFolderModal(false);
             setEditingFolder(null);
             loadData();
-
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
             setLoading(false);
         }
     };
-
-    // --- COURSE ACTIONS ---
-
     const handleOpenCourseModal = (course = null) => {
         if (course) {
             setEditingCourse(course);
@@ -216,10 +170,8 @@ export default function CourseEditor({ onPreview }) {
             });
         } else {
             setEditingCourse(null);
-            // INHERITANCE
             const folderCourses = courses.filter(c => getFolderFromDescription(c.description) === currentFolder);
             const inheritedIds = folderCourses.length > 0 ? (folderCourses[0].assigned_company_ids || []) : [];
-
             setCourseFormData({
                 title: '',
                 description: '',
@@ -231,11 +183,9 @@ export default function CourseEditor({ onPreview }) {
         }
         setShowCourseModal(true);
     };
-
     const [courseFormData, setCourseFormData] = useState({
         title: '', description: '', folder: '', file: null, assigned_company_ids: [], icon_name: 'FileText'
     });
-
     const handleSaveCourse = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -248,7 +198,6 @@ export default function CourseEditor({ onPreview }) {
             } else if (!editingCourse) {
                 throw new Error('Debes subir un archivo.');
             }
-
             const finalDesc = formatDescription(currentFolder, courseFormData.description);
             const courseData = {
                 title: courseFormData.title,
@@ -258,13 +207,10 @@ export default function CourseEditor({ onPreview }) {
                 assigned_company_ids: courseFormData.assigned_company_ids,
                 icon_name: courseFormData.icon_name || 'FileText'
             };
-
             let result;
             if (editingCourse) result = await updateCourse(editingCourse.id, courseData);
             else result = await createCourse(courseData);
-
             if (!result.success) throw new Error(result.error);
-
             setShowCourseModal(false);
             loadData();
             showToast('Clase guardada correctamente');
@@ -274,7 +220,6 @@ export default function CourseEditor({ onPreview }) {
             setLoading(false);
         }
     };
-
     const handleDeleteCourse = async (id) => {
         if (!confirm("¿Eliminar clase?")) return;
         setLoading(true);
@@ -282,73 +227,48 @@ export default function CourseEditor({ onPreview }) {
         loadData();
         setLoading(false);
     };
-
-    // --- SHARED UI HELPERS ---
     const [toast, setToast] = useState(null);
     const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3000); };
     const [menuSearch, setMenuSearch] = useState('');
-
     // Toggle ID in a list
     const toggleId = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
-
     // Toggle GROUP (Batch Select)
     const toggleGroup = (list, groupId) => {
         const groupCompanies = companies.filter(c => c.group_id === groupId || (c.type === groupId && !c.group_id)); // Support Legacy Types as "Groups" by ID if needed, but primarily use real groups
         // Actually, let's treat groups strictly by ID for dynamic ones.
         const targetCompanies = companies.filter(c => c.group_id === groupId);
-
         if (targetCompanies.length === 0) return list;
-
         const targetIds = targetCompanies.map(c => c.id);
         const allSelected = targetIds.every(id => list.includes(id));
-
         if (allSelected) {
-            // Deselect all
             return list.filter(id => !targetIds.includes(id));
         } else {
-            // Select all
             const newIds = new Set([...list, ...targetIds]);
             return [...newIds];
         }
     };
-
-    // --- DRAG AND DROP SENSORS ---
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
-
     const handleDragEnd = async (event) => {
         const { active, over } = event;
-
         if (active.id !== over.id) {
             setCourses((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
                 const newIndex = items.findIndex((item) => item.id === over.id);
                 const newItems = arrayMove(items, oldIndex, newIndex);
-
-                // Persist new positions
-                // We typically only need to update the moved item and those shifted, 
-                // but for simplicity/robustness we can update the range or just the moved one's neighbors.
-                // Or update all indices in the local list for consistency.
-
-                // Let's update backend asynchronously
                 const updates = newItems.map((item, index) => ({ id: item.id, position: index }));
-
-                // Trigger backend updates (optimistic UI)
                 updates.forEach(u => updateCoursePosition(u.id, u.position));
-
                 return newItems;
             });
         }
     };
-
     return (
         <div className="animate-fade-in space-y-6">
-
-            {/* HEADER */}
+            {}
             <div
                 key={`header-${isDark ? 'dark' : 'light'}`}
                 className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 rounded-xl border gap-4"
@@ -371,8 +291,7 @@ export default function CourseEditor({ onPreview }) {
                         <h2 className="text-xl sm:text-2xl font-bold" style={{ color: isDark ? '#ffffff' : '#111827' }}>Gestión de Material</h2>
                     </div>
                 </div>
-
-                {/* Preview Trigger */}
+                {}
                 <button
                     onClick={() => {
                         let relevantCourses = courses;
@@ -385,7 +304,6 @@ export default function CourseEditor({ onPreview }) {
                                 c.assigned_company_ids.forEach(id => validIds.add(id));
                             }
                         });
-
                         if (validIds.size > 0) {
                             const firstId = [...validIds][0];
                             const companyName = companies.find(c => c.id === firstId)?.name;
@@ -406,15 +324,13 @@ export default function CourseEditor({ onPreview }) {
                     <span>Vista Previa</span>
                 </button>
             </div>
-
             {loading && !showCourseModal && !showFolderModal && <div className="text-center py-10 opacity-50 animate-pulse">Cargando...</div>}
-
-            {/* === LIBRARY VIEW (FOLDERS) === */}
+            {}
             {!loading && (
                 <div className="space-y-6">
-                    {/* BREADCRUMBS & ACTIONS */}
+                    {}
                     <div className="flex flex-col gap-4">
-                        {/* Breadcrumb Row */}
+                        {}
                         <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-sm sm:text-lg md:text-xl font-bold overflow-hidden" style={{ color: theme.text }}>
                             <button
                                 onClick={() => setCurrentFolder(null)}
@@ -431,9 +347,7 @@ export default function CourseEditor({ onPreview }) {
                                 </div>
                             )}
                         </div>
-
-
-                        {/* Action Buttons Row */}
+                        {}
                         <div className="w-full">
                             {!currentFolder ? (
                                 <button
@@ -460,16 +374,13 @@ export default function CourseEditor({ onPreview }) {
                             )}
                         </div>
                     </div>
-
-                    {/* ROOT: FOLDER GRID */}
+                    {}
                     {!currentFolder && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {folders.map(folder => {
                                 const count = courses.filter(c => getFolderFromDescription(c.description) === folder).length;
-                                // Find permissions summary from first course
                                 const firstCourse = courses.find(c => getFolderFromDescription(c.description) === folder);
                                 const permCount = firstCourse?.assigned_company_ids?.length || 0;
-
                                 return (
                                     <div
                                         key={folder}
@@ -480,7 +391,6 @@ export default function CourseEditor({ onPreview }) {
                                         <div className="w-14 h-14 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all shadow-inner">
                                             <Folder size={28} strokeWidth={2.5} />
                                         </div>
-
                                         <div className="w-full">
                                             <h3 className="text-xl font-bold truncate mb-1" style={{ color: theme.text }}>{folder}</h3>
                                             <div className="flex items-center gap-3 text-xs font-bold opacity-60">
@@ -488,7 +398,6 @@ export default function CourseEditor({ onPreview }) {
                                                 <span className="flex items-center gap-1"><Users size={12} /> {permCount} Accesos</span>
                                             </div>
                                         </div>
-
                                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleOpenFolderModal(folder); }}
@@ -509,18 +418,16 @@ export default function CourseEditor({ onPreview }) {
                             )}
                         </div>
                     )}
-
-                    {/* FOLDER CONTENT: FILE LIST / CARD VIEW ON MOBILE */}
+                    {}
                     {currentFolder && (
                         <div className="rounded-xl border overflow-hidden shadow-sm animate-fade-in" style={{ borderColor: theme.border, background: theme.surface }}>
-                            {/* TABLE HEADER (Desktop Only) */}
+                            {}
                             <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b text-xs font-black uppercase tracking-widest opacity-50" style={{ borderColor: theme.border, color: theme.text }}>
                                 <div className="col-span-1 text-center">Icono</div>
                                 <div className="col-span-6">Nombre de la Clase</div>
                                 <div className="col-span-3 text-center">Permisos Actuales</div>
                                 <div className="col-span-2 text-right">Acciones</div>
                             </div>
-
                             <DndContext
                                 sensors={sensors}
                                 collisionDetection={closestCenter}
@@ -534,13 +441,12 @@ export default function CourseEditor({ onPreview }) {
                                         {courses.filter(c => getFolderFromDescription(c.description) === currentFolder).map((course) => {
                                             const Icon = course.icon_name && LucideIcons[course.icon_name] ? LucideIcons[course.icon_name] : FileText;
                                             const accessCount = course.assigned_company_ids?.length || 0;
-
                                             return (
                                                 <SortableItem key={course.id} id={course.id}>
-                                                    {/* CARD VIEW (Mobile) + ROW VIEW (Desktop) */}
+                                                    {}
                                                     <div className="flex flex-col md:grid md:grid-cols-12 gap-2 sm:gap-4 p-3 sm:p-4 items-center hover:bg-black/[0.02] transition-colors bg-white dark:bg-transparent" style={{ borderColor: theme.border }}>
                                                         <div className="w-full flex items-center justify-between md:contents">
-                                                            {/* Icon + Title on same row in mobile */}
+                                                            {}
                                                             <div className="flex items-center gap-2 sm:gap-3 md:col-span-1 md:justify-center flex-1 min-w-0">
                                                                 <div className="p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-blue-500/10 text-blue-500 cursor-grab active:cursor-grabbing flex-shrink-0">
                                                                     <Icon size={16} className="sm:w-5 sm:h-5" />
@@ -550,13 +456,11 @@ export default function CourseEditor({ onPreview }) {
                                                                     <p className="text-[9px] sm:text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
                                                                 </div>
                                                             </div>
-
                                                             <div className="hidden md:block md:col-span-6 min-w-0">
                                                                 <h4 className="font-bold text-sm truncate" style={{ color: theme.text }}>{course.title}</h4>
                                                                 <p className="text-[10px] font-bold opacity-50 uppercase">{course.file_url ? course.file_url.split('.').pop().toUpperCase() : '—'}</p>
                                                             </div>
-
-                                                            {/* Status Badge - Hidden on very small mobile */}
+                                                            {}
                                                             <div className="md:col-span-3 flex justify-center flex-shrink-0">
                                                                 {accessCount === 0 ? (
                                                                     <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold bg-red-100 text-red-600 dark:bg-red-500/10">Sin Acceso</span>
@@ -567,8 +471,7 @@ export default function CourseEditor({ onPreview }) {
                                                                 )}
                                                             </div>
                                                         </div>
-
-                                                        {/* Actions Button Bar - Professional on mobile */}
+                                                        {}
                                                         <div className="w-full md:col-span-2 flex justify-between gap-2 mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-dashed" style={{ borderColor: theme.border }}>
                                                             <button
                                                                 onPointerDown={(e) => e.stopPropagation()}
@@ -596,8 +499,7 @@ export default function CourseEditor({ onPreview }) {
                     )}
                 </div>
             )}
-
-            {/* === MODAL: EDIT FOLDER & PERMISSIONS === */}
+            {}
             {showFolderModal && (
                 <div key={`folder-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
                     <div
@@ -630,10 +532,9 @@ export default function CourseEditor({ onPreview }) {
                                 <X size={20} className="group-hover:rotate-90 transition-transform" />
                             </button>
                         </div>
-
                         <div className="overflow-y-auto custom-scrollbar" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
                             <form onSubmit={handleSaveFolder} className="p-8 space-y-8">
-                                {/* Name */}
+                                {}
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-end">
                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre del Módulo</label>
@@ -652,8 +553,7 @@ export default function CourseEditor({ onPreview }) {
                                         onChange={e => setEditingFolder(prev => ({ ...prev, name: e.target.value }))}
                                     />
                                 </div>
-
-                                {/* Batch Permissions */}
+                                {}
                                 <div className="border-t pt-4" style={{ borderColor: isDark ? '#374151' : '#e5e7eb' }}>
                                     <div className="flex justify-between items-center mb-3">
                                         <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Acceso Global (Todas las clases)</label>
@@ -674,8 +574,7 @@ export default function CourseEditor({ onPreview }) {
                                             />
                                         </div>
                                     </div>
-
-                                    {/* GROUPS SECTION */}
+                                    {}
                                     <div className="mb-2 flex flex-wrap gap-2">
                                         {groups.length > 0 && (
                                             <>
@@ -701,8 +600,6 @@ export default function CourseEditor({ onPreview }) {
                                             </>
                                         )}
                                     </div>
-
-
                                     <div
                                         className="h-48 overflow-y-auto border rounded-xl divide-y"
                                         style={{
@@ -733,8 +630,7 @@ export default function CourseEditor({ onPreview }) {
                                                     >
                                                         {isSelected && <CheckCircle size={14} className="text-white" />}
                                                     </div>
-
-                                                    {/* Company Logo in List */}
+                                                    {}
                                                     <div
                                                         className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden border"
                                                         style={{
@@ -748,7 +644,6 @@ export default function CourseEditor({ onPreview }) {
                                                             <LucideIcons.Building2 size={16} style={{ color: isDark ? '#9ca3af' : '#9ca3af' }} />
                                                         )}
                                                     </div>
-
                                                     <div className="flex flex-col flex-1 min-w-0">
                                                         <span className="font-bold text-sm select-none truncate" style={{ color: isDark ? '#f3f4f6' : '#111827' }}>{company.name}</span>
                                                         {company.group_name && <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter">{company.group_name}</span>}
@@ -758,7 +653,6 @@ export default function CourseEditor({ onPreview }) {
                                         })}
                                     </div>
                                 </div>
-
                                 <div className="flex justify-end gap-2 pt-2">
                                     <button type="button" onClick={() => setShowFolderModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
                                     <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
@@ -770,8 +664,7 @@ export default function CourseEditor({ onPreview }) {
                     </div>
                 </div>
             )}
-
-            {/* === MODAL: EDIT CLASS (COURSE) === */}
+            {}
             {showCourseModal && (
                 <div key={`course-modal-${isDark ? 'dark' : 'light'}`} className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in overflow-y-auto">
                     <div
@@ -807,10 +700,9 @@ export default function CourseEditor({ onPreview }) {
                                 <X size={16} className="sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform" />
                             </button>
                         </div>
-
                         <div className="overflow-y-auto custom-scrollbar flex-1" style={{ backgroundColor: isDark ? '#111827' : '#ffffff' }}>
                             <form onSubmit={handleSaveCourse} className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-                                {/* Title First */}
+                                {}
                                 <div className="space-y-2 sm:space-y-3">
                                     <div className="flex justify-between items-end">
                                         <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wide sm:tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Nombre</label>
@@ -829,16 +721,14 @@ export default function CourseEditor({ onPreview }) {
                                         placeholder="Ej: Introducción a la Auditoría"
                                     />
                                 </div>
-
-                                {/* Icon Selector Second */}
+                                {}
                                 <div>
                                     <IconSelector
                                         selectedIcon={courseFormData.icon_name}
                                         onSelect={(icon) => setCourseFormData({ ...courseFormData, icon_name: icon })}
                                     />
                                 </div>
-
-                                {/* Parent Folder (Read Only) */}
+                                {}
                                 <div
                                     className="p-4 rounded-xl border-2 border-dashed flex items-center gap-4"
                                     style={{
@@ -860,7 +750,6 @@ export default function CourseEditor({ onPreview }) {
                                         <p className="font-black" style={{ color: isDark ? '#ffffff' : '#111827' }}>{courseFormData.folder}</p>
                                     </div>
                                 </div>
-
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Archivo de Contenido</label>
                                     <label
@@ -883,8 +772,7 @@ export default function CourseEditor({ onPreview }) {
                                         <input type="file" className="hidden" onChange={e => setCourseFormData({ ...courseFormData, file: e.target.files[0] })} />
                                     </label>
                                 </div>
-
-                                {/* Permissions */}
+                                {}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="block text-xs font-black uppercase tracking-widest" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>Empresas con Acceso</label>
@@ -892,7 +780,6 @@ export default function CourseEditor({ onPreview }) {
                                             {courseFormData.showPerms ? 'Ocultar' : 'Personalizar'}
                                         </button>
                                     </div>
-
                                     {(courseFormData.showPerms || courseFormData.assigned_company_ids.length > 0) && (
                                         <div
                                             className="h-32 overflow-y-auto border rounded-xl divide-y p-1"
@@ -935,7 +822,6 @@ export default function CourseEditor({ onPreview }) {
                                         </div>
                                     )}
                                 </div>
-
                                 <div className="flex justify-end gap-2 pt-4 border-t">
                                     <button type="button" onClick={() => setShowCourseModal(false)} className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg">Cancelar</button>
                                     <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 shadow-lg shadow-blue-500/20">
@@ -947,8 +833,7 @@ export default function CourseEditor({ onPreview }) {
                     </div>
                 </div>
             )}
-
-            {/* === MODAL: PREVIEW SELECTOR === */}
+            {}
             {showPreviewModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
                     <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
@@ -984,7 +869,6 @@ export default function CourseEditor({ onPreview }) {
                     </div>
                 </div>
             )}
-
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         </div>
     );

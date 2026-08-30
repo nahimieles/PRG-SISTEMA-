@@ -66,8 +66,7 @@ function extractUser(item) {
         const localPart = modEmail.split('@')[0];
         return localPart.split(/[._-]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
-    
-    // DELIBERATELY EXCLUDING APPLICATION NAMES TO PREVENT FALSE ATTRIBUTION
+
     return null;
 }
 
@@ -88,29 +87,29 @@ async function getAppToken() {
 export async function GET() {
     try {
         const token = await getAppToken();
-        
+
         const { data: logs, error } = await supabaseAdmin
             .from('audit_logs')
             .select('*')
             .in('worker_name', ['Paul Rodríguez García', 'Paul Rodriguez Garcia'])
             .order('timestamp', { ascending: false })
             .limit(10);
-            
+
         if (error) throw error;
-        
+
         let fixedCount = 0;
         let notFoundCount = 0;
         const updates = [];
-        
+
         for (const log of logs) {
             const driveId = log.metadata?.driveId;
             const fileId = log.metadata?.fileId;
-            
+
             if (!driveId || !fileId) continue;
-            
+
             const url = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${fileId}?$select=lastModifiedBy,createdBy`;
             const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-            
+
             if (!res.ok) {
                 if (log.action_type === 'AUTO_DELETE' || log.action_type === 'AUTO_MODIFY') {
                     await supabaseAdmin.from('audit_logs').update({ worker_name: 'Desconocido' }).eq('id', log.id);
@@ -119,23 +118,23 @@ export async function GET() {
                 notFoundCount++;
                 continue;
             }
-            
+
             const item = await res.json();
             const realUser = extractUser(item) || 'Desconocido';
-            
+
             updates.push({
                 file: log.file_name,
                 old: log.worker_name,
                 new: realUser,
                 graphData: item.lastModifiedBy
             });
-            
+
             if (realUser !== log.worker_name) {
                 await supabaseAdmin.from('audit_logs').update({ worker_name: realUser }).eq('id', log.id);
                 fixedCount++;
             }
         }
-        
+
         return NextResponse.json({ success: true, fixed: fixedCount, totalEvaluated: logs.length, notFoundOnGraph: notFoundCount, updates });
     } catch (e) {
         return NextResponse.json({ error: e.message });

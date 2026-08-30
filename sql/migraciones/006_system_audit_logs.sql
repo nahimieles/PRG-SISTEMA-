@@ -1,28 +1,22 @@
--- ========================================================================================
--- MIGRACIÓN 006: SISTEMA DE AUDITORÍA (TRIGGERS)
--- ========================================================================================
 
--- 1. Tabla de Logs de Auditoría
 CREATE TABLE IF NOT EXISTS system_audit_logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     table_name TEXT NOT NULL,
     record_id UUID NOT NULL,
-    action TEXT NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
+    action TEXT NOT NULL, 
     old_data JSONB,
     new_data JSONB,
     changed_by_user TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Función genérica para el Trigger
 CREATE OR REPLACE FUNCTION log_audit_event() RETURNS TRIGGER AS $$
 DECLARE
     v_old_data JSONB;
     v_new_data JSONB;
     v_changed_by TEXT;
 BEGIN
-    -- Intentar obtener el ID del usuario de la sesión (Supabase auth.uid())
-    -- Si no está disponible (ej. query directo), usar 'system'
+
     BEGIN
         v_changed_by := current_setting('request.jwt.claim.sub', true);
     EXCEPTION WHEN OTHERS THEN
@@ -41,7 +35,7 @@ BEGIN
     ELSIF TG_OP = 'UPDATE' THEN
         v_old_data := to_jsonb(OLD);
         v_new_data := to_jsonb(NEW);
-        -- Evitar loguear si no hubo cambios reales
+
         IF v_old_data <> v_new_data THEN
             INSERT INTO system_audit_logs (table_name, record_id, action, old_data, new_data, changed_by_user)
             VALUES (TG_TABLE_NAME, NEW.id, 'UPDATE', v_old_data, v_new_data, v_changed_by);
@@ -57,8 +51,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Aplicar triggers SOLO a tablas transaccionales/críticas
--- (Se eliminan los triggers existentes para evitar duplicados si se corre de nuevo)
 DROP TRIGGER IF EXISTS audit_records_trigger ON audit_records;
 CREATE TRIGGER audit_records_trigger AFTER INSERT OR UPDATE OR DELETE ON audit_records FOR EACH ROW EXECUTE FUNCTION log_audit_event();
 
