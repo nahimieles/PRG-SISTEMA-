@@ -3,8 +3,8 @@ import CandidateTestView from '../../../components/recruitment/CandidateTestView
 import { AlertCircle } from 'lucide-react';
 
 export const metadata = {
-  title: 'Evaluación - PRG Ecuador',
-  description: 'Plataforma de Evaluación de PRG Ecuador',
+  title: 'Evaluación',
+  description: 'Plataforma de Evaluación',
 };
 
 export default async function PublicSurveyPage({ params }) {
@@ -22,9 +22,6 @@ export default async function PublicSurveyPage({ params }) {
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mb-6 flex justify-center w-full max-w-3xl mx-auto">
-        <h1 className="text-3xl font-black text-blue-900 uppercase tracking-wider">PRG ECUADOR</h1>
-      </div>
       <CandidateTestView survey={result.survey} questions={result.questions} />
     </div>
   );
@@ -40,7 +37,7 @@ function ErrorDisplay({ message }) {
         <h2 className="text-2xl font-black text-gray-900 mb-2">Acceso Denegado</h2>
         <p className="text-gray-600 mb-8">{message}</p>
         <p className="text-sm text-gray-400 font-medium border-t border-gray-100 pt-6 mt-4">
-          Si crees que esto es un error, por favor contacta al departamento de Recursos Humanos de PRG Ecuador.
+          Si crees que esto es un error, por favor contacta al departamento de Recursos Humanos.
         </p>
       </div>
     </div>

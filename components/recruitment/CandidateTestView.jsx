@@ -85,15 +85,17 @@ export default function CandidateTestView({ survey, questions }) {
     );
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white sm:rounded-2xl sm:shadow-xl sm:border border-gray-100 animate-fade-in">
+    <div className="max-w-3xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white/90 backdrop-blur-xl sm:rounded-3xl sm:shadow-2xl sm:border border-gray-100 animate-fade-in relative overflow-hidden">
       
-      <div className="text-center mb-10 pb-8 border-b border-gray-100">
-        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <ClipboardList size={32} />
+      {/* Elemento de diseño de fondo */}
+      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-10"></div>
+      
+      <div className="text-center mb-10 pb-8 border-b border-gray-100 relative z-10">
+        <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-500 text-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+          <ClipboardList size={36} />
         </div>
-        <h1 className="text-3xl font-black text-gray-900 mb-3">{survey.title}</h1>
-        <p className="text-gray-600 max-w-xl mx-auto">{survey.description}</p>
+        <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 mb-4">{survey.title}</h1>
+        <p className="text-gray-600 max-w-xl mx-auto text-lg">{survey.description}</p>
       </div>
 
       {error && (
@@ -112,30 +114,30 @@ export default function CandidateTestView({ survey, questions }) {
           
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Nombre Completo</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <div className="relative group">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
               <input
                 type="text"
                 required
                 placeholder="Ej. Juan Pérez"
                 value={candidateData.full_name}
                 onChange={e => setCandidateData(prev => ({...prev, full_name: e.target.value}))}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition"
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
               />
             </div>
           </div>
           
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Correo Electrónico</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
               <input
                 type="email"
                 required
                 placeholder="ejemplo@correo.com"
                 value={candidateData.email}
                 onChange={e => setCandidateData(prev => ({...prev, email: e.target.value}))}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition"
+                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
               />
             </div>
           </div>
@@ -158,8 +160,8 @@ export default function CandidateTestView({ survey, questions }) {
               
               {q.type === 'text' && (
                 <textarea
-                  className="w-full p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition resize-none min-h-[120px]"
-                  placeholder="Escribe tu respuesta aquí..."
+                  className="w-full p-4 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm resize-none min-h-[140px]"
+                  placeholder="Escribe tu respuesta detallada aquí..."
                   value={responses[q.id]?.response_text || ''}
                   onChange={e => handleTextChange(q.id, e.target.value)}
                 />
