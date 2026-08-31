@@ -85,6 +85,7 @@ export default function CandidateTestView({ survey, questions }) {
     );
   }
 
+  return (
     <div className="max-w-3xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white/90 backdrop-blur-xl sm:rounded-3xl sm:shadow-2xl sm:border border-gray-100 animate-fade-in relative overflow-hidden">
       
       {/* Elemento de diseño de fondo */}
