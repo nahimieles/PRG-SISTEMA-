@@ -208,7 +208,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
              <p className="font-bold text-sm mb-2" style={{ color: isDark ? '#93c5fd' : '#1e3a8a' }}>Enlace Público para Candidatos</p>
              <div className="flex w-full">
                <code className="text-sm break-all px-4 py-2 rounded-md select-all w-full border font-mono" style={{ background: isDark ? 'rgba(0,0,0,0.3)' : '#ffffff', borderColor: isDark ? 'rgba(30, 58, 138, 0.5)' : '#bfdbfe', color: theme.text }}>
-                 {`https://nextjs-boilerplate-delta-bay-eez7fy3o9d.vercel.app/prueba/${survey.id}`}
+                 {`${typeof window !== 'undefined' ? window.location.origin : ''}/prueba/${survey.id}`}
                </code>
              </div>
            </div>
