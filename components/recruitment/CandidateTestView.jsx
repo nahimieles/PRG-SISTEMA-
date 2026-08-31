@@ -44,7 +44,8 @@ export default function CandidateTestView({ survey, questions }) {
     // Validar requeridos
     for (const q of questions) {
       if (q.is_required && (!responses[q.id] || !responses[q.id].response_text?.trim())) {
-        setError('Por favor, responde todas las preguntas obligatorias.');
+        setError(`Por favor, responde la pregunta obligatoria: ${q.text}`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
     }
@@ -65,8 +66,10 @@ export default function CandidateTestView({ survey, questions }) {
     
     if (result.success) {
       setSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setError(result.error || 'Ocurrió un error al enviar la prueba.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -86,13 +89,13 @@ export default function CandidateTestView({ survey, questions }) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white/90 backdrop-blur-xl sm:rounded-3xl sm:shadow-2xl sm:border border-gray-100 animate-fade-in relative overflow-hidden">
+    <div className="max-w-4xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white/90 backdrop-blur-xl sm:rounded-3xl sm:shadow-2xl sm:border border-gray-100 animate-fade-in relative overflow-hidden">
       
       {/* Elemento de diseño de fondo */}
       <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-10"></div>
       
       <div className="text-center mb-10 pb-8 border-b border-gray-100 relative z-10">
-        <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-500 text-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+        <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-500 text-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6">
           <ClipboardList size={36} />
         </div>
         <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 mb-4">{survey.title}</h1>
@@ -120,7 +123,7 @@ export default function CandidateTestView({ survey, questions }) {
               <input
                 type="text"
                 required
-                placeholder="Ej. Juan Pérez"
+                placeholder="Juan Pérez"
                 value={candidateData.full_name}
                 onChange={e => setCandidateData(prev => ({...prev, full_name: e.target.value}))}
                 className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
@@ -204,7 +207,13 @@ export default function CandidateTestView({ survey, questions }) {
             </div>
           ))}
           
-          <div className="pt-6 border-t border-gray-200 flex justify-end">
+          <div className="pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+            {error ? (
+              <div className="text-red-500 flex items-center gap-2 font-medium">
+                <AlertCircle size={18} /> Hay errores, revisa la parte superior.
+              </div>
+            ) : <div></div>}
+            
             <button
               onClick={handleSubmit}
               disabled={submitting}
