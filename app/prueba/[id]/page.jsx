@@ -3,8 +3,8 @@ import CandidateTestView from '../../../components/recruitment/CandidateTestView
 import { AlertCircle } from 'lucide-react';
 
 export const metadata = {
-  title: 'Evaluación',
-  description: 'Plataforma de Evaluación',
+  title: 'Prueba',
+  description: 'Plataforma de Pruebas',
 };
 
 export default async function PublicSurveyPage({ params }) {
