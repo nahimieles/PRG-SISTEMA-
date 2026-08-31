@@ -27,6 +27,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [candidateResponses, setCandidateResponses] = useState([]);
+  const [allCandidateResponses, setAllCandidateResponses] = useState({});
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const showToast = (text, type = 'success') => {
@@ -64,6 +65,21 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
           .in('survey_id', allIds);
 
         setQuestions(allQuestions || []);
+
+        if (survey.is_graded && cands && cands.length > 0) {
+          const candIds = cands.map(c => c.id);
+          const { data: allResp } = await supabase
+            .from('recruitment_responses')
+            .select('*')
+            .in('candidate_id', candIds);
+            
+          const respMap = {};
+          (allResp || []).forEach(r => {
+             if(!respMap[r.candidate_id]) respMap[r.candidate_id] = [];
+             respMap[r.candidate_id].push(r);
+          });
+          setAllCandidateResponses(respMap);
+        }
 
       } catch (err) {
 
@@ -295,6 +311,7 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                 <th className="p-4 font-semibold">Candidato</th>
                 <th className="p-4 font-semibold">Email</th>
                 <th className="p-4 font-semibold text-center">Versión</th>
+                {survey.is_graded && <th className="p-4 font-semibold text-center">Puntaje</th>}
                 <th className="p-4 font-semibold">Fecha Registro</th>
                 <th className="p-4 font-semibold text-center">Acciones</th>
               </tr>
@@ -316,6 +333,35 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                          v{cVersion}
                        </span>
                     </td>
+                    
+                    {survey.is_graded && (
+                      <td className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">
+                        {(() => {
+                          let total = 0;
+                          const candResponses = allCandidateResponses[cand.id] || [];
+                          candResponses.forEach(r => {
+                            const q = questions.find(qu => qu.id === r.question_id);
+                            if (q && q.options) {
+                              if (Array.isArray(q.options)) {
+                                if (q.type === 'multiple_choice' || q.type === 'dropdown') {
+                                  const optObj = q.options.find(o => typeof o === 'object' ? o.label === r.response_value : false);
+                                  if (optObj && optObj.score) total += optObj.score;
+                                } else if (q.type === 'checkbox') {
+                                  if (Array.isArray(r.response_value)) {
+                                    r.response_value.forEach(val => {
+                                      const optObj = q.options.find(o => typeof o === 'object' ? o.label === val : false);
+                                      if (optObj && optObj.score) total += optObj.score;
+                                    });
+                                  }
+                                }
+                              }
+                            }
+                          });
+                          return total;
+                        })()}
+                      </td>
+                    )}
+
                     <td className="p-4 uppercase text-xs" style={{ color: theme.textSecondary }}>
                        {new Date(cand.created_at).toLocaleDateString()} {new Date(cand.created_at).toLocaleTimeString([],{hour: '2-digit', minute:'2-digit'})}
                     </td>
@@ -391,11 +437,33 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
                  </button>
               </div>
 
-              <div className="p-6 border-b" style={{ borderColor: theme.border, background: theme.surface }}>
-                 <div className="flex justify-between items-center text-sm">
-                    <p className="font-bold" style={{ color: theme.textSecondary }}>Respuestas del Candidato</p>
-                    <p className="font-medium" style={{ color: theme.textSecondary }}>{new Date(selectedCandidate.created_at).toLocaleString()}</p>
+              <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: theme.border, background: theme.surface }}>
+                 <div>
+                    <p className="font-bold text-sm" style={{ color: theme.textSecondary }}>Respuestas del Candidato</p>
+                    <p className="font-medium text-xs mt-1" style={{ color: theme.textSecondary }}>{new Date(selectedCandidate.created_at).toLocaleString()}</p>
                  </div>
+                 {survey.is_graded && (
+                   <div className="text-right">
+                      <p className="font-bold text-sm" style={{ color: theme.textSecondary }}>Puntaje Total</p>
+                      <p className="font-black text-2xl text-blue-600 dark:text-blue-400">
+                        {candidateResponses.reduce((acc, resp) => {
+                          const q = questions.find(qu => qu.id === resp.question_id);
+                          if (!q || !q.options || !Array.isArray(q.options)) return acc;
+                          let pts = 0;
+                          if (q.type === 'multiple_choice' || q.type === 'dropdown') {
+                            const optObj = q.options.find(o => typeof o === 'object' ? o.label === resp.response_value : false);
+                            if (optObj && optObj.score) pts = optObj.score;
+                          } else if (q.type === 'checkbox' && Array.isArray(resp.response_value)) {
+                            resp.response_value.forEach(val => {
+                              const optObj = q.options.find(o => typeof o === 'object' ? o.label === val : false);
+                              if (optObj && optObj.score) pts += optObj.score;
+                            });
+                          }
+                          return acc + pts;
+                        }, 0)}
+                      </p>
+                   </div>
+                 )}
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -409,6 +477,20 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
                        const q = questions.find(qu => qu.id === resp.question_id);
                        const displayVal = resp.response_value;
+                       
+                       let scoreForQuestion = null;
+                       if (survey.is_graded && q && q.options && Array.isArray(q.options)) {
+                         scoreForQuestion = 0;
+                         if (q.type === 'multiple_choice' || q.type === 'dropdown') {
+                           const optObj = q.options.find(o => typeof o === 'object' ? o.label === displayVal : false);
+                           if (optObj && optObj.score) scoreForQuestion = optObj.score;
+                         } else if (q.type === 'checkbox' && Array.isArray(displayVal)) {
+                           displayVal.forEach(val => {
+                             const optObj = q.options.find(o => typeof o === 'object' ? o.label === val : false);
+                             if (optObj && optObj.score) scoreForQuestion += optObj.score;
+                           });
+                         }
+                       }
 
                        const renderValue = (val) => {
                          if (!val) return <p className="text-gray-500 italic">Sin respuesta</p>;
@@ -432,9 +514,16 @@ export default function SurveyDashboard({ survey, onUpdate, onBack, headerPortal
 
                        return (
                          <div key={resp.id} className="rounded-xl border p-5 transition" style={{ borderColor: theme.border, background: theme.surface }}>
-                           <p className="font-medium text-blue-600 dark:text-blue-400 mb-3 block border-b pb-2" style={{ borderColor: theme.border }}>
-                             {i+1}. {q ? q.text : 'Pregunta desconocida (eliminada)'}
-                           </p>
+                           <div className="flex justify-between items-start mb-3 border-b pb-2" style={{ borderColor: theme.border }}>
+                             <p className="font-medium text-blue-600 dark:text-blue-400">
+                               {i+1}. {q ? q.text : 'Pregunta desconocida (eliminada)'}
+                             </p>
+                             {scoreForQuestion !== null && (
+                               <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded text-xs font-bold whitespace-nowrap ml-4 border border-blue-100 dark:border-blue-800">
+                                 {scoreForQuestion} pts
+                               </span>
+                             )}
+                           </div>
                            {renderValue(displayVal)}
                          </div>
                        )

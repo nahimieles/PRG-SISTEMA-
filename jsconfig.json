@@ -2,10 +2,15 @@
     "compilerOptions": {
         "baseUrl": ".",
         "paths": {
-            "@*.js",
-        "***.ts"
+            "@/*": ["./*"]
+        }
+    },
+    "include": [
+        "**/*.js",
+        "**/*.jsx"
     ],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        ".next"
     ]
 }

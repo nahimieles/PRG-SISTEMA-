@@ -246,7 +246,9 @@ export default function SurveyForm({ interviewId }) {
 
                       {q.type === 'multiple_choice' && q.options && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {Array.isArray(q.options) && q.options.map((opt, i) => (
+                          {Array.isArray(q.options) && q.options.map((optItem, i) => {
+                            const opt = typeof optItem === 'object' ? optItem.label : optItem;
+                            return (
                             <label key={i} className={`relative flex items-center p-5 rounded-2xl cursor-pointer transition-all duration-200 border-2 ${responses[q.id] === opt ? 'border-indigo-500 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-gray-100 bg-white hover:border-indigo-200 hover:bg-gray-50 shadow-sm'}`}>
                               <input 
                                 type="radio" 
@@ -262,13 +264,14 @@ export default function SurveyForm({ interviewId }) {
                               </div>
                               <span className="text-slate-700 text-lg font-medium">{opt}</span>
                             </label>
-                          ))}
+                          )})}
                         </div>
                       )}
 
                       {q.type === 'checkbox' && q.options && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {Array.isArray(q.options) && q.options.map((opt, i) => {
+                          {Array.isArray(q.options) && q.options.map((optItem, i) => {
+                            const opt = typeof optItem === 'object' ? optItem.label : optItem;
                             const isChecked = (responses[q.id] || []).includes(opt);
                             return (
                             <label key={i} className={`relative flex items-center p-5 rounded-2xl cursor-pointer transition-all duration-200 border-2 ${isChecked ? 'border-indigo-500 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-gray-100 bg-white hover:border-indigo-200 hover:bg-gray-50 shadow-sm'}`}>
@@ -298,9 +301,10 @@ export default function SurveyForm({ interviewId }) {
                              onChange={e => handleResponseChange(q.id, e.target.value)}
                            >
                              <option value="" disabled hidden>Selecciona de la lista...</option>
-                             {Array.isArray(q.options) && q.options.map((opt, i) => (
-                                <option key={i} value={opt} className="py-2">{opt}</option>
-                             ))}
+                             {Array.isArray(q.options) && q.options.map((optItem, i) => {
+                                const opt = typeof optItem === 'object' ? optItem.label : optItem;
+                                return <option key={i} value={opt} className="py-2">{opt}</option>
+                             })}
                            </select>
                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>

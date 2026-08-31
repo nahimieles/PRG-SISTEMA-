@@ -30,11 +30,11 @@ const OneDriveContainer = () => {
     };
     const handleLogin = () => {
         instance.loginPopup({ scopes: ["Files.ReadWrite.All", "Sites.Read.All"] })
-            .catch(e => );
+            .catch(e => {});
     };
     const handleLogout = () => {
         instance.logoutPopup()
-            .catch(e => );
+            .catch(e => {});
     };
     return (
         <div className="space-y-6 animate-fade-in">

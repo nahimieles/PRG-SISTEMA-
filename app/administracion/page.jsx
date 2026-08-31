@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { LogOut, Plus, Trash2, Eye, EyeOff, Download, Calendar, Users, Settings, BarChart3, FileText, AlertCircle, PieChart, Clock, Building2, TrendingUp, UserCheck, RefreshCw, X, LayoutGrid, Folder, MonitorPlay, Edit2, ClipboardList, Search } from 'lucide-react';
@@ -136,6 +136,7 @@ export default function AdminPage() {
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
+  const fileInputRef = useRef(null);
   const openConfirm = (title, action) => {
     setConfirmModal({
       show: true,
@@ -580,7 +581,7 @@ export default function AdminPage() {
     }
   };
 
-  const fileInputRef = React.useRef(null);
+  
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {

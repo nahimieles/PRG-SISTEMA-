@@ -124,7 +124,8 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
       const { data: newSurveyId, error: sErr } = await supabase.rpc('create_new_survey_version', {
         p_old_survey_id: surveyId,
         p_title: survey.title,
-        p_description: survey.description
+        p_description: survey.description,
+        p_is_graded: survey.is_graded || false
       });
 
       if (sErr) throw sErr;
@@ -233,6 +234,25 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
            <div className="text-xs" style={{ color: theme.textSecondary }}>
              Versión actual: {survey.version}. Al guardar cambios, la versión aumentará para no afectar respuestas previas.
            </div>
+           
+           <div className="pt-4 border-t" style={{ borderColor: theme.border }}>
+             <label className="flex items-center gap-3 cursor-pointer w-fit">
+                <div className="relative">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only" 
+                    checked={survey.is_graded || false} 
+                    onChange={e => setSurvey({...survey, is_graded: e.target.checked})} 
+                  />
+                  <div className={`block w-10 h-6 rounded-full transition ${survey.is_graded ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                  <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform ${survey.is_graded ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm" style={{ color: theme.text }}>Prueba con Calificación</span>
+                  <span className="text-xs" style={{ color: theme.textSecondary }}>Asigna un puntaje a cada opción para calcular un total.</span>
+                </div>
+             </label>
+           </div>
         </div>
 
         <div className="flex justify-between items-center mt-8 mb-4">
@@ -304,20 +324,47 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
                  {['multiple_choice', 'checkbox', 'dropdown', 'multi_text'].includes(q.type) && (
                    <div className="pl-4 border-l-2 border-blue-500 space-y-2">
                      <p className="text-xs font-bold text-gray-500 uppercase mb-2">{q.type === 'multi_text' ? 'Campos / Etiquetas' : 'Opciones'}</p>
-                     {(q.options || []).map((opt, optIdx) => (
+                     {(q.options || []).map((opt, optIdx) => {
+                       const label = typeof opt === 'object' ? opt.label : opt;
+                       const score = typeof opt === 'object' ? (opt.score || 0) : 0;
+                       
+                       return (
                        <div key={optIdx} className="flex gap-2 items-center">
                          <div className="w-4 h-4 rounded-full border border-gray-400" />
                          <input 
                            type="text" 
-                           value={opt} 
+                           value={label} 
                            className="flex-1 p-1 bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none text-sm"
                            style={{ color: theme.text }}
+                           placeholder="Texto de la opción"
                            onChange={e => {
                              const newOpts = [...q.options];
-                             newOpts[optIdx] = e.target.value;
+                             newOpts[optIdx] = typeof newOpts[optIdx] === 'object' 
+                               ? { ...newOpts[optIdx], label: e.target.value } 
+                               : { label: e.target.value, score: 0 };
                              handleQuestionChange(q.id, 'options', newOpts);
                            }}
                          />
+                         
+                         {survey.is_graded && q.type !== 'multi_text' && (
+                           <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded border dark:border-gray-700">
+                             <span className="text-xs font-bold text-gray-500">Pts:</span>
+                             <input 
+                               type="number"
+                               value={score}
+                               onChange={e => {
+                                 const newOpts = [...q.options];
+                                 newOpts[optIdx] = typeof newOpts[optIdx] === 'object' 
+                                   ? { ...newOpts[optIdx], score: Number(e.target.value) } 
+                                   : { label: newOpts[optIdx], score: Number(e.target.value) };
+                                 handleQuestionChange(q.id, 'options', newOpts);
+                               }}
+                               className="w-12 text-center text-sm p-1 bg-transparent outline-none border-b border-transparent focus:border-blue-500"
+                               style={{ color: theme.text }}
+                             />
+                           </div>
+                         )}
+
                          <button 
                            onClick={() => {
                              const newOpts = [...q.options];
@@ -325,12 +372,14 @@ export default function SurveyEditor({ surveyId, onBack, headerPortalNode }) {
                              handleQuestionChange(q.id, 'options', newOpts);
                            }}
                            className="text-red-400 hover:text-red-500 p-1"
+                           title="Eliminar opción"
                          ><Trash2 size={14}/></button>
                        </div>
-                     ))}
+                     )})}
                      <button 
                        onClick={() => {
-                         const newOpts = [...(q.options || []), `Nueva Opción ${(q.options?.length||0)+1}`];
+                         const newOpt = survey.is_graded ? { label: `Nueva Opción ${(q.options?.length||0)+1}`, score: 0 } : `Nueva Opción ${(q.options?.length||0)+1}`;
+                         const newOpts = [...(q.options || []), newOpt];
                          handleQuestionChange(q.id, 'options', newOpts);
                        }}
                        className="text-sm text-blue-500 hover:underline mt-2 inline-block font-medium"

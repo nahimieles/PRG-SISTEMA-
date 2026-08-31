@@ -82,7 +82,7 @@ export default function CourseViewer({ companyId, company, onBack, adminPreview 
     };
     const closeCourse = () => {
         if (document.fullscreenElement) {
-            document.exitFullscreen().catch(e => );
+            document.exitFullscreen().catch(e => {});
         }
         setIsFullscreen(false);
         setTimeout(() => {
