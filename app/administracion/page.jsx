@@ -12,7 +12,7 @@ import ManagementAnalysisModule from '../../components/management/ManagementAnal
 import CorporateCalendar from '../../components/CorporateCalendar';
 import StatsCard from '../../components/StatsCard';
 import { getRecords, deleteRecord, exportToCSV, exportToExcel, getCompanies, deleteCompany, saveAdminSession, getAdminSession, clearAdminSession, clearUnifiedSession, getUnifiedSession, getWorkersWithoutReports, getQualityIssues, getRealTimeStats, getAllAttendanceRecords, getActiveAttendances, getAttendanceStats, deleteAttendanceRecord } from '../../lib/auth.js';
-import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction, deleteWorkerAction, deleteAuditRecordAction } from '../../lib/actions.js';
+import { createWorkerAction, updateWorkerAction, createCompanyAction, updateCompanyAction, loginUnifiedAction, updateAdminAction, deleteWorkerAction, deleteAuditRecordAction, uploadAvatarAction } from '../../lib/actions.js';
 import { lightTheme, darkTheme } from '../../lib/colors';
 import { supabase } from '../../lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Legend, LineChart, Line } from 'recharts';
@@ -544,17 +544,20 @@ export default function AdminPage() {
       if (profileImageFile) {
         const fileExt = profileImageFile.name.split('.').pop();
         const fileName = `${adminSession.id}-${Date.now()}.${fileExt}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, profileImageFile, { cacheControl: '3600', upsert: true });
+        
+        const formData = new FormData();
+        formData.append('file', profileImageFile);
+        formData.append('fileName', fileName);
+        
+        const uploadResult = await uploadAvatarAction(formData);
           
-        if (uploadError) {
-          showToast('Error al subir la imagen: ' + uploadError.message, 'error');
+        if (!uploadResult.success) {
+          showToast('Error al subir la imagen: ' + uploadResult.error, 'error');
           setProfileSaving(false);
           return;
         }
-        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-        payload.profile_image_url = publicUrl;
+        
+        payload.profile_image_url = uploadResult.url;
       }
 
       if (Object.keys(payload).length === 0) {

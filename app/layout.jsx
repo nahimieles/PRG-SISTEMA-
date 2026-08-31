@@ -21,7 +21,8 @@ export default function RootLayout({ children }) {
   const pathname = usePathname()
   const isEntrevista = pathname?.startsWith('/entrevista')
   const isDocs = pathname?.startsWith('/docs')
-  const isPublicRoute = isEntrevista || isDocs
+  const isPrueba = pathname?.startsWith('/prueba')
+  const isPublicRoute = isEntrevista || isDocs || isPrueba
 
   return (
     <html lang="es">

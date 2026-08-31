@@ -8,7 +8,11 @@ import { useRouter } from "next/navigation";
 let msalInstance = null;
 let initializationPromise = null;
 if (typeof window !== "undefined") {
-    msalInstance = new PublicClientApplication(msalConfig);
+    try {
+        msalInstance = new PublicClientApplication(msalConfig);
+    } catch (e) {
+        console.warn("MSAL no pudo inicializarse (probablemente falta Web Crypto API):", e);
+    }
 }
 export { msalInstance };
 const GRAPH_SCOPES = ["Files.ReadWrite.All", "Sites.Read.All"];
@@ -85,6 +89,15 @@ export default function MsalWrapper({ children }) {
         initializeMsal();
     }, [router]);
     if (!isReady || !msalInstance) {
+        if (!msalInstance) {
+            // Si MSAL falla completamente (ej. sin crypto en HTTP), renderizamos sin MsalProvider
+            // aunque fallará si intentan usar login de Microsoft.
+            return (
+                <SharePointProvider>
+                    {children}
+                </SharePointProvider>
+            );
+        }
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f1419] text-white">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>

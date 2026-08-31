@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { submitPublicSurveyAction } from '../../lib/actions_public_survey';
 import { CheckCircle2, AlertCircle, Send, User, Mail, ClipboardList } from 'lucide-react';
 
@@ -10,6 +10,36 @@ export default function CandidateTestView({ survey, questions }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  const STORAGE_KEY = `recruitment_survey_${survey?.id || 'unknown'}`;
+
+  // Cargar estado guardado al inicio
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.candidateData) setCandidateData(parsed.candidateData);
+        if (parsed.responses) setResponses(parsed.responses);
+      }
+    } catch (err) {
+      console.error("Error cargando estado:", err);
+    }
+    setIsLoaded(true);
+  }, [STORAGE_KEY]);
+
+  // Guardar cambios automáticamente
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        step,
+        candidateData,
+        responses
+      }));
+    }
+  }, [step, candidateData, responses, isLoaded, STORAGE_KEY]);
 
   const handleStart = (e) => {
     e.preventDefault();
@@ -67,11 +97,21 @@ export default function CandidateTestView({ survey, questions }) {
     if (result.success) {
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      localStorage.removeItem(STORAGE_KEY); // Limpiar caché al finalizar exitosamente
     } else {
       setError(result.error || 'Ocurrió un error al enviar la prueba.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  // Prevenir parpadeo o errores de hidratación
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -90,13 +130,9 @@ export default function CandidateTestView({ survey, questions }) {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-8 mt-4 sm:mt-12 bg-white/90 backdrop-blur-xl sm:rounded-3xl sm:shadow-2xl sm:border border-gray-100 animate-fade-in relative overflow-hidden">
-      
-      {/* Elemento de diseño de fondo */}
-      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-10"></div>
-      
       <div className="text-center mb-10 pb-8 border-b border-gray-100 relative z-10">
-        <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-500 text-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-6">
-          <ClipboardList size={36} />
+        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+          <ClipboardList size={32} />
         </div>
         <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 mb-4">{survey.title}</h1>
         <p className="text-gray-600 max-w-xl mx-auto text-lg">{survey.description}</p>
@@ -123,7 +159,6 @@ export default function CandidateTestView({ survey, questions }) {
               <input
                 type="text"
                 required
-                placeholder="Juan Pérez"
                 value={candidateData.full_name}
                 onChange={e => setCandidateData(prev => ({...prev, full_name: e.target.value}))}
                 className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
@@ -138,7 +173,6 @@ export default function CandidateTestView({ survey, questions }) {
               <input
                 type="email"
                 required
-                placeholder="ejemplo@correo.com"
                 value={candidateData.email}
                 onChange={e => setCandidateData(prev => ({...prev, email: e.target.value}))}
                 className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 text-gray-900 font-medium rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
