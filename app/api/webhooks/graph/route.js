@@ -50,12 +50,10 @@ async function processNotifications(payload) {
             const driveId = driveMatch[1];
             if (!processedDrives.has(driveId)) {
                 processedDrives.add(driveId);
-                await runDeltaScanForDrive(driveId).catch((err) =>
-                );
+                await runDeltaScanForDrive(driveId).catch((err) => {});
             }
         } else {
-            await runDeltaScanAllDrives().catch((err) =>
-            );
+            await runDeltaScanAllDrives().catch((err) => {});
             break; 
         }
     }
